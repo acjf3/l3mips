@@ -58,7 +58,7 @@ record CP0
    BadVAddr :: dword           -- 8   Bad virtual address
    Count    :: word            -- 9   Timer count
 -- EntryHi  :: word            -- 10  High half of TLB entry
--- Compare  :: word            -- 11  Timer compare
+   Compare  :: word            -- 11  Timer compare
    Status   :: StatusRegister  -- 12  Status register
    Cause    :: CauseRegister   -- 13  Cause of last exception
    EPC      :: dword           -- 14  Exception program counter

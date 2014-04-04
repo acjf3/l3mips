@@ -55,6 +55,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       {
          case 0,  8, 0 =>  CP0.BadVAddr
          case 0,  9, 0 => [CP0.Count]
+         case 0, 11, 0 => [CP0.Compare]
          case 0, 12, 0 => [CP0.&Status]
          case 0, 13, 0 => [CP0.&Cause]
          case 0, 14, 0 =>  CP0.EPC
@@ -71,6 +72,8 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       {
          case 0,  9, 0 =>
             { CP0.Count <- value<31:0>   ; mark (w_c0 (reg, value)) }
+         case 0, 11, 0 =>
+            { CP0.Compare <- value<31:0> ; mark (w_c0 (reg, value)) }
          case 0, 12, 0 =>
             { CP0.&Status <- value<31:0> ; mark (w_c0 (reg, value)) }
          case 0, 13, 0 =>
