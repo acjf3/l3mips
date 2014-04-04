@@ -321,6 +321,4 @@ val () = test "test_raw_jalr.hex";
 val () = test "test_ddiv_cached.hex";
 val () = test "test_raw_sdr_cached.hex";
 
-4612.0 / 0.01200
-
 *)
