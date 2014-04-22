@@ -2,53 +2,36 @@
    MIPS emulator (based on SML generated from an L3 specification)
    -------------------------------------------------------------------------- *)
 
-(*
-(* load library and model under Poly/ML *)
-
-local
-   fun path a s = OS.Path.toString {vol = "", isAbs = false, arcs = a @ [s]}
-in
-   fun useSigSml a s =
-      ( use (path a (OS.Path.joinBaseExt {base = s, ext = SOME "sig"}))
-      ; use (path a (OS.Path.joinBaseExt {base = s, ext = SOME "sml"}))
-      )
-end
-
-val useLib = useSigSml (List.tabulate (3, fn _ => OS.Path.parentArc) @ ["lib"])
-
-val () =
-   ( List.app useLib
-        ["IntExtra", "Nat", "L3", "Bitstring", "BitsN", "FP64", "Ptree",
-         "MutableMap", "Runtime"]
-   ; useSigSml [OS.Path.currentArc] "mips"
-   );
-
-*)
-
 (* --------------------------------------------------------------------------
    Default Configuration
    -------------------------------------------------------------------------- *)
 
-val be = ref true
+val be = ref true (* big-endian *)
 val trace_level = ref 0
 val time_run = ref true
+val uart_delay = ref 5000
+val uart_countdown = ref (!uart_delay)
+val uart_in = ref (NONE: TextIO.instream option)
+val uart_out = ref (NONE: TextIO.outstream option)
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
    -------------------------------------------------------------------------- *)
 
 fun hex s = L3.lowercase (BitsN.toHexString s)
-fun phex n = fn s => StringCvt.padLeft #"0" (n div 4) (hex s)
+fun phex n = StringCvt.padLeft #"0" (n div 4) o hex
 fun word i = fn s => Option.valOf (BitsN.fromHexString (s, i))
 val w8 = word 8
+val w16 = word 16
 val w32 = word 32
+val w64 = word 64
 val hex32 = phex 32
 val hex64 = phex 64
 
 fun failExit s = ( print (s ^ "\n"); OS.Process.exit OS.Process.failure )
+fun err e s = failExit ("Failed to " ^ e ^ " file \"" ^ s ^ "\"")
 
 local
-   fun address s = Option.valOf (BitsN.fromHexString (s, 16))
    val endLine = ":00000001FF"
    fun inc16 a = BitsN.+ (a, BitsN.fromInt (1, 16))
    fun checkEnd s r = if s = endLine then r else raise Fail ("Bad line: " ^ s)
@@ -56,14 +39,14 @@ local
       if String.substring (s, 0, 3) <> ":04" orelse
          String.substring (s, 7, 2) <> "00" then NONE
       else let
-              val a = address (String.substring (s, 3, 4))
+              val a = w16 (String.substring (s, 3, 4))
               val b0 = w8 (String.substring (s, 9, 2))
               val b1 = w8 (String.substring (s, 11, 2))
               val b2 = w8 (String.substring (s, 13, 2))
               val b3 = w8 (String.substring (s, 15, 2))
-              val l = [b0, b1, b2, b3]
+              val l = [b3, b2, b1, b0]
            in
-              SOME (a, BitsN.concat (if !be then List.rev l else l))
+              SOME (a, BitsN.concat (if !be then l else List.rev l))
            end
 in
    fun loadIntelHex s =
@@ -75,34 +58,38 @@ in
          case l of
             [] => raise Fail ("File empty: " ^ s)
           | h :: t =>
-              (case readIntelHex h of
-                  SOME (a0, w0) =>
-                    let
-                       val () = if a0 <> BitsN.fromInt (0, 16)
-                                   then raise Fail
-                                          ("Does not start at zero: " ^ s)
-                                else ()
-                       val (_, r) =
-                          List.foldl
-                             (fn (s, (pa, l)) =>
-                                case readIntelHex s of
-                                   SOME (a, w) =>
-                                      if inc16 pa = a
-                                         then (a, w :: l)
-                                      else ( print (BitsN.toHexString pa)
-                                           ; print "\n"
-                                           ; print (BitsN.toHexString a)
-                                           ; raise Fail ("Not sequential: " ^ s)
-                                           )
-                                 | NONE => checkEnd s (pa, l))
-                             (a0, [w0]) t
-                    in
-                       Array.fromList (List.rev r)
-                    end
-                | NONE => checkEnd h (Array.fromList []))
+              case OS.Path.ext s of
+                 SOME "phex" => (Array.fromList (List.map w32 l)
+                                 handle Option.Option => err "parse" s)
+               | _ =>
+                 (case readIntelHex h of
+                     SOME (a0, w0) =>
+                       let
+                          val () = if a0 <> BitsN.fromInt (0, 16)
+                                      then raise Fail
+                                             ("Does not start at zero: " ^ s)
+                                   else ()
+                          val (_, r) =
+                             List.foldl
+                                (fn (s, (pa, l)) =>
+                                   case readIntelHex s of
+                                      SOME (a, w) =>
+                                         if inc16 pa = a
+                                            then (a, w :: l)
+                                         else ( print (BitsN.toHexString pa)
+                                              ; print "\n"
+                                              ; print (BitsN.toHexString a)
+                                              ; raise Fail
+                                                  ("Not sequential: " ^ s)
+                                              )
+                                    | NONE => checkEnd s (pa, l))
+                                (a0, [w0]) t
+                       in
+                          Array.fromList (List.rev r)
+                       end
+                   | NONE => checkEnd h (Array.fromList []))
       end
-      handle IO.Io {function  = "TextIO.openIn", ...} =>
-         failExit ("Failed to open file \"" ^ s ^ "\"")
+      handle IO.Io {function  = "TextIO.openIn", ...} => err "open" s
 end
 
 (*
@@ -182,6 +169,47 @@ in
 end
 
 (* ------------------------------------------------------------------------
+   UART I/O
+   ------------------------------------------------------------------------ *)
+
+fun uart_outut1 () =
+   if #TRDY (#status (!mips.UART_RS232))
+      then ()
+   else let
+           val c = mips.UART_RS232_putChar ()
+        in
+           case !uart_out of
+              SOME strm => TextIO.output1 (strm, c)
+            | NONE => TextIO.print ("UART out: " ^ String.str c ^ "\n")
+        end
+
+fun uart_input1 () =
+   if #RRDY (#status (!mips.UART_RS232))
+      then ()
+   else let
+           val istrm =
+              case !uart_in of
+                 SOME strm => strm
+               | NONE => (print "UART in: "; TextIO.stdIn)
+        in
+           mips.UART_RS232_getChar (TextIO.input1 istrm)
+        end
+
+fun uart () =
+   if !uart_delay <= 0 (* UART turned off *)
+      then ()
+   else if !uart_countdown <= 0
+      then ( uart_countdown := !uart_delay
+           ; mips.UART_RS232_read_mm ()
+           ; uart_outut1 ()
+           ; uart_input1 ()
+           ; mips.UART_RS232_write_mm ()
+           )
+   else uart_countdown := !uart_countdown - 1
+
+(* fun rxdata () = (mips.UART_RS232_read_mm (); #rxdata (!mips.UART_RS232)) *)
+
+(* ------------------------------------------------------------------------
    Run code
    ------------------------------------------------------------------------ *)
 
@@ -190,11 +218,12 @@ fun loop mx i =
       val (h, a) =
          case mips.Fetch () of
             SOME w => (hex32 w, mips.instructionToString (mips.Decode w))
-          | NONE => ("-", "unaligned instruction fetch")
+          | NONE => ("-", "failed instruction fetch")
       val exl0 = #EXL (#Status (!mips.CP0))
    in
       print (StringCvt.padRight #" " 6 (Int.toString i) ^ " " ^
              hex64 (!mips.PC) ^ " : " ^ h ^ "   " ^ a ^ "\n")
+    ; uart ()
     ; mips.Next ()
     ; if 2 <= !trace_level then printLog () else ()
     ; dumpRegistersOnCP0_26 ()
@@ -208,7 +237,8 @@ fun loop mx i =
 fun decr i = if i <= 0 then i else i - 1
 
 fun pureLoop mx =
-   ( mips.Next ()
+   ( uart ()
+   ; mips.Next ()
    ; dumpRegistersOnCP0_26 ()
    ; if mips.done () orelse mx = 1 then () else pureLoop (decr mx)
    )
@@ -218,13 +248,16 @@ local
 in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t pureLoop mx
-   fun run pc mx code =
-      ( mips.initMips pc
-      ; List.map
+   fun run pc_uart mx code =
+      ( mips.initMips pc_uart
+      ; List.app
           (fn (a, s) =>
              ( print ("Loading " ^ s ^ "... ")
              ; storeArrayInMem (a, loadIntelHex s))) code
+      ; uart_countdown := !uart_delay
       ; run_mem mx
+      ; mips.UART_RS232_read_mm ()
+      ; uart_outut1 ()
       )
 end
 
@@ -233,18 +266,22 @@ end
    ------------------------------------------------------------------------ *)
 
 fun printUsage () =
-   let
-      val name = OS.Path.file (CommandLine.name ())
-   in
-      print
-        ("\nMIPS emulator (based on an L3 specification).\n\
-          \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
-          \usage: " ^ name ^
-         " [--cyles number] [--trace level] [--pc address]\n" ^
-         StringCvt.padLeft #" " (String.size name + 8) " " ^
-          "[--at address hex_file] ... hex_start_file\n\n" ^
-         "       " ^ name ^ " --help\n\n")
-   end
+   print
+    ("\nMIPS emulator (based on an L3 specification).\n\
+      \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
+      \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
+      \Arguments:\n\
+      \  --cyles <number>         upper bound on instruction cycles\n\
+      \  --trace <level>          verbosity level (0 default, 2 maximum)\n\
+      \  --pc <address>           initial program counter value and\n\
+      \                           start address for main Intel Hex file\n\
+      \  --at <address> <file>    load extra Intel Hex <file> into physical\n\
+      \                           memory at <address>\n\
+      \  --uart <address>         base physical address for UART memory-map\n\
+      \  --uart-delay <number>    UART cycle delay (determines baud rate)\n\
+      \  --uart-in <file>         UART input file (stdin if ommitted)\n\
+      \  --uart-out <file>        UART output file (stdout if ommitted)\n\
+      \  -h or --help             print this message\n\n")
 
 fun getNumber s =
    case IntExtra.fromString s of
@@ -290,35 +327,31 @@ val () =
        let
           val (p, l) = processOption "--pc" l
           val p = Option.getOpt (Option.map getNumber p, 0x0000000040000000)
+          val (u, l) = processOption "--uart" l
+          val u = Option.getOpt (Option.map getNumber u, 0x000000007f002100)
           val (c, l) = processOption "--cycles" l
           val c = Option.getOpt (Option.map getNumber c, ~1)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, Int.min (t, 2))
+          val (d, l) = processOption "--uart-delay" l
+          val () =
+             uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
+          val (ui, l) = processOption "--uart-in" l
+          val () = uart_in := Option.map TextIO.openIn ui
+          val (uo, l) = processOption "--uart-out" l
+          val () = uart_out := Option.map TextIO.openOut uo
+          fun closeStreams () =
+            ( case !uart_in of
+                 SOME stm => TextIO.closeIn stm
+               | NONE => ()
+            ; case !uart_out of
+                 SOME stm => TextIO.closeOut stm
+               | NONE => ()
+            )
        in
           case getCode p l of
-             SOME code => run p c code
+             SOME code => ((run (p, u) c code; closeStreams ())
+                           handle e => (closeStreams (); raise e))
            | NONE => printUsage ()
        end
-
-(* ------------------------------------------------------------------------ *)
-
-(* testing...
-
-fun test s =
-   run 0x40000000 10000 [(0x40000000, "/Users/acjf3/Work/mips/testTraces/" ^ s)]
-
-val () = trace_level := 2
-val () = trace_level := 1
-val () = trace_level := 0
-
-val () = test "test_addi_overflow_cached.hex";
-val () = test "test_raw_b_cached.hex";
-val () = test "test_raw_lb_cached.hex";
-val () = test "test_raw_sb_cached.hex";
-val () = test "test_teq_eq_cached.hex";
-val () = test "test_raw_jalr.hex";
-val () = test "test_ddiv_cached.hex";
-val () = test "test_raw_sdr_cached.hex";
-
-*)

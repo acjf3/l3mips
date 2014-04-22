@@ -74,5 +74,7 @@ struct
    fun padLeftString (e, (n, l)) = StringCvt.padLeft e n l
    fun padRightString (e, (n, l)) = StringCvt.padRight e n l
    val revString = String.implode o List.rev o String.explode
+   fun stringToChar s =
+      if String.size s = 1 then String.sub (s, 0) else raise Domain
 
 end (* structure L3 *)

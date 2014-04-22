@@ -74,12 +74,14 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
 -- Memory access
 --------------------------------------------------
 
-type mAddr = bits(61)
+type pAddr = bits(64)
+
+nat PSIZE = 64 -- 64-bit physical memory
 
 declare MEM :: pAddr -> byte -- memory
 
 pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
-   return (vAddr, UNKNOWN) -- null address translation
+   return (vAddr, 2) -- null address translation
 
 dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
@@ -140,9 +142,41 @@ word option Fetch =
       vAddr = PC;
       pAddr, CCA = AddressTranslation (vAddr, INSTRUCTION, LOAD);
       memdoubleword = LoadMemory (CCA, WORD, pAddr, vAddr, INSTRUCTION);
-      bytesel = vAddr<2:0> ?? BigEndianCPU : '00'; -- must be aligned
+      bytesel = vAddr<2:0> ?? (BigEndianCPU : '00'); -- must be aligned
       memword = memdoubleword <31 + 8 * [bytesel] : 8 * [bytesel]>;
       return (Some (memword))
    }
    else
+   {
+      SignalException (AdEL);
       None
+   }
+
+--------------------------------------------------
+-- Stub TLB instructions
+--------------------------------------------------
+
+--------
+-- TLBP
+--------
+define TLBP = SignalException (RI)
+
+--------
+-- TLBR
+--------
+define TLBR = SignalException (RI)
+
+--------
+-- TLBWI
+--------
+define TLBWI = SignalException (RI)
+
+--------
+-- TLBWR
+--------
+define TLBWR = SignalException (RI)
+
+-------------------------
+-- CACHE op, offset(base)
+-------------------------
+define CACHE (base::reg, opn::bits(5), offset::bits(16)) = SignalException (RI)

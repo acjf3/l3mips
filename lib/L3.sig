@@ -25,6 +25,7 @@ sig
    val splitr : (char -> bool) * string -> string * string
    val strHd : string -> char
    val strTl : string -> string
+   val stringToChar : string -> char
    val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
    val update : (''a -> 'b) -> ''a -> 'b -> ''a -> 'b
    val uppercase : string -> string
