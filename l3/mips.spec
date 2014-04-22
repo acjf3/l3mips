@@ -1566,24 +1566,22 @@ unit Next =
       case Some (w) => Run (Decode (w))
       case None => nothing
    } ;
-   if exceptionSignalled then
-      exceptionSignalled <- false
-   else
-      match BranchDelay, BranchTo
+   match BranchDelay, BranchTo
+   {
+      case None, None => when not exceptionSignalled do PC <- PC + 4
+      case Some (addr), None =>
       {
-         case None, None => PC <- PC + 4
-         case Some (addr), None =>
-         {
-            BranchDelay <- None;
-            PC <- addr
-         }
-         case None, Some (addr) =>
-         {
-            BranchDelay <- Some (addr);
-            BranchTo <- None;
-            PC <- PC + 4
-         }
-         case _ => #UNPREDICTABLE("Branch follows branch")
-      };
+         BranchDelay <- None;
+         PC <- addr
+      }
+      case None, Some (addr) =>
+      {
+         BranchDelay <- Some (addr);
+         BranchTo <- None;
+         PC <- PC + 4
+      }
+      case _ => #UNPREDICTABLE("Branch follows branch")
+   };
+   exceptionSignalled <- false;
    CP0.Count <- CP0.Count + 1
 }

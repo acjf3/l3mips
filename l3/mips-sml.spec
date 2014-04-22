@@ -491,7 +491,8 @@ word option Fetch =
                         else
                             CP0.Random.Random - 1;
    ti = CP0.Compare == CP0.Count;
-   if ti or UART_RS232.exceptionSignalled then
+   if CP0.Status.IE and CP0.Status.IM<7> and
+      (ti or UART_RS232.exceptionSignalled) then
    {
       CP0.Cause.TI <- ti;
       CP0.Cause.IP<7> <- true;
@@ -548,8 +549,9 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Status.KSU <- '00';
    CP0.Status.EXL <- true;
    CP0.Status.ERL <- true;      -- reset to kernel mode
+   CP0.Status.IE <- true;       -- enable interrupts
    CP0.Count <- 0;
-   CP0.Compare <- -1;
+   CP0.Compare <- 0;
    CP0.Config.BE  <- true;      -- big-endian
    CP0.Config.MT  <- 1;         -- standard TLB
    CP0.&Status <- 0x044000e0;

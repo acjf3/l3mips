@@ -60,8 +60,7 @@ register StatusRegister :: word
    26 : FR        -- Floating-point data
    25 : RE        -- Reverse endianness
    22 : BEV       -- Controls location of exception vectors
-    9 : IM1       -- Interrupt mask
-    8 : IM0       -- Interrupt mask
+ 15-8 : IM        -- Interrupt mask
     7 : KX
     6 : SX
     5 : UX
@@ -175,32 +174,40 @@ unit ExceptionCode (ExceptionType::ExceptionType) =
 
 unit SignalException (ExceptionType::ExceptionType) =
 {
-   when not CP0.Status.EXL do
+   if CP0.Status.IE then
    {
-      if IsSome (BranchDelay) then
+      when not CP0.Status.EXL do
       {
-         CP0.EPC <- PC - 4;
-         CP0.Cause.BD <- true
-      }
-      else
-      {
-         CP0.EPC <- PC;
-         CP0.Cause.BD <- false
-      }
+         if IsSome (BranchDelay) then
+         {
+            CP0.EPC <- PC - 4;
+            CP0.Cause.BD <- true
+         }
+         else
+         {
+            CP0.EPC <- PC;
+            CP0.Cause.BD <- false
+         }
+      };
+      vectorOffset = if ExceptionType == XTLBRefill and not CP0.Status.EXL then
+                        0x080`30
+                     else
+                        0x180;
+      ExceptionCode (ExceptionType);
+      CP0.Status.EXL <- true;
+      vectorBase = if CP0.Status.BEV then
+                      0xFFFF_FFFF_BFC0_0200`64
+                   else
+                      0xFFFF_FFFF_8000_0000;
+      BranchDelay <- None;
+      BranchTo <- None;
+      PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)
+   }
+   else
+   {
+      BranchTo <- None;
+      PC <- PC + 4
    };
-   vectorOffset = if ExceptionType == XTLBRefill and not CP0.Status.EXL then
-                     0x080`30
-                  else
-                     0x180;
-   ExceptionCode (ExceptionType);
-   CP0.Status.EXL <- true;
-   vectorBase = if CP0.Status.BEV then
-                   0xFFFF_FFFF_BFC0_0200`64
-                else
-                   0xFFFF_FFFF_8000_0000;
-   BranchDelay <- None;
-   BranchTo <- None;
-   PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
    exceptionSignalled <- true
 }
 
