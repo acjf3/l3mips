@@ -276,11 +276,11 @@ fun printUsage () =
       \  --pc <address>           initial program counter value and\n\
       \                           start address for main Intel Hex file\n\
       \  --at <address> <file>    load extra Intel Hex <file> into physical\n\
-      \                           memory at <address>\n\
+      \                           memory at location <address>\n\
       \  --uart <address>         base physical address for UART memory-map\n\
       \  --uart-delay <number>    UART cycle delay (determines baud rate)\n\
-      \  --uart-in <file>         UART input file (stdin if ommitted)\n\
-      \  --uart-out <file>        UART output file (stdout if ommitted)\n\
+      \  --uart-in <file>         UART input file (stdin if omitted)\n\
+      \  --uart-out <file>        UART output file (stdout if omitted)\n\
       \  -h or --help             print this message\n\n")
 
 fun getNumber s =
