@@ -308,8 +308,6 @@ dword LoadMemory (CCA::CCA, AccessLength::bits(3),
    b = [pAddr<2:0>]::nat;
    when a == JTAG_UART.base_address and b < 4 and 4 <= b + [AccessLength] do
    {
-      when JTAG_UART.data.RVALID do
-         d <- d && 0xFFFF_FF00_FFFF_FFFF || [JTAG_UART.data.RW_DATA] << 32;
       match JTAG_UART.read_fifo
       {
          case Nil =>
@@ -344,6 +342,7 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
 {  a = pAddr<39:3>;
    l = 64 - ([AccessLength] + 1 + [pAddr<2:0>]) * 0n8;
    mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
+   mark (w_mem (pAddr, mask, AccessLength, MemElem));
    if a == JTAG_UART.base_address then
    {
       when mask<39:32> <> 0 do
@@ -363,8 +362,7 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
       JTAG_UART_write_mm
    }
    else
-      MEM(a) <- MEM(a) && ~mask || MemElem && mask;
-   mark (w_mem (pAddr, mask, AccessLength, MemElem))
+      MEM(a) <- MEM(a) && ~mask || MemElem && mask
 }
 
 --------------------------------------------------
@@ -580,6 +578,8 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Random.Random <- 0x10;
    CP0.Wired.Wired <- 0x2;
    JTAG_UART.base_address <- [[uart]::pAddr >>+ 3];
+   JTAG_UART.read_threshold <- 0xFF00;
+   JTAG_UART.write_threshold <- 0xFFF0;
    JTAG_UART.read_fifo <- Nil;
    JTAG_UART.write_fifo <- Nil;
    JTAG_UART.data.RW_DATA <- 0;
@@ -591,8 +591,6 @@ unit initMips (pc::nat, uart::nat) =
    JTAG_UART.control.WI <- false;
    JTAG_UART.control.AC <- false;
    JTAG_UART.control.WSPACE <- -1;
-   JTAG_UART.read_threshold <- 0xFF00;
-   JTAG_UART.write_threshold <- 0xFFF0;
    TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
