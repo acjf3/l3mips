@@ -159,24 +159,25 @@ word option Fetch =
 --------
 -- TLBP
 --------
-define TLBP = SignalException (RI)
+define TLBP = SignalException (ResI)
 
 --------
 -- TLBR
 --------
-define TLBR = SignalException (RI)
+define TLBR = SignalException (ResI)
 
 --------
 -- TLBWI
 --------
-define TLBWI = SignalException (RI)
+define TLBWI = SignalException (ResI)
 
 --------
 -- TLBWR
 --------
-define TLBWR = SignalException (RI)
+define TLBWR = SignalException (ResI)
 
 -------------------------
 -- CACHE op, offset(base)
 -------------------------
-define CACHE (base::reg, opn::bits(5), offset::bits(16)) = SignalException (RI)
+define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
+   SignalException (ResI)

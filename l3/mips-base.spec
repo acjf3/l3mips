@@ -149,7 +149,7 @@ declare
 --------------------------------------------------
 
 construct ExceptionType
-   { Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, RI, CpU, Ov, Tr,
+   { Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
      XTLBRefill }
 
 unit ExceptionCode (ExceptionType::ExceptionType) =
@@ -165,7 +165,7 @@ unit ExceptionCode (ExceptionType::ExceptionType) =
             case AdES => 0x05 -- Address error (store)
             case Sys  => 0x08 -- Syscall
             case Bp   => 0x09 -- Breakpoint
-            case RI   => 0x0a -- Reserved instruction
+            case ResI => 0x0a -- Reserved instruction
             case CpU  => 0x0b -- Coprocessor Unusable
             case Ov   => 0x0c -- Arithmetic overflow
             case Tr   => 0x0d -- Trap

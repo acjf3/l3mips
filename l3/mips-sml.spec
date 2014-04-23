@@ -105,55 +105,39 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
 }
 
 --------------------------------------------------
--- UART support
+-- JTAG UART support
 --------------------------------------------------
 
-register UART_Status :: half
+register JTAG_UART_data :: word
 {
-    12 : EOP   -- End-of-packet encountered (optional)
---  11 : CTS   -- Clear-to-send signal (optional)
---  10 : DCTS  -- Change in clear-to-send signal (optional)
-     8 : E     -- Exception
-     7 : RRDY  -- Receive character ready
-     6 : TRDY  -- Transmit ready
-     5 : TMT   -- Transmit empty
-     4 : TOE   -- Transmit overrun error
-     3 : ROE   -- Receive overrun error
-     2 : BRK   -- Break detected
-     1 : FE    -- Framing error
---   0 : PE    -- Parity error (optional)
+  31-16 : RAVAIL    -- Number of characters reamining in read FIFO
+     15 : RVALID    -- Indicates whether RW_DATA field is valid
+    7-0 : RW_DATA   -- Value to transfer to/from JTAG core
 }
 
-register UART_Control :: half
+register JTAG_UART_control :: word
 {
-    12 : IEOP  -- Enable interrupt for end-of-packet
---  11 : RTS   -- Request to send signal
---  10 : IDCTS -- Enable interrupt for a change in CTS signal
-     9 : TRBK  -- Transmit break
-     8 : IE    -- Enable interrupt for an exception
-     7 : IRRDY -- Enable interrupt for a read ready
-     6 : ITRDY -- Enable interrupt for a transmission ready
-     5 : ITMT  -- Enable interrupt for a transmitter shift register empty
-     4 : ITOE  -- Enable interrupt for a transmitter overrun error
-     3 : IROE  -- Enable interrupt for a receiver overrun error
-     2 : IBRK  -- Enable interrupt for a break detected
-     1 : IFE   -- Enable interrupt for a framing error
---   0 : IPE   -- Enable interrupt for a parity error
+  31-16 : WSPACE    -- Number of spaces available in write FIFO
+     10 : AC        -- Indicates that there has been JTAG activity since last
+                    -- cleared
+      9 : WI        -- Write interrupt is pending
+      8 : RI        -- Read interrupt is pending
+      1 : WE        -- Write interrupt-enable
+      0 : RE        -- Read interrupt-enable
 }
 
-record UART
+record JTAG_UART
 {
-   base_address :: pAddr        -- memory-mapped base address
-   rxdata       :: byte         -- offset 0 ; receive data
-   txdata       :: byte         -- offset 1 ; transmit data
-   status       :: UART_Status  -- offset 2
-   control      :: UART_Control -- offset 3
--- divisor      :: half         -- offset 4 ; baud rate divisor
--- endofpacket  :: byte         -- offset 5
-   exceptionSignalled :: bool   -- flag for UART interrupt
+   base_address      :: mAddr
+   data              :: JTAG_UART_data
+   control           :: JTAG_UART_control
+   read_fifo         :: byte list
+   write_fifo        :: byte list
+   read_threshold    :: nat
+   write_threshold   :: nat
 }
 
-declare UART_RS232 :: UART
+declare JTAG_UART :: JTAG_UART
 
 --------------------------------------------------
 -- Memory access
@@ -310,20 +294,41 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
    }
 }
 
+-- Update JTAG_UART memory-map
+
+unit JTAG_UART_write_mm =
+   MEM (JTAG_UART.base_address) <- JTAG_UART.&data : JTAG_UART.&control
+
 -- Pimitive memory load
 
 dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
-{
-   when UART_RS232.status.RRDY and pAddr == UART_RS232.base_address and
-        match pAddr<2:0>
-        {
-           case 0 => HALFWORD <=+ AccessLength
-           case 1 => true
-           case _ => false
-        } do
-      UART_RS232.status.RRDY <- false;
-   MEM (pAddr<39:3>)
+{  a = pAddr<39:3>;
+   var d = MEM (a);
+   b = [pAddr<2:0>]::nat;
+   when a == JTAG_UART.base_address and b < 4 and 4 <= b + [AccessLength] do
+   {
+      when JTAG_UART.data.RVALID do
+         d <- d && 0xFFFF_FF00_FFFF_FFFF || [JTAG_UART.data.RW_DATA] << 32;
+      match JTAG_UART.read_fifo
+      {
+         case Nil =>
+         {
+            JTAG_UART.data.RAVAIL <- 0; -- should already hold
+            JTAG_UART.data.RVALID <- false
+         }
+         case h @ t =>
+         {
+            JTAG_UART.data.RW_DATA <- h;
+            JTAG_UART.data.RAVAIL <- [Length (t)];
+            JTAG_UART.data.RVALID <- true;
+            JTAG_UART.read_fifo <- t
+         }
+      };
+      JTAG_UART.control.RI <- false; -- could have cleared read interrupt
+      JTAG_UART_write_mm
+   };
+   return d
 }
 
 word loadWord32 (a::pAddr) =
@@ -339,17 +344,27 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
 {  a = pAddr<39:3>;
    l = 64 - ([AccessLength] + 1 + [pAddr<2:0>]) * 0n8;
    mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-   MEM(a) <- MEM(a) && ~mask || MemElem && mask;
-   mark (w_mem (pAddr, mask, AccessLength, MemElem));
-   when pAddr && 0xFFFFFFFFF8 == UART_RS232.base_address and mask<39:32> <> 0 do
-      if UART_RS232.status.TRDY then
-         UART_RS232.status.TRDY <- false   -- write to UART transmit register
-      else
+   if a == JTAG_UART.base_address then
+   {
+      when mask<39:32> <> 0 do
       {
-         UART_RS232.status.TOE <- true;    -- transmit overrun error
-         UART_RS232.status.E <- true;
-         when UART_RS232.control.ITOE do UART_RS232.exceptionSignalled <- true
-      }
+         JTAG_UART.data.RW_DATA <- MemElem<39:32>;
+         when JTAG_UART.control.WSPACE <> 0 do
+         {
+            JTAG_UART.control.WSPACE <- JTAG_UART.control.WSPACE - 1;
+            JTAG_UART.write_fifo <-
+               JTAG_UART.data.RW_DATA @ JTAG_UART.write_fifo
+         }
+      };
+      when mask<0> do JTAG_UART.control.RE <- MemElem<0>;
+      when mask<1> do JTAG_UART.control.WE <- MemElem<1>;
+      when mask<10> and MemElem<10> do JTAG_UART.control.AC <- false;
+      JTAG_UART.control.WI <-false; -- could have cleared write interrupt
+      JTAG_UART_write_mm
+   }
+   else
+      MEM(a) <- MEM(a) && ~mask || MemElem && mask;
+   mark (w_mem (pAddr, mask, AccessLength, MemElem))
 }
 
 --------------------------------------------------
@@ -427,57 +442,41 @@ define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
 }
 
 --------------------------------------------------
--- UART memory-map
+-- JTAG UART
 --------------------------------------------------
 
-half * half * half * half UART_RS232_load =
+unit JTAG_UART_input (l::byte list) =
 {
-   match MEM (UART_RS232.base_address<39:3>)
+   match JTAG_UART.read_fifo : l
    {
-      case 'a b c d' => (a, b, c, d)
-   }
-}
-
-unit UART_RS232_store (a::half, b::half, c::half, d::half) =
-   MEM (UART_RS232.base_address<39:3>) <- a : b : c : d
-
-unit UART_RS232_read_mm =
-{
-   rx, tx, st, ct = UART_RS232_load;
-   UART_RS232.txdata <- [tx];
-   s = UART_Status (st); -- R/C access for some status components
-   UART_RS232.status.E   <- UART_RS232.status.E   and s.E;
-   UART_RS232.status.TOE <- UART_RS232.status.TOE and s.TOE;
-   UART_RS232.status.ROE <- UART_RS232.status.ROE and s.ROE;
-   UART_RS232.status.BRK <- UART_RS232.status.BRK and s.BRK;
-   UART_RS232.status.FE  <- UART_RS232.status.FE  and s.FE;
-   UART_RS232.&control <- [ct]
-}
-
-unit UART_RS232_write_mm =
-{
-   rx, tx, st, ct = UART_RS232_load;
-   UART_RS232_store ([UART_RS232.rxdata], tx, UART_RS232.&status, ct)
-}
-
-char UART_RS232_putChar =
-{
-   UART_RS232.status.TRDY <- true;
-   when UART_RS232.control.ITRDY do UART_RS232.exceptionSignalled <- true;
-   [UART_RS232.txdata]
-}
-
-unit UART_RS232_getChar (inp::char option) =
-   match inp
-   {
-      case Some (c) =>
+      case Nil =>
       {
-         UART_RS232.rxdata <- [c];
-         UART_RS232.status.RRDY <- true;
-         when UART_RS232.control.IRRDY do UART_RS232.exceptionSignalled <- true
+         JTAG_UART.data.RVALID <- false;
+         JTAG_UART.data.RAVAIL <- 0
       }
-      case None => ()
-   }
+      case h @ t =>
+      {
+         JTAG_UART.read_fifo <- t;
+         JTAG_UART.data.RW_DATA <- h;
+         JTAG_UART.data.RVALID <- true;
+         JTAG_UART.data.RAVAIL <- [Length (t)];
+         JTAG_UART.control.AC <- true
+      }
+   };
+   JTAG_UART.control.RI <- false;
+   JTAG_UART_write_mm
+}
+
+byte list JTAG_UART_output =
+{
+   JTAG_UART.control.AC <- true;
+   l = Reverse (JTAG_UART.write_fifo);
+   JTAG_UART.write_fifo <- Nil;
+   JTAG_UART.control.WSPACE <- -1;
+   JTAG_UART.control.WI <- false;
+   JTAG_UART_write_mm;
+   return l
+}
 
 --------------------------------------------------
 -- Instruction fetch
@@ -490,14 +489,31 @@ word option Fetch =
                            [TLBEntries - 1]
                         else
                             CP0.Random.Random - 1;
-   ti = CP0.Compare == CP0.Count;
-   if CP0.Status.IE and CP0.Status.IM<7> and
-      (ti or UART_RS232.exceptionSignalled) then
+   if CP0.Status.IE and CP0.Status.IM<7> and CP0.Compare == CP0.Count then
    {
-      CP0.Cause.TI <- ti;
+      CP0.Cause.TI <- true;
       CP0.Cause.IP<7> <- true;
       SignalException (Int);
-      UART_RS232.exceptionSignalled <- false;
+      None
+   }
+   else if CP0.Status.IE and CP0.Status.IM<2> and
+           JTAG_UART.control.WE and not JTAG_UART.control.WI and
+           JTAG_UART.write_threshold <= [JTAG_UART.control.WSPACE] then
+   {
+      JTAG_UART.control.WI <- true;
+      JTAG_UART_write_mm;
+      CP0.Cause.IP<2> <- true;
+      SignalException (Int);
+      None
+   }
+   else if CP0.Status.IE and CP0.Status.IM<2> and
+           JTAG_UART.control.RE and not JTAG_UART.control.RI and
+           [JTAG_UART.data.RAVAIL] <= JTAG_UART.read_threshold then
+   {
+      JTAG_UART.control.RI <- true;
+      JTAG_UART_write_mm;
+      CP0.Cause.IP<2> <- true;
+      SignalException (Int);
       None
    }
    else if PC<1:0> == 0 then
@@ -546,36 +562,48 @@ unit addTLB (a::vAddr, i::bits(4)) =
 
 unit initMips (pc::nat, uart::nat) =
 {
-   CP0.Status.KSU <- '00';
-   CP0.Status.EXL <- true;
-   CP0.Status.ERL <- true;      -- reset to kernel mode
-   CP0.Status.IE <- true;       -- enable interrupts
-   CP0.Count <- 0;
-   CP0.Compare <- 0;
    CP0.Config.BE  <- true;      -- big-endian
    CP0.Config.MT  <- 1;         -- standard TLB
-   CP0.&Status <- 0x044000e0;
+   CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
+   CP0.Status.BEV <- true;
+   CP0.Status.KSU <- '00';
+   CP0.Status.KX <- true;
+   CP0.Status.SX <- true;
+   CP0.Status.UX <- true;
+   CP0.Status.EXL <- true;
+   CP0.Status.ERL <- true;
+   CP0.Count <- 0;
+   CP0.Compare <- 0;
    CP0.PRId <- 0x400;           -- processor ID
    CP0.Index.P <- false;
    CP0.Index.Index <- 0x0;
    CP0.Random.Random <- 0x10;
    CP0.Wired.Wired <- 0x2;
+   JTAG_UART.base_address <- [[uart]::pAddr >>+ 3];
+   JTAG_UART.read_fifo <- Nil;
+   JTAG_UART.write_fifo <- Nil;
+   JTAG_UART.data.RW_DATA <- 0;
+   JTAG_UART.data.RVALID <- false;
+   JTAG_UART.data.RAVAIL <- 0;
+   JTAG_UART.control.RE <- false;
+   JTAG_UART.control.WE <- false;
+   JTAG_UART.control.RI <- false;
+   JTAG_UART.control.WI <- false;
+   JTAG_UART.control.AC <- false;
+   JTAG_UART.control.WSPACE <- -1;
+   TLB_direct <- InitMap (initTLB);
+   TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
    BranchTo <- None;
    LLbit <- None;
    hi <- None;
    lo <- None;
    PC <- [pc];
-   UART_RS232.status <- UART_Status (0x0);
-   UART_RS232.control <- UART_Control (0x0);
-   UART_RS232.status.TRDY <- true;
-   UART_RS232.base_address <- [uart] && ~0b111;
-   TLB_direct <- InitMap (initTLB);
-   TLB_assoc <- InitMap (initTLB);
    addTLB (PC, 0);
-   addTLB ([UART_RS232.base_address], 1);
+   addTLB ([JTAG_UART.base_address] : '000', 1);
    MEM <- InitMap (0x0);
-   gpr <- InitMap (0xAAAAAAAAAAAAAAAA)
+   gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
+   JTAG_UART_write_mm
 }
 
 bool done =

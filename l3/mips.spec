@@ -1402,7 +1402,7 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
 -- Rerserved instruction, i.e. unsuccessful decode.
 -----------------------------------
 define ReservedInstruction =
-   SignalException (RI)
+   SignalException (ResI)
 
 define Run
 

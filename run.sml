@@ -172,42 +172,42 @@ end
    UART I/O
    ------------------------------------------------------------------------ *)
 
-fun uart_outut1 () =
-   if #TRDY (#status (!mips.UART_RS232))
-      then ()
-   else let
-           val c = mips.UART_RS232_putChar ()
-        in
-           case !uart_out of
-              SOME strm => TextIO.output1 (strm, c)
-            | NONE => TextIO.print ("UART out: " ^ String.str c ^ "\n")
-        end
+val bytesToString = String.implode o List.map (Char.chr o BitsN.toNat)
+val stringToBytes = List.map (fn c => BitsN.B (Char.ord c, 8)) o String.explode
 
-fun uart_input1 () =
-   if #RRDY (#status (!mips.UART_RS232))
-      then ()
-   else let
-           val istrm =
-              case !uart_in of
-                 SOME strm => strm
-               | NONE => (print "UART in: "; TextIO.stdIn)
-        in
-           mips.UART_RS232_getChar (TextIO.input1 istrm)
-        end
+fun uart_output () =
+   let
+      val s = bytesToString (mips.JTAG_UART_output ())
+   in
+      if s = ""
+         then ()
+      else case !uart_out of
+              SOME strm => TextIO.output (strm, s)
+            | NONE => TextIO.print ("UART out: " ^ s ^ "\n")
+   end
+
+fun uart_input () =
+   let
+      val n = 0xFFFF - BitsN.toNat (#RAVAIL (#data (!mips.JTAG_UART)))
+   in
+      if n = 0
+         then ()
+      else let
+              val istrm =
+                 case !uart_in of
+                    SOME strm => strm
+                  | NONE => (print "UART in: "; TextIO.stdIn)
+           in
+              mips.JTAG_UART_input (stringToBytes (TextIO.inputN (istrm, n)))
+           end
+   end
 
 fun uart () =
    if !uart_delay <= 0 (* UART turned off *)
       then ()
    else if !uart_countdown <= 0
-      then ( uart_countdown := !uart_delay
-           ; mips.UART_RS232_read_mm ()
-           ; uart_outut1 ()
-           ; uart_input1 ()
-           ; mips.UART_RS232_write_mm ()
-           )
+      then (uart_countdown := !uart_delay; uart_output (); uart_input ())
    else uart_countdown := !uart_countdown - 1
-
-(* fun rxdata () = (mips.UART_RS232_read_mm (); #rxdata (!mips.UART_RS232)) *)
 
 (* ------------------------------------------------------------------------
    Run code
@@ -255,9 +255,9 @@ in
              ( print ("Loading " ^ s ^ "... ")
              ; storeArrayInMem (a, loadIntelHex s))) code
       ; uart_countdown := !uart_delay
+      ; if 0 < !uart_delay then uart_input () else ()
       ; run_mem mx
-      ; mips.UART_RS232_read_mm ()
-      ; uart_outut1 ()
+      ; if 0 < !uart_delay then uart_output () else ()
       )
 end
 
