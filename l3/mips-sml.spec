@@ -508,7 +508,7 @@ word option Fetch =
    }
    else if CP0.Status.IE and CP0.Status.IM<2> and
            JTAG_UART.control.RE and not JTAG_UART.control.RI and
-           [JTAG_UART.data.RAVAIL] <= JTAG_UART.read_threshold then
+           JTAG_UART.read_threshold <= [JTAG_UART.data.RAVAIL] then
    {
       JTAG_UART.control.RI <- true;
       JTAG_UART_write_mm;
@@ -591,6 +591,8 @@ unit initMips (pc::nat, uart::nat) =
    JTAG_UART.control.WI <- false;
    JTAG_UART.control.AC <- false;
    JTAG_UART.control.WSPACE <- -1;
+   JTAG_UART.read_threshold <- 0xFF00;
+   JTAG_UART.write_threshold <- 0xFFF0;
    TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
