@@ -348,6 +348,7 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
       when mask<39:32> <> 0 do
       {
          JTAG_UART.data.RW_DATA <- MemElem<39:32>;
+         JTAG_UART.data.RVALID <- false;
          when JTAG_UART.control.WSPACE <> 0 do
          {
             JTAG_UART.control.WSPACE <- JTAG_UART.control.WSPACE - 1;
@@ -447,16 +448,10 @@ unit JTAG_UART_input (l::byte list) =
 {
    match JTAG_UART.read_fifo : l
    {
-      case Nil =>
-      {
-         JTAG_UART.data.RVALID <- false;
-         JTAG_UART.data.RAVAIL <- 0
-      }
-      case h @ t =>
+      case Nil => JTAG_UART.data.RAVAIL <- 0
+      case t =>
       {
          JTAG_UART.read_fifo <- t;
-         JTAG_UART.data.RW_DATA <- h;
-         JTAG_UART.data.RVALID <- true;
          JTAG_UART.data.RAVAIL <- [Length (t)];
          JTAG_UART.control.AC <- true
       }
@@ -487,46 +482,46 @@ word option Fetch =
                            [TLBEntries - 1]
                         else
                             CP0.Random.Random - 1;
-   if CP0.Status.IE and CP0.Status.IM<7> and CP0.Compare == CP0.Count then
+   when CP0.Status.IE do
    {
-      CP0.Cause.TI <- true;
-      CP0.Cause.IP<7> <- true;
-      SignalException (Int);
-      None
-   }
-   else if CP0.Status.IE and CP0.Status.IM<2> and
-           JTAG_UART.control.WE and not JTAG_UART.control.WI and
-           JTAG_UART.write_threshold <= [JTAG_UART.control.WSPACE] then
-   {
-      JTAG_UART.control.WI <- true;
-      JTAG_UART_write_mm;
-      CP0.Cause.IP<2> <- true;
-      SignalException (Int);
-      None
-   }
-   else if CP0.Status.IE and CP0.Status.IM<2> and
-           JTAG_UART.control.RE and not JTAG_UART.control.RI and
-           JTAG_UART.read_threshold <= [JTAG_UART.data.RAVAIL] then
-   {
-      JTAG_UART.control.RI <- true;
-      JTAG_UART_write_mm;
-      CP0.Cause.IP<2> <- true;
-      SignalException (Int);
-      None
-   }
-   else if PC<1:0> == 0 then
-   {
-      pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
-      if exceptionSignalled then
-         None
+      if CP0.Status.IM<7> and CP0.Compare == CP0.Count then
+      {
+         CP0.Cause.TI <- true;
+         CP0.Cause.IP<7> <- true;
+         SignalException (Int)
+      }
+      else if CP0.Status.IM<2> and JTAG_UART.control.WE and
+              not JTAG_UART.control.WI and
+              JTAG_UART.write_threshold <= [JTAG_UART.control.WSPACE] then
+      {
+         JTAG_UART.control.WI <- true;
+         JTAG_UART_write_mm;
+         CP0.Cause.IP<2> <- true;
+         SignalException (Int)
+      }
+      else if CP0.Status.IM<2> and JTAG_UART.control.RE and
+              not JTAG_UART.control.RI and
+              JTAG_UART.read_threshold <= [JTAG_UART.data.RAVAIL] then
+      {
+         JTAG_UART.control.RI <- true;
+         JTAG_UART_write_mm;
+         CP0.Cause.IP<2> <- true;
+         SignalException (Int)
+      }
+      else if PC<1:0> == 0 then
+         nothing
       else
-         Some (loadWord32 (pc))
-   }
+      {
+         CP0.BadVAddr <- PC;
+         SignalException (AdEL)
+      }
+   };
+   if exceptionSignalled then
+      None
    else
    {
-      CP0.BadVAddr <- PC;
-      SignalException (AdEL);
-      None
+      pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
+      if exceptionSignalled then None else Some (loadWord32 (pc))
    }
 }
 
