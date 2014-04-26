@@ -560,11 +560,11 @@ unit initMips (pc::nat, uart::nat) =
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
    CP0.Status.BEV <- true;
    CP0.Status.KSU <- '00';
+   CP0.Status.EXL <- false;
+   CP0.Status.ERL <- false;
    CP0.Status.KX <- true;
    CP0.Status.SX <- true;
    CP0.Status.UX <- true;
-   CP0.Status.EXL <- true;
-   CP0.Status.ERL <- true;
    CP0.Count <- 0;
    CP0.Compare <- 0;
    CP0.PRId <- 0x400;           -- processor ID

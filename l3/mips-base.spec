@@ -180,12 +180,12 @@ unit SignalException (ExceptionType::ExceptionType) =
       {
          if IsSome (BranchDelay) then
          {
-            CP0.EPC <- PC - 4;
+            CP0.EPC <- PC;
             CP0.Cause.BD <- true
          }
          else
          {
-            CP0.EPC <- PC;
+            CP0.EPC <- PC + 4;
             CP0.Cause.BD <- false
          }
       };
