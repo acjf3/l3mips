@@ -297,7 +297,11 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
 -- Update JTAG_UART memory-map
 
 unit JTAG_UART_write_mm =
-   MEM (JTAG_UART.base_address) <- JTAG_UART.&data : JTAG_UART.&control
+   match JTAG_UART.&data, JTAG_UART.&control
+   {
+      case 'a`8 b`8 c`8 d', 'e`8 f`8 g`8 h' =>
+         MEM (JTAG_UART.base_address) <- d : c : b : a : h : g : f : e
+   }
 
 -- Pimitive memory load
 
@@ -508,20 +512,21 @@ word option Fetch =
          CP0.Cause.IP<2> <- true;
          SignalException (Int)
       }
-      else if PC<1:0> == 0 then
-         nothing
       else
-      {
-         CP0.BadVAddr <- PC;
-         SignalException (AdEL)
-      }
+         nothing
    };
    if exceptionSignalled then
       None
-   else
+   else if PC<1:0> == 0 then
    {
       pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
       if exceptionSignalled then None else Some (loadWord32 (pc))
+   }
+   else
+   {
+      CP0.BadVAddr <- PC;
+      SignalException (AdEL);
+      None
    }
 }
 
