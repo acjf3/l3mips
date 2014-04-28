@@ -486,7 +486,7 @@ word option Fetch =
                            [TLBEntries - 1]
                         else
                             CP0.Random.Random - 1;
-   when CP0.Status.IE do
+   when CP0.Status.IE and not (CP0.Status.EXL or CP0.Status.ERL) do
    {
       if CP0.Status.IM<7> and CP0.Compare == CP0.Count then
       {
