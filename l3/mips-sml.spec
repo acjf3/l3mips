@@ -296,12 +296,11 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
 
 -- Update JTAG_UART memory-map
 
+word flip_endian (w::word) = match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+
 unit JTAG_UART_write_mm =
-   match JTAG_UART.&data, JTAG_UART.&control
-   {
-      case 'a`8 b`8 c`8 d', 'e`8 f`8 g`8 h' =>
-         MEM (JTAG_UART.base_address) <- d : c : b : a : h : g : f : e
-   }
+   MEM (JTAG_UART.base_address) <-
+     flip_endian (JTAG_UART.&data) : flip_endian (JTAG_UART.&control)
 
 -- Pimitive memory load
 
