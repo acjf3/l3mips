@@ -48,6 +48,9 @@ local
            in
               SOME (a, BitsN.concat (if !be then l else List.rev l))
            end
+   fun toArray l =
+      Array.fromList
+        (if List.length l mod 2 = 0 then l else l @ [BitsN.zero 32])
 in
    fun loadIntelHex s =
       let
@@ -59,7 +62,7 @@ in
             [] => raise Fail ("File empty: " ^ s)
           | h :: t =>
               case OS.Path.ext s of
-                 SOME "phex" => (Array.fromList (List.map w32 l)
+                 SOME "phex" => (toArray (List.map w32 l)
                                  handle Option.Option => err "parse" s)
                | _ =>
                  (case readIntelHex h of
@@ -85,7 +88,7 @@ in
                                     | NONE => checkEnd s (pa, l))
                                 (a0, [w0]) t
                        in
-                          Array.fromList (List.rev r)
+                          toArray (List.rev r)
                        end
                    | NONE => checkEnd h (Array.fromList []))
       end
@@ -112,7 +115,7 @@ fun printHex a =
 
 fun storeArrayInMem (base, marray) =
    let
-      val b = base div 8
+      val b = IntInf.andb (base div 8, 0x1fffffffff)
    in
       L3.for (0, Array.length marray div 2 - 1,
         fn i =>
@@ -228,7 +231,7 @@ fun loop mx i =
     ; if 2 <= !trace_level then printLog () else ()
     ; dumpRegistersOnCP0_26 ()
     ; if mips.done () orelse i = mx
-         then print ("Completed " ^ Int.toString i ^ " instructions.\n")
+         then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
       else loop mx (if not exl0 andalso #EXL (#Status (!mips.CP0))
                        then (print "exception\n"; i)
                     else i + 1)
@@ -326,9 +329,9 @@ val () =
     | l =>
        let
           val (p, l) = processOption "--pc" l
-          val p = Option.getOpt (Option.map getNumber p, 0x0000000040000000)
+          val p = Option.getOpt (Option.map getNumber p, 0x9800000040000000)
           val (u, l) = processOption "--uart" l
-          val u = Option.getOpt (Option.map getNumber u, 0x000000007f002100)
+          val u = Option.getOpt (Option.map getNumber u, 0x000000007f000000)
           val (c, l) = processOption "--cycles" l
           val c = Option.getOpt (Option.map getNumber c, ~1)
           val (t, l) = processOption "--trace" l

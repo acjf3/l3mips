@@ -307,9 +307,8 @@ unit JTAG_UART_write_mm =
 dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
 {  a = pAddr<39:3>;
-   var d = MEM (a);
-   b = [pAddr<2:0>]::nat;
-   when a == JTAG_UART.base_address and b < 4 and 4 <= b + [AccessLength] do
+   d = MEM (a);
+   when a == JTAG_UART.base_address and pAddr<2:0> == 0 do
    {
       match JTAG_UART.read_fifo
       {
@@ -348,9 +347,9 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
    mark (w_mem (pAddr, mask, AccessLength, MemElem));
    if a == JTAG_UART.base_address then
    {
-      when mask<39:32> <> 0 do
+      when mask<63:56> <> 0 do
       {
-         JTAG_UART.data.RW_DATA <- MemElem<39:32>;
+         JTAG_UART.data.RW_DATA <- MemElem<63:56>;
          JTAG_UART.data.RVALID <- false;
          when JTAG_UART.control.WSPACE <> 0 do
          {
@@ -359,9 +358,9 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
                JTAG_UART.data.RW_DATA @ JTAG_UART.write_fifo
          }
       };
-      when mask<0> do JTAG_UART.control.RE <- MemElem<0>;
-      when mask<1> do JTAG_UART.control.WE <- MemElem<1>;
-      when mask<10> and MemElem<10> do JTAG_UART.control.AC <- false;
+      when mask<24> do JTAG_UART.control.RE <- MemElem<24>;
+      when mask<25> do JTAG_UART.control.WE <- MemElem<25>;
+      when mask<18> and MemElem<18> do JTAG_UART.control.AC <- false;
       JTAG_UART.control.WI <-false; -- could have cleared write interrupt
       JTAG_UART_write_mm
    }
@@ -575,7 +574,7 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Index.P <- false;
    CP0.Index.Index <- 0x0;
    CP0.Random.Random <- 0x10;
-   CP0.Wired.Wired <- 0x2;
+   CP0.Wired.Wired <- 0x1;
    JTAG_UART.base_address <- [[uart]::pAddr >>+ 3];
    JTAG_UART.read_threshold <- 0xFF00;
    JTAG_UART.write_threshold <- 0xFFF0;
@@ -598,8 +597,7 @@ unit initMips (pc::nat, uart::nat) =
    hi <- None;
    lo <- None;
    PC <- [pc];
-   addTLB (PC, 0);
-   addTLB ([JTAG_UART.base_address] : '000', 1);
+   addTLB ([JTAG_UART.base_address] : '000', 0);
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
    JTAG_UART_write_mm
