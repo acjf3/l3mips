@@ -604,14 +604,8 @@ unit initMips (pc::nat, uart::nat) =
 }
 
 bool done =
-   return
-     (match log
-      {
-         case list {w_c0 (23, _)} => true
-         case _ => false
-      } or
-      match BranchDelay
-      {
-         case Some (addr) => addr == PC - 8
-         case None => false
-      })
+   match log
+   {
+      case list {w_c0 (23, _)} => true
+      case _ => false
+   }
