@@ -153,6 +153,14 @@ struct
    fun op >>+ (l, s) = List.take (l, List.length l - Nat.toInt s)
                        handle General.Subscript => []
 
+   fun op #>> (l, s) =
+      let
+         val n = List.length l
+         val x = n - s mod n
+      in
+         List.drop (l, x) @ List.take (l, x)
+      end
+
    fun setSize s l =
       let
          val n = List.length l
