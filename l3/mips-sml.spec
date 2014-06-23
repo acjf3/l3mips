@@ -105,41 +105,6 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
 }
 
 --------------------------------------------------
--- JTAG UART support
---------------------------------------------------
-
-register JTAG_UART_data :: word
-{
-  31-16 : RAVAIL    -- Number of characters reamining in read FIFO
-     15 : RVALID    -- Indicates whether RW_DATA field is valid
-    7-0 : RW_DATA   -- Value to transfer to/from JTAG core
-}
-
-register JTAG_UART_control :: word
-{
-  31-16 : WSPACE    -- Number of spaces available in write FIFO
-     10 : AC        -- Indicates that there has been JTAG activity since last
-                    -- cleared
-      9 : WI        -- Write interrupt is pending
-      8 : RI        -- Read interrupt is pending
-      1 : WE        -- Write interrupt-enable
-      0 : RE        -- Read interrupt-enable
-}
-
-record JTAG_UART
-{
-   base_address      :: mAddr
-   data              :: JTAG_UART_data
-   control           :: JTAG_UART_control
-   read_fifo         :: byte list
-   write_fifo        :: byte list
-   read_threshold    :: nat
-   write_threshold   :: nat
-}
-
-declare JTAG_UART :: JTAG_UART
-
---------------------------------------------------
 -- Memory access
 --------------------------------------------------
 
@@ -310,22 +275,7 @@ dword LoadMemory (CCA::CCA, AccessLength::bits(3),
    d = MEM (a);
    when a == JTAG_UART.base_address and pAddr<2:0> == 0 do
    {
-      match JTAG_UART.read_fifo
-      {
-         case Nil =>
-         {
-            JTAG_UART.data.RAVAIL <- 0; -- should already hold
-            JTAG_UART.data.RVALID <- false
-         }
-         case h @ t =>
-         {
-            JTAG_UART.data.RW_DATA <- h;
-            JTAG_UART.data.RAVAIL <- [Length (t)];
-            JTAG_UART.data.RVALID <- true;
-            JTAG_UART.read_fifo <- t
-         }
-      };
-      JTAG_UART.control.RI <- false; -- could have cleared read interrupt
+      JTAG_UART_load;
       JTAG_UART_write_mm
    };
    return d
@@ -347,21 +297,7 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
    mark (w_mem (pAddr, mask, AccessLength, MemElem));
    if a == JTAG_UART.base_address then
    {
-      when mask<63:56> <> 0 do
-      {
-         JTAG_UART.data.RW_DATA <- MemElem<63:56>;
-         JTAG_UART.data.RVALID <- false;
-         when JTAG_UART.control.WSPACE <> 0 do
-         {
-            JTAG_UART.control.WSPACE <- JTAG_UART.control.WSPACE - 1;
-            JTAG_UART.write_fifo <-
-               JTAG_UART.data.RW_DATA @ JTAG_UART.write_fifo
-         }
-      };
-      when mask<24> do JTAG_UART.control.RE <- MemElem<24>;
-      when mask<25> do JTAG_UART.control.WE <- MemElem<25>;
-      when mask<18> and MemElem<18> do JTAG_UART.control.AC <- false;
-      JTAG_UART.control.WI <-false; -- could have cleared write interrupt
+      JTAG_UART_store (mask, MemElem);
       JTAG_UART_write_mm
    }
    else
@@ -440,37 +376,6 @@ define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
    vAddr = GPR(base) + SignExtend(offset);
    pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
    nothing
-}
-
---------------------------------------------------
--- JTAG UART
---------------------------------------------------
-
-unit JTAG_UART_input (l::byte list) =
-{
-   match JTAG_UART.read_fifo : l
-   {
-      case Nil => JTAG_UART.data.RAVAIL <- 0
-      case t =>
-      {
-         JTAG_UART.read_fifo <- t;
-         JTAG_UART.data.RAVAIL <- [Length (t)];
-         JTAG_UART.control.AC <- true
-      }
-   };
-   JTAG_UART.control.RI <- false;
-   JTAG_UART_write_mm
-}
-
-byte list JTAG_UART_output =
-{
-   JTAG_UART.control.AC <- true;
-   l = Reverse (JTAG_UART.write_fifo);
-   JTAG_UART.write_fifo <- Nil;
-   JTAG_UART.control.WSPACE <- -1;
-   JTAG_UART.control.WI <- false;
-   JTAG_UART_write_mm;
-   return l
 }
 
 --------------------------------------------------
@@ -575,20 +480,6 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Index.Index <- 0x0;
    CP0.Random.Random <- 0x10;
    CP0.Wired.Wired <- 0x1;
-   JTAG_UART.base_address <- [[uart]::pAddr >>+ 3];
-   JTAG_UART.read_threshold <- 0xFF00;
-   JTAG_UART.write_threshold <- 0xFFF0;
-   JTAG_UART.read_fifo <- Nil;
-   JTAG_UART.write_fifo <- Nil;
-   JTAG_UART.data.RW_DATA <- 0;
-   JTAG_UART.data.RVALID <- false;
-   JTAG_UART.data.RAVAIL <- 0;
-   JTAG_UART.control.RE <- false;
-   JTAG_UART.control.WE <- false;
-   JTAG_UART.control.RI <- false;
-   JTAG_UART.control.WI <- false;
-   JTAG_UART.control.AC <- false;
-   JTAG_UART.control.WSPACE <- -1;
    TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
@@ -600,6 +491,7 @@ unit initMips (pc::nat, uart::nat) =
    addTLB ([JTAG_UART.base_address] : '000', 0);
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
+   JTAG_UART_initialise (uart);
    JTAG_UART_write_mm
 }
 

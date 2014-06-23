@@ -181,6 +181,7 @@ val stringToBytes = List.map (fn c => BitsN.B (Char.ord c, 8)) o String.explode
 fun uart_output () =
    let
       val s = bytesToString (mips.JTAG_UART_output ())
+      val () = mips.JTAG_UART_write_mm ()
    in
       if s = ""
          then ()
@@ -202,6 +203,7 @@ fun uart_input () =
                   | NONE => (print "UART in: "; TextIO.stdIn)
            in
               mips.JTAG_UART_input (stringToBytes (TextIO.inputN (istrm, n)))
+            ; mips.JTAG_UART_write_mm ()
            end
    end
 
