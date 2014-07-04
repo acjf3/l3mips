@@ -40,6 +40,10 @@ sig
 
    val << : bitstring * Nat.nat -> bitstring
    val #>> : bitstring * Nat.nat -> bitstring
+   val >>+ : bitstring * Nat.nat -> bitstring
    val + : bitstring * bitstring -> bitstring
+   val || : bitstring * bitstring -> bitstring
+   val && : bitstring * bitstring -> bitstring
+   val ?? : bitstring * bitstring -> bitstring
    val @@ : bitstring * bitstring -> bitstring
 end
