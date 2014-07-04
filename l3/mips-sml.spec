@@ -187,7 +187,7 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
    UNKNOWN
 }
 
-CCA option * bool CheckSegment (vAddr::vAddr) =
+(pAddr * CCA) option * bool CheckSegment (vAddr::vAddr) =
    if UserMode then
       None, vAddr <+ 0x0000_0100_0000_0000      -- xuseg
    else if SupervisorMode then
@@ -204,16 +204,16 @@ CCA option * bool CheckSegment (vAddr::vAddr) =
       None, true
    else if 0x8000_0000_0000_0000 <=+ vAddr and
            vAddr <+  0xC000_0000_0000_0000 then -- xkphys (unmapped)
-      Some (vAddr<61:59>), vAddr<58:40> == 0
+      Some (vAddr<39:0>, vAddr<61:59>), vAddr<58:40> == 0
    else if 0xC000_0000_0000_0000 <=+ vAddr and
            vAddr <+  0xC000_00FF_8000_0000 then -- xkseg
       None, true
    else if 0xFFFF_FFFF_8000_0000 <=+ vAddr and
            vAddr <+  0xFFFF_FFFF_A000_0000 then -- ckseg0 (unmapped)
-      Some (CP0.Config.K0), true
+      Some (vAddr<39:0> - 0xFF_8000_0000, CP0.Config.K0), true
    else if 0xFFFF_FFFF_A000_0000 <=+ vAddr and
            vAddr <+  0xFFFF_FFFF_C000_0000 then -- ckseg1 (unmapped+uncached)
-      Some (2), true
+      Some (vAddr<39:0> - 0xFF_A000_0000, 2), true
    else
       None, 0xFFFF_FFFF_C000_0000 <=+ vAddr     -- cksseg/ckseg3
 
@@ -223,7 +223,7 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
    if valid then
       match unmapped
       {
-         case Some (cca) => vAddr<39:0>, cca
+         case Some (pAddr, cca) => pAddr, cca
          case None =>
             match LookupTLB (vAddr<63:62>, vAddr<39:13>)
             {
