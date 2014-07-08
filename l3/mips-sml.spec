@@ -350,14 +350,16 @@ define TLBR =
 
 define TLBWI =
 {
-   i`4 = [CP0.Index.Index];
-   if i >= [TLBEntries] then
+   if [CP0.Index.Index] >= TLBEntries then
    {
       j = CP0.EntryHi.VPN2<6:0>;
       TLB_direct (j) <- ModifyTLB (TLB_direct (j))
    }
    else
+   {
+      i`4 = [CP0.Index.Index];
       TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
+   }
 }
 
 define TLBWR =
