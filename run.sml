@@ -331,7 +331,7 @@ val () =
     | l =>
        let
           val (p, l) = processOption "--pc" l
-          val p = Option.getOpt (Option.map getNumber p, 0x9800000040000000)
+          val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l
           val u = Option.getOpt (Option.map getNumber u, 0x000000007f000000)
           val (c, l) = processOption "--cycles" l
