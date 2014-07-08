@@ -85,8 +85,15 @@ register CauseRegister :: word
    6-2 : ExcCode  -- Exception code
 }
 
+register Context :: dword
+{
+ 63-23 : PTEBase  -- PTE base
+  22-4 : BadVPN2  -- The bad Virtual Page Number
+}
+
 register XContext :: dword
 {
+ 63-33 : PTEBase  -- PTE base
  32-31 : R        -- The region
   30-4 : BadVPN2  -- The bad Virtual Page Number
 }
@@ -97,7 +104,7 @@ record CP0
    Random   :: Random          -- 1   Pseudorandom pointer to TLB array
    EntryLo0 :: EntryLo         -- 2   Low half of TLB entry for even VPN
    EntryLo1 :: EntryLo         -- 3   Low half of TLB entry for odd VPN
--- Context  :: word            -- 4   Kernel virtual page table entry (PTE)
+   Context  :: Context         -- 4   Kernel virtual page table entry (PTE)
    PageMask :: PageMask        -- 5   TLB page mask
    Wired    :: Wired           -- 6   Number of wired TLB entries
 -- HWREna   :: word            -- 7   See RDHWR instruction

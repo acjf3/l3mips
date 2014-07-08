@@ -63,6 +63,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  1, 0 => [CP0.&Random]
          case 0,  2, 0 =>  CP0.&EntryLo0
          case 0,  3, 0 =>  CP0.&EntryLo1
+         case 0,  4, 0 =>  CP0.&Context
          case 0,  5, 0 => [CP0.&PageMask]
          case 0,  8, 0 =>  CP0.BadVAddr
          case 0,  9, 0 => [CP0.Count]
@@ -88,6 +89,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  0, 0 => CP0.Index.Index <- value<5:0>
          case 0,  2, 0 => CP0.&EntryLo0 <- value
          case 0,  3, 0 => CP0.&EntryLo1 <- value
+         case 0,  4, 0 => CP0.Context.PTEBase <- value<63:23>
          case 0,  5, 0 => CP0.PageMask.Mask <- value<24:13>
          case 0,  9, 0 => CP0.Count <- value<31:0>
          case 0, 10, 0 => CP0.&EntryHi <- value
@@ -96,6 +98,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 13, 0 => CP0.&Cause <- value<31:0>
          case 0, 14, 0 => CP0.EPC <- value
          case 0, 16, 0 => CP0.Config.K0 <- value<2:0>
+         case 0, 20, 0 => CP0.XContext.PTEBase <- value<63:33>
          case 0, 23, 0 => CP0.Debug <- value<31:0>
          case 0, 26, 0 => CP0.ErrCtl <- value<31:0>
          case 0, 30, 0 => CP0.ErrorEPC <- value
@@ -184,6 +187,7 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
    CP0.EntryHi.ASID <- asid;
    CP0.XContext.R <- r;
    CP0.XContext.BadVPN2 <- vpn2;
+   CP0.Context.BadVPN2 <- vAddr<31:13>;
    UNKNOWN
 }
 
