@@ -490,10 +490,10 @@ unit initMips (pc::nat, uart::nat) =
    hi <- None;
    lo <- None;
    PC <- [pc];
-   addTLB ([JTAG_UART.base_address] : '000', 0);
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
    JTAG_UART_initialise (uart);
+   addTLB ([JTAG_UART.base_address] : '000', 0);
    JTAG_UART_write_mm
 }
 
