@@ -254,6 +254,7 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
       }
    else
    {
+      CP0.BadVAddr <- vAddr;
       SignalException (if LorS == LOAD then AdEL else AdES);
       UNKNOWN
    }
