@@ -236,7 +236,18 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                case list {(_, e)} =>
                   if e.G or e.ASID == CP0.EntryHi.ASID then
                   {
-                     PFN, C, D, V = if vAddr<12> then
+                     EvenOddBit = match e.Mask
+                                  {
+                                    case 0b0000_0000_0000 => 12
+                                    case 0b0000_0000_0011 => 14
+                                    case 0b0000_0000_1111 => 16
+                                    case 0b0000_0011_1111 => 18
+                                    case 0b0000_1111_1111 => 20
+                                    case 0b0011_1111_1111 => 22
+                                    case 0b1111_1111_1111 => 24
+                                    case _                => UNKNOWN
+                                  };
+                     PFN, C, D, V = if vAddr<EvenOddBit> then
                                        e.PFN1, e.C1, e.D1, e.V1
                                     else
                                        e.PFN0, e.C0, e.D0, e.V0;
@@ -244,7 +255,13 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                         if not D and LorS == STORE then
                            SignalTLBException (Mod, e.ASID, vAddr)
                         else
-                           PFN : vAddr<11:0>, C
+                        {
+                          PFN_     = [PFN]   :: bool list;
+                          vAddr_   = [vAddr] :: bool list;
+                          pAddr    = PFN_<27:EvenOddBit-12>
+                                   : vAddr_<EvenOddBit-1:0>;
+                          ([pAddr], C)
+                        }
                      else
                      {
                         exc = if LorS == LOAD then TLBL else TLBS;
