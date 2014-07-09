@@ -417,9 +417,14 @@ define TLBWR =
 -------------------------
 define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
 {
-   vAddr = GPR(base) + SignExtend(offset);
-   pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
-   nothing
+   if !CP0.Status.CU0 and !KernelMode then
+     SignalException(CpU)
+   else
+   {
+     vAddr = GPR(base) + SignExtend(offset);
+     pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
+     nothing
+   }
 }
 
 --------------------------------------------------
