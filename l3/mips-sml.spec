@@ -141,14 +141,16 @@ declare
 {
    e = TLB_direct (vpn2<6:0>);
    nmask`27 = ~[e.Mask];
-   var found = if e.VPN2 && nmask == vpn2 && nmask and e.R == r then
+   var found = if e.VPN2 && nmask == vpn2 && nmask and e.R == r
+                  and (e.G or e.ASID == CP0.EntryHi.ASID) then
                    list {(16, e)}
                else Nil;
    for i in 0 .. TLBEntries - 1 do
    {
       e = TLB_assoc ([i]);
       nmask`27 = ~[e.Mask];
-      when e.VPN2 && nmask == vpn2 && nmask and e.R == r do
+      when e.VPN2 && nmask == vpn2 && nmask and e.R == r 
+                  and (e.G or e.ASID == CP0.EntryHi.ASID) do
          found <- ([i], e) @ found
    };
    return found
@@ -234,7 +236,6 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                case Nil =>
                   SignalTLBException (XTLBRefill, CP0.EntryHi.ASID, vAddr)
                case list {(_, e)} =>
-                  if e.G or e.ASID == CP0.EntryHi.ASID then
                   {
                      EvenOddBit = match e.Mask
                                   {
@@ -268,8 +269,6 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                         SignalTLBException (exc, e.ASID, vAddr)
                      }
                   }
-                  else
-                     SignalTLBException (XTLBRefill, e.ASID, vAddr)
                case _ => #UNPREDICTABLE ("TLB: multiple matches")
             }
       }
