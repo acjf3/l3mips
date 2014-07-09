@@ -331,65 +331,85 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
 --------------------------------------------------
 
 define TLBP =
-   match LookupTLB (CP0.EntryHi.R, CP0.EntryHi.VPN2)
+   if !CP0.Status.CU0 and !KernelMode then
+     SignalException(CpU)
+   else
    {
-      case Nil => CP0.Index.P <- true
-      case list {(i, e)} =>
-         if e.G or e.ASID == CP0.EntryHi.ASID then
-         {
-            CP0.Index.P <- false;
-            CP0.Index.Index <- i
-         }
-         else
-            CP0.Index.P <- true
-      case _ => #UNPREDICTABLE ("TLB: multiple matches")
+     match LookupTLB (CP0.EntryHi.R, CP0.EntryHi.VPN2)
+     {
+        case Nil => CP0.Index.P <- true
+        case list {(i, e)} =>
+           if e.G or e.ASID == CP0.EntryHi.ASID then
+           {
+              CP0.Index.P <- false;
+              CP0.Index.Index <- i
+           }
+           else
+              CP0.Index.P <- true
+        case _ => #UNPREDICTABLE ("TLB: multiple matches")
+     }
    }
 
 define TLBR =
 {
-   i = CP0.Index.Index;
-   if i >= [TLBEntries] then
-      #UNPREDICTABLE ("TLBR: index > TLBEntries - 1")
+   if !CP0.Status.CU0 and !KernelMode then
+     SignalException(CpU)
    else
    {
-      e = TLB_assoc ([i]);
-      CP0.PageMask.Mask <- e.Mask;
-      CP0.EntryHi.R <- e.R;
-      CP0.EntryHi.VPN2 <- e.VPN2;
-      CP0.EntryHi.ASID <- e.ASID;
-      CP0.EntryLo1.PFN <- e.PFN1;
-      CP0.EntryLo1.C <- e.C1;
-      CP0.EntryLo1.D <- e.D1;
-      CP0.EntryLo1.V <- e.V1;
-      CP0.EntryLo1.G <- e.G;
-      CP0.EntryLo0.PFN <- e.PFN0;
-      CP0.EntryLo0.C <- e.C0;
-      CP0.EntryLo0.D <- e.D0;
-      CP0.EntryLo0.V <- e.V0;
-      CP0.EntryLo0.G <- e.G
+     i = CP0.Index.Index;
+     if i >= [TLBEntries] then
+        #UNPREDICTABLE ("TLBR: index > TLBEntries - 1")
+     else
+     {
+        e = TLB_assoc ([i]);
+        CP0.PageMask.Mask <- e.Mask;
+        CP0.EntryHi.R <- e.R;
+        CP0.EntryHi.VPN2 <- e.VPN2;
+        CP0.EntryHi.ASID <- e.ASID;
+        CP0.EntryLo1.PFN <- e.PFN1;
+        CP0.EntryLo1.C <- e.C1;
+        CP0.EntryLo1.D <- e.D1;
+        CP0.EntryLo1.V <- e.V1;
+        CP0.EntryLo1.G <- e.G;
+        CP0.EntryLo0.PFN <- e.PFN0;
+        CP0.EntryLo0.C <- e.C0;
+        CP0.EntryLo0.D <- e.D0;
+        CP0.EntryLo0.V <- e.V0;
+        CP0.EntryLo0.G <- e.G
+     }
    }
 }
 
 define TLBWI =
 {
-   if [CP0.Index.Index] >= TLBEntries then
-   {
-      j = CP0.EntryHi.VPN2<6:0>;
-      TLB_direct (j) <- ModifyTLB (TLB_direct (j))
-   }
+   if !CP0.Status.CU0 and !KernelMode then
+     SignalException(CpU)
    else
    {
-      i`4 = [CP0.Index.Index];
-      TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
-   }
+     if [CP0.Index.Index] >= TLBEntries then
+     {
+        j = CP0.EntryHi.VPN2<6:0>;
+        TLB_direct (j) <- ModifyTLB (TLB_direct (j))
+     }
+     else
+     {
+        i`4 = [CP0.Index.Index];
+        TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
+     }
+  }
 }
 
 define TLBWR =
 {
-   j = CP0.EntryHi.VPN2<6:0>;
-   old = TLB_direct (j);
-   TLB_direct (j) <- ModifyTLB (old);
-   when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+   if !CP0.Status.CU0 and !KernelMode then
+     SignalException(CpU)
+   else
+   {
+     j = CP0.EntryHi.VPN2<6:0>;
+     old = TLB_direct (j);
+     TLB_direct (j) <- ModifyTLB (old);
+     when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+   }
 }
 
 -------------------------
