@@ -1167,17 +1167,22 @@ define SYSCALL = SignalException (Sys)
 -----------------------------------
 define ERET =
 {
-   if CP0.Status.ERL then
+   if CP0.Status.CU0 or KernelMode then
    {
-      PC <- CP0.ErrorEPC - 4;
-      CP0.Status.ERL <- false
+      if CP0.Status.ERL then
+      {
+         PC <- CP0.ErrorEPC - 4;
+         CP0.Status.ERL <- false
+      }
+      else
+      {
+         PC <- CP0.EPC - 4;
+         CP0.Status.EXL <- false
+      };
+      LLbit <- Some (false)
    }
    else
-   {
-      PC <- CP0.EPC - 4;
-      CP0.Status.EXL <- false
-   };
-   LLbit <- Some (false)
+     SignalException (CpU)
 }
 
 -----------------------------------
