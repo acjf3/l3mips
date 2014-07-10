@@ -246,7 +246,8 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                                     case 0b0000_1111_1111 => 20
                                     case 0b0011_1111_1111 => 22
                                     case 0b1111_1111_1111 => 24
-                                    case _                => UNKNOWN
+                                    case _                =>
+                                      #UNPREDICTABLE ("TLB: bad mask")
                                   };
                      PFN, C, D, V = if vAddr<EvenOddBit> then
                                        e.PFN1, e.C1, e.D1, e.V1
