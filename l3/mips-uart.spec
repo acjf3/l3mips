@@ -87,15 +87,10 @@ unit JTAG_UART_input (l::byte list) =
 
 unit JTAG_UART_store (mask::dword, MemElem::dword) =
 {
-   when mask<63:56> <> 0 do
+   when mask<63:56> <> 0 and JTAG_UART.control.WSPACE <> 0 do
    {
-      JTAG_UART.data.RW_DATA <- MemElem<63:56>;
-      JTAG_UART.data.RVALID <- false;
-      when JTAG_UART.control.WSPACE <> 0 do
-      {
-         JTAG_UART.control.WSPACE <- JTAG_UART.control.WSPACE - 1;
-         JTAG_UART.write_fifo <- JTAG_UART.data.RW_DATA @ JTAG_UART.write_fifo
-      }
+      JTAG_UART.control.WSPACE <- JTAG_UART.control.WSPACE - 1;
+      JTAG_UART.write_fifo <- MemElem<63:56> @ JTAG_UART.write_fifo
    };
    when mask<24> do JTAG_UART.control.RE <- MemElem<24>;
    when mask<25> do JTAG_UART.control.WE <- MemElem<25>;
