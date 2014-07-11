@@ -1166,7 +1166,6 @@ define SYSCALL = SignalException (Sys)
 -- ERET
 -----------------------------------
 define ERET =
-{
    if CP0.Status.CU0 or KernelMode then
    {
       if CP0.Status.ERL then
@@ -1183,7 +1182,6 @@ define ERET =
    }
    else
      SignalException (CpU)
-}
 
 -----------------------------------
 -- MTC0 rt, rd

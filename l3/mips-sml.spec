@@ -149,8 +149,8 @@ declare
    {
       e = TLB_assoc ([i]);
       nmask`27 = ~[e.Mask];
-      when e.VPN2 && nmask == vpn2 && nmask and e.R == r 
-                  and (e.G or e.ASID == CP0.EntryHi.ASID) do
+      when e.VPN2 && nmask == vpn2 && nmask and e.R == r
+           and (e.G or e.ASID == CP0.EntryHi.ASID) do
          found <- ([i], e) @ found
    };
    return found
@@ -334,7 +334,6 @@ define TLBP =
    if !CP0.Status.CU0 and !KernelMode then
      SignalException(CpU)
    else
-   {
      match LookupTLB (CP0.EntryHi.R, CP0.EntryHi.VPN2)
      {
         case Nil => CP0.Index.P <- true
@@ -348,10 +347,8 @@ define TLBP =
               CP0.Index.P <- true
         case _ => #UNPREDICTABLE ("TLB: multiple matches")
      }
-   }
 
 define TLBR =
-{
    if !CP0.Status.CU0 and !KernelMode then
      SignalException(CpU)
    else
@@ -378,10 +375,8 @@ define TLBR =
         CP0.EntryLo0.G <- e.G
      }
    }
-}
 
 define TLBWI =
-{
    if !CP0.Status.CU0 and !KernelMode then
      SignalException(CpU)
    else
@@ -397,10 +392,8 @@ define TLBWI =
         TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
      }
   }
-}
 
 define TLBWR =
-{
    if !CP0.Status.CU0 and !KernelMode then
      SignalException(CpU)
    else
@@ -410,13 +403,11 @@ define TLBWR =
      TLB_direct (j) <- ModifyTLB (old);
      when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
    }
-}
 
 -------------------------
 -- CACHE op, offset(base)
 -------------------------
 define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
-{
    if !CP0.Status.CU0 and !KernelMode then
      SignalException(CpU)
    else
@@ -425,7 +416,6 @@ define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
      pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
      nothing
    }
-}
 
 --------------------------------------------------
 -- Instruction fetch
