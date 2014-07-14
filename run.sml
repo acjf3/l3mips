@@ -187,7 +187,7 @@ fun uart_output () =
          then ()
       else case !uart_out of
               SOME strm => TextIO.output (strm, s)
-            | NONE => TextIO.print ("UART out: " ^ s ^ "\n")
+            | NONE => TextIO.print s
    end
 
 fun uart_input () =
@@ -197,13 +197,18 @@ fun uart_input () =
       if n = 0
          then ()
       else let
-              val istrm =
+              val (readN, istrm) =
                  case !uart_in of
-                    SOME strm => strm
-                  | NONE => (print "UART in: "; TextIO.stdIn)
+                    SOME strm => (n, strm)
+                  | NONE => case TextIO.canInput (TextIO.stdIn, n) of
+                               NONE => (0, TextIO.stdIn)
+                             | SOME x => (x, TextIO.stdIn)
            in
-              mips.JTAG_UART_input (stringToBytes (TextIO.inputN (istrm, n)))
-            ; mips.JTAG_UART_write_mm ()
+             if readN > 0 then (
+                mips.JTAG_UART_input (stringToBytes
+                                       (TextIO.inputN (istrm, readN)))
+              ; mips.JTAG_UART_write_mm ()
+             ) else ()
            end
    end
 
