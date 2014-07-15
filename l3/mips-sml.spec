@@ -24,6 +24,8 @@ declare log :: event list
 unit mark (e::event) = log <- e @ log
 unit unmark = log <- Tail (log)
 
+nat TLBEntries = 16
+
 --------------------------------------------------
 -- Gereral purpose register access
 --------------------------------------------------
@@ -65,6 +67,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  3, 0 =>  CP0.&EntryLo1
          case 0,  4, 0 =>  CP0.&Context
          case 0,  5, 0 => [CP0.&PageMask]
+         case 0,  6, 0 => [CP0.&Wired]
          case 0,  8, 0 =>  CP0.BadVAddr
          case 0,  9, 0 => [CP0.Count]
          case 0, 10, 0 =>  CP0.&EntryHi
@@ -97,6 +100,10 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  3, 0 => CP0.&EntryLo1 <- value
          case 0,  4, 0 => CP0.Context.PTEBase <- value<63:23>
          case 0,  5, 0 => CP0.PageMask.Mask <- value<24:13>
+         case 0,  6, 0 => {
+                            CP0.Wired.Wired <- value<5:0>;
+                            CP0.Random.Random <- [TLBEntries-1]
+                          }
          case 0,  9, 0 => CP0.Count <- value<31:0>
          case 0, 10, 0 => CP0.&EntryHi <- value
          case 0, 11, 0 => {
@@ -138,8 +145,6 @@ record TLBEntry
    V0   :: bool
    V1   :: bool
 }
-
-nat TLBEntries = 16
 
 declare
 {
@@ -578,8 +583,9 @@ unit initMips (pc::nat, uart::nat) =
    CP0.PRId <- 0x400;           -- processor ID
    CP0.Index.P <- false;
    CP0.Index.Index <- 0x0;
-   CP0.Random.Random <- 0x10;
-   CP0.Wired.Wired <- 0x1;
+   CP0.Random.Random <- [TLBEntries-1];
+   CP0.Wired.Wired <- 0;
+   -- CP0.Wired.Wired <- 0x1;
    TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
@@ -591,7 +597,7 @@ unit initMips (pc::nat, uart::nat) =
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
    JTAG_UART_initialise (uart);
-   addTLB ([JTAG_UART.base_address] : '000', 0);
+   -- addTLB ([JTAG_UART.base_address] : '000', 0);
    JTAG_UART_write_mm
 }
 
