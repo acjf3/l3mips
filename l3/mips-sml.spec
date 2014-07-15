@@ -94,7 +94,10 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  5, 0 => CP0.PageMask.Mask <- value<24:13>
          case 0,  9, 0 => CP0.Count <- value<31:0>
          case 0, 10, 0 => CP0.&EntryHi <- value
-         case 0, 11, 0 => CP0.Compare <- value<31:0>
+         case 0, 11, 0 => {
+                            CP0.Compare <- value<31:0>;
+                            CP0.Cause.IP<7> <- false
+                          }
          case 0, 12, 0 => CP0.&Status <- value<31:0>
          case 0, 13, 0 => CP0.&Cause <- value<31:0>
          case 0, 14, 0 => CP0.EPC <- value
