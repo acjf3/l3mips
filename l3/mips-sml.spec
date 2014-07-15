@@ -75,6 +75,11 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 15, 0 => [CP0.PRId]
          case 0, 16, 0 => [CP0.&Config]
          case 0, 16, 1 => [CP0.&Config1]
+         case 0, 16, 2 => [CP0.&Config2]
+         case 0, 16, 3 => [CP0.&Config3]
+         case 0, 16, 4 => 1 -- Mimic BERI
+         case 0, 16, 5 => 1 -- Mimic BERI
+         case 0, 16, 6 => [CP0.&Config6]
          case 0, 17, 0 => [CP0.LLAddr]
          case 0, 20, 0 =>  CP0.&XContext
          case 0, 23, 0 => [CP0.Debug]
@@ -102,6 +107,8 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 13, 0 => CP0.&Cause <- value<31:0>
          case 0, 14, 0 => CP0.EPC <- value
          case 0, 16, 0 => CP0.Config.K0 <- value<2:0>
+         case 0, 16, 2 => CP0.Config2.SU <- value<15:12>
+         case 0, 16, 6 => CP0.Config6.LTLB <- value<2>
          case 0, 20, 0 => CP0.XContext.PTEBase <- value<63:33>
          case 0, 23, 0 => CP0.Debug <- value<31:0>
          case 0, 26, 0 => CP0.ErrCtl <- value<31:0>
@@ -514,7 +521,7 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config.AT  <- 2;         -- MIPS64 with access to all address segments
 
    -- Configuration register 1 (mimic BERI)
-   CP0.Config1.M  <- false;     -- true if config register 2 exists
+   CP0.Config1.M  <- true;      -- true if config register 2 exists
    CP0.Config1.MMUSize <- 15;   -- TLB has MMUSize+1 entries
    CP0.Config1.IS <- 3;         -- Icache sets per way
    CP0.Config1.IL <- 4;         -- Icache line size
@@ -529,6 +536,34 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config1.CA <- false;     -- Code compression (MIPS16) implemented?
    CP0.Config1.EP <- false;     -- EJTAG implemented?
    CP0.Config1.FP <- false;     -- FPU implemented?
+
+   -- Configuration register 2 (mimic BERI)
+   CP0.Config2.M  <- true;      -- true if config register 3 exists
+   CP0.Config2.TU <- 0;         -- Tertiary cache control
+   CP0.Config2.TS <- 0;         -- Tertiary cache sets per way
+   CP0.Config2.TL <- 0;         -- Tertiary cache line size
+   CP0.Config2.TA <- 0;         -- Tertiary cache associativity
+   CP0.Config2.SU <- 3;         -- Secondary cache control
+   CP0.Config2.SS <- 8;         -- Secondary cache sets per way
+   CP0.Config2.SL <- 4;         -- Secondary cache line size
+   CP0.Config2.SA <- 0;         -- Secondary cache associativity
+
+   -- Configuration register 3 (mimic BERI)
+   CP0.Config3.M  <- true;      -- true if config register 4 exists
+   CP0.Config3.ULRI <- true;    -- UserLocal register implemented?
+   CP0.Config3.DSPP <- false;   -- MIPS DSPASE implemented?
+   CP0.Config3.LPA  <- false;   -- Large physical addr support and
+                                -- page grain register present?
+   CP0.Config3.VEIC <- false;   -- External interrupt controller present?
+   CP0.Config3.VInt <- false;   -- Vectored interrupts implemented?
+   CP0.Config3.SP   <- false;   -- Small (1kB) page support?
+   CP0.Config3.MT   <- false;   -- MIPS MTASE implemented?
+   CP0.Config3.SM   <- false;   -- SmartMIPS ASI implemented?
+   CP0.Config3.TL   <- false;   -- Trace Logic implemented?
+
+   -- Configuration register 6 (mimic BERI)
+   CP0.Config6.TLBSize <- 143;  -- Size of TLB - 1
+   CP0.Config6.LTLB <- false;   -- Enable large TLB?
 
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
    CP0.Status.BEV <- true;

@@ -99,6 +99,39 @@ register ConfigRegister1 :: word
       0 : FP        -- FPU implemented?
 }
 
+register ConfigRegister2 :: word
+{
+     31 : M         -- Continuation (1 if config register 3 exists)
+  30-28 : TU        -- Implementation specific tertiary cache control
+  27-24 : TS        -- Tertiary cache sets per way
+  23-20 : TL        -- Tertiary cache line size
+  19-16 : TA        -- Tertiary cache associativity
+  15-12 : SU        -- Implementation specific secondary cache control
+   11-8 : SS        -- Secondary cache sets per way
+    7-4 : SL        -- Secondary cache line size
+    3-0 : SA        -- Secondary cache associativity
+}
+
+register ConfigRegister3 :: word
+{
+   31 : M           -- Continuation (1 if config register 4 exists)
+   13 : ULRI        -- UserLocal register implemented?
+   10 : DSPP        -- MIPS DSPASE implemented?
+    7 : LPA         -- Large physical addr support and page grain reg present?
+    6 : VEIC        -- External interrupt controller present?
+    5 : VInt        -- Vectored interrupts implemented?
+    4 : SP          -- Small (1kB) page support?
+    2 : MT          -- MIPS MTASE implemented?
+    1 : SM          -- SmartMIPS ASI implemented?
+    0 : TL          -- Trace Logic implemented?
+}
+
+register ConfigRegister6 :: word
+{
+  31-16 : TLBSize  -- Size of TLB-1
+      2 : LTLB     -- Enable large TLB?
+}
+
 register CauseRegister :: word
 {
     31 : BD       -- In branch delay slot
@@ -140,6 +173,9 @@ record CP0
    PRId     :: word            -- 15  Processor revision identifier
    Config   :: ConfigRegister  -- 16  Configuration register
    Config1  :: ConfigRegister1 -- 16  Configuration register 1
+   Config2  :: ConfigRegister2 -- 16  Configuration register 2
+   Config3  :: ConfigRegister3 -- 16  Configuration register 3
+   Config6  :: ConfigRegister6 -- 16  Configuration register 6
    LLAddr   :: dword           -- 17  Load linked address
 -- WatchLo  :: word            -- 18  Memory reference trap address low bits
 -- WatchHi  :: word            -- 19  Memory reference trap address high bits
