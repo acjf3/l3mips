@@ -130,6 +130,48 @@ fun storeArrayInMem (base, marray) =
     ; print (Int.toString (Array.length marray) ^ " words.\n")
    end
 
+(* --------------------------------------------------------------------------
+   Loading code into memory from raw file
+   -------------------------------------------------------------------------- *)
+
+fun word8ToBits8 word8 =
+  BitsN.B (Word8.toInt word8, 8)
+
+fun getByte v i =
+  if   i < Word8Vector.length v
+  then word8ToBits8 (Word8Vector.sub (v, i))
+  else BitsN.zero 8
+
+fun storeVecInMemHelper vec base i =
+  let
+    val j = 8*i;
+    val bytes0 = List.map (getByte vec) [j+7,j+6,j+5,j+4,j+3,j+2,j+1,j+0]
+    val bytes1 = if !be then List.rev bytes0 else bytes0
+    val bits64 = BitsN.concat bytes1
+  in
+    if   j < Word8Vector.length vec
+    then ( mips.MEM := mips.Map.update (!mips.MEM, base+i, bits64)
+         ; storeVecInMemHelper vec base (i+1)
+         )
+    else print (Int.toString (Word8Vector.length vec) ^ " words.\n")
+  end
+
+fun storeVecInMem (base, vec) = 
+  let
+    val b = IntInf.andb (base div 8, 0x1fffffffff)
+  in
+    storeVecInMemHelper vec b 0
+  end
+
+fun readRaw filename =
+  let
+    val istream = BinIO.openIn filename
+    val vec     = BinIO.inputAll istream
+    val ()      = BinIO.closeIn istream
+  in
+    vec
+  end
+
 (* ------------------------------------------------------------------------
    Dump final state of registers
    ------------------------------------------------------------------------ *)
@@ -253,12 +295,15 @@ local
 in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t pureLoop mx
-   fun run pc_uart mx code =
+   fun run pc_uart mx code raw =
       ( mips.initMips pc_uart
       ; List.app
           (fn (a, s) =>
              ( print ("Loading " ^ s ^ "... ")
-             ; storeArrayInMem (a, loadIntelHex s))) code
+             ; if   raw
+               then storeVecInMem (a, readRaw s)
+               else storeArrayInMem (a, loadIntelHex s)
+             )) code 
       ; uart_countdown := !uart_delay
       ; if 0 < !uart_delay then uart_input () else ()
       ; run_mem mx
@@ -286,6 +331,7 @@ fun printUsage () =
       \  --uart-delay <number>    UART cycle delay (determines baud rate)\n\
       \  --uart-in <file>         UART input file (stdin if omitted)\n\
       \  --uart-out <file>        UART output file (stdout if omitted)\n\
+      \  --format <format>        'raw' or 'hex' file format \n\
       \  -h or --help             print this message\n\n")
 
 fun getNumber s =
@@ -330,6 +376,12 @@ val () =
       ["--help"] => printUsage ()
     | l =>
        let
+          val (fmt, l) = processOption "--format" l
+          val raw = case fmt of
+                        NONE       => false
+                      | SOME "raw" => true
+                      | SOME "hex" => false
+                      | _          => failExit "Format must be raw or hex\n"
           val (p, l) = processOption "--pc" l
           val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l
@@ -356,7 +408,7 @@ val () =
             )
        in
           case getCode p l of
-             SOME code => ((run (p, u) c code; closeStreams ())
+             SOME code => ((run (p, u) c code raw; closeStreams ())
                            handle e => (closeStreams (); raise e))
            | NONE => printUsage ()
        end
