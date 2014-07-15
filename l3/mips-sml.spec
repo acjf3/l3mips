@@ -74,6 +74,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 14, 0 =>  CP0.EPC
          case 0, 15, 0 => [CP0.PRId]
          case 0, 16, 0 => [CP0.&Config]
+         case 0, 16, 1 => [CP0.&Config1]
          case 0, 17, 0 => [CP0.LLAddr]
          case 0, 20, 0 =>  CP0.&XContext
          case 0, 23, 0 => [CP0.Debug]
@@ -502,8 +503,30 @@ unit addTLB (a::vAddr, i::bits(4)) =
 
 unit initMips (pc::nat, uart::nat) =
 {
+   -- Configuration register (mimic BERI)
+   CP0.Config.M   <- true;      -- true if config register 1 exists
    CP0.Config.BE  <- true;      -- big-endian
    CP0.Config.MT  <- 1;         -- standard TLB
+   CP0.Config.AR  <- 0;         -- 0 = revision 1, 1 = revision 2
+   CP0.Config.AT  <- 2;         -- MIPS64 with access to all address segments
+
+   -- Configuration register 1 (mimic BERI)
+   CP0.Config1.M  <- false;     -- true if config register 2 exists
+   CP0.Config1.MMUSize <- 15;   -- TLB has MMUSize+1 entries
+   CP0.Config1.IS <- 3;         -- Icache sets per way
+   CP0.Config1.IL <- 4;         -- Icache line size
+   CP0.Config1.IA <- 0;         -- Icache associativity
+   CP0.Config1.DS <- 3;         -- Dcache sets per way
+   CP0.Config1.DL <- 4;         -- Dcache line size
+   CP0.Config1.DA <- 0;         -- Dcache associativity
+   CP0.Config1.C2 <- false;     -- Coprocessor 2 available?
+   CP0.Config1.MD <- false;     -- MDMX ASE implemented?
+   CP0.Config1.PC <- false;     -- Performance counter registers implemented?
+   CP0.Config1.WR <- false;     -- Watch registers implemented? (true on BERI)
+   CP0.Config1.CA <- false;     -- Code compression (MIPS16) implemented?
+   CP0.Config1.EP <- false;     -- EJTAG implemented?
+   CP0.Config1.FP <- false;     -- FPU implemented?
+
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
    CP0.Status.BEV <- true;
    CP0.Status.KSU <- '00';

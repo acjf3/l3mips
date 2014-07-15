@@ -72,9 +72,31 @@ register StatusRegister :: word
 
 register ConfigRegister :: word
 {
-   15 : BE        -- Big endian
-  9-7 : MT        -- MMU Type
-  2-0 : K0        -- kseg0 cacheability and coherency attribute
+     31 : M         -- Continuation (1 if config register 1 exists)
+     15 : BE        -- Big endian
+  14-13 : AT        -- Architecture type
+  12-10 : AR        -- Architecture revision
+    9-7 : MT        -- MMU type
+    2-0 : K0        -- kseg0 cacheability and coherency attribute
+}
+
+register ConfigRegister1 :: word
+{
+     31 : M         -- Continuation (1 if config register 2 exists)
+  30-25 : MMUSize   -- MMU has MMUSize+1 entries
+  24-22 : IS        -- Icache sets per way
+  21-19 : IL        -- Icache line size
+  18-16 : IA        -- Icache associativity
+  15-13 : DS        -- Dcache sets per way
+  12-10 : DL        -- Dcache line size
+    9-7 : DA        -- Dcache associativity
+      6 : C2        -- Co-processor 2 implemented?
+      5 : MD        -- MDMX ASE implemented?
+      4 : PC        -- Performance counter registers implemented?
+      3 : WR        -- Watch registers implemented?
+      2 : CA        -- Code compression (MIPS16) implemented?
+      1 : EP        -- EJTAG implemented?
+      0 : FP        -- FPU implemented?
 }
 
 register CauseRegister :: word
@@ -117,6 +139,7 @@ record CP0
    EPC      :: dword           -- 14  Exception program counter
    PRId     :: word            -- 15  Processor revision identifier
    Config   :: ConfigRegister  -- 16  Configuration register
+   Config1  :: ConfigRegister1 -- 16  Configuration register 1
    LLAddr   :: dword           -- 17  Load linked address
 -- WatchLo  :: word            -- 18  Memory reference trap address low bits
 -- WatchHi  :: word            -- 19  Memory reference trap address high bits
