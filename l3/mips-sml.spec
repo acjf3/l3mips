@@ -66,8 +66,10 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  2, 0 =>  CP0.&EntryLo0
          case 0,  3, 0 =>  CP0.&EntryLo1
          case 0,  4, 0 =>  CP0.&Context
+         case 0,  4, 2 =>  CP0.UsrLocal
          case 0,  5, 0 => [CP0.&PageMask]
          case 0,  6, 0 => [CP0.&Wired]
+         case 0,  7, 0 => [CP0.&HWREna]
          case 0,  8, 0 =>  CP0.BadVAddr
          case 0,  9, 0 => [CP0.Count]
          case 0, 10, 0 =>  CP0.&EntryHi
@@ -99,10 +101,18 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  2, 0 => CP0.&EntryLo0 <- value
          case 0,  3, 0 => CP0.&EntryLo1 <- value
          case 0,  4, 0 => CP0.Context.PTEBase <- value<63:23>
+         case 0,  4, 2 => CP0.UsrLocal <- value
          case 0,  5, 0 => CP0.PageMask.Mask <- value<24:13>
          case 0,  6, 0 => {
                             CP0.Wired.Wired <- value<5:0>;
                             CP0.Random.Random <- [TLBEntries-1]
+                          }
+           
+         case 0,  7, 0 => {
+                            CP0.HWREna.CPUNum <- value<0>;
+                            CP0.HWREna.CC     <- value<2>;
+                            CP0.HWREna.CCRes  <- value<3>;
+                            CP0.HWREna.UL     <- value<29>
                           }
          case 0,  9, 0 => CP0.Count <- value<31:0>
          case 0, 10, 0 => CP0.&EntryHi <- value
@@ -433,6 +443,25 @@ define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
      nothing
    }
 
+---------------
+-- RDHWR rt, rd
+---------------
+
+define RDHWR (rt::reg, rd::reg) =
+   if CP0.Status.CU0 or KernelMode or CP0.&HWREna<[rd]::nat> then
+   {
+      match rd
+      {
+         case  0 => GPR(rt) <- 0
+         case  2 => GPR(rt) <- SignExtend(CP0.Count)
+         case  3 => GPR(rt) <- 1
+         case 29 => GPR(rt) <- CP0.UsrLocal
+         case _  => SignalException(ResI)
+      }
+   }
+   else
+     SignalException(ResI)
+      
 --------------------------------------------------
 -- Instruction fetch
 --------------------------------------------------
@@ -586,6 +615,7 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Random.Random <- [TLBEntries-1];
    CP0.Wired.Wired <- 0;
    -- CP0.Wired.Wired <- 0x1;
+   CP0.&HWREna <- 0;
    TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;

@@ -153,6 +153,14 @@ register XContext :: dword
   30-4 : BadVPN2  -- The bad Virtual Page Number
 }
 
+register HWREna :: word
+{
+   0 : CPUNum      -- Enable CPU num register
+   2 : CC          -- Enable high-res cycle count register
+   3 : CCRes       -- Enable CC resolution register
+  29 : UL          -- Enable UserLocal register
+}
+
 record CP0
 {
    Index    :: Index           -- 0   Index to TLB array
@@ -160,9 +168,10 @@ record CP0
    EntryLo0 :: EntryLo         -- 2   Low half of TLB entry for even VPN
    EntryLo1 :: EntryLo         -- 3   Low half of TLB entry for odd VPN
    Context  :: Context         -- 4   Kernel virtual page table entry (PTE)
+   UsrLocal :: dword           -- 4   UserLocal register
    PageMask :: PageMask        -- 5   TLB page mask
    Wired    :: Wired           -- 6   Number of wired TLB entries
--- HWREna   :: word            -- 7   See RDHWR instruction
+   HWREna   :: HWREna          -- 7   See RDHWR instruction
    BadVAddr :: dword           -- 8   Bad virtual address
    Count    :: word            -- 9   Timer count
    EntryHi  :: EntryHi         -- 10  High half of TLB entry

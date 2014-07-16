@@ -192,6 +192,7 @@ string instructionToString (i::instruction) =
      case TLBWR                          => "tlbwr"
      case TLBP                           => "tlbp"
      case ERET                           => "eret"
+     case RDHWR (rt, rd)                 => op2r ("rdhwr", rt, rd)
      case ReservedInstruction            => "???"
    }
 
@@ -209,6 +210,9 @@ word form4 (function::bits(6), rs::reg, rt::reg, imm::bits(16)) =
 
 word form5 (rs::reg, rt::reg, rd::reg, function::bits(6)) =
    '011100' : rs : rt : rd : '00000' : function
+
+word form6 (rt::reg, rd::reg, function::bits(6)) =
+   '011111' : '00000' : rt : rd : '00000' : function
 
 word Encode (i::instruction) =
    match i
@@ -339,5 +343,6 @@ word Encode (i::instruction) =
      case TLBWR                          => '01000010000000000000000000000110'
      case TLBP                           => '01000010000000000000000000001000'
      case ERET                           => '01000010000000000000000000011000'
+     case RDHWR (rt, rd)                 => form6 (rt, rd, '111011')
      case ReservedInstruction            => 0
    }

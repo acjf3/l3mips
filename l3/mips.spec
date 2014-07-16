@@ -1554,9 +1554,12 @@ instruction Decode (w::word) =
       case '111 100 rs rt immediate' => Store (SCD (rs, rt, immediate))
       case '111 111 rs rt immediate' => Store (SD (rs, rt, immediate))
       case '101 111 base opn immediate' => CACHE (base, opn, immediate)
+      case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
       case _ => ReservedInstruction
    }
 }
+
+
 
 --================================================
 -- The next state function
