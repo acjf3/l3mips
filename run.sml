@@ -257,6 +257,16 @@ fun uart () =
    else uart_countdown := !uart_countdown - 1
 
 (* ------------------------------------------------------------------------
+   Define UNPREDICTABLE "LO" and UNPREDICTABLE "HI" behaviour
+   ------------------------------------------------------------------------ *)
+
+val () = mips.UNPREDICTABLE_LO :=
+  (fn _ => raise mips.UNPREDICTABLE "LO")
+
+val () = mips.UNPREDICTABLE_HI :=
+  (fn _ => raise mips.UNPREDICTABLE "HI")
+
+(* ------------------------------------------------------------------------
    Run code
    ------------------------------------------------------------------------ *)
 

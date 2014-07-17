@@ -36,10 +36,15 @@ component GPR (n::reg) :: dword
    assign value = when n <> 0 do { gpr(n) <- value; mark (w_gpr (n, value)) }
 }
 
+declare {
+  UNPREDICTABLE_LO :: unit -> unit
+  UNPREDICTABLE_HI :: unit -> unit
+}
+
 component HI :: dword
 {
    value = match hi { case Some (v) => v
-                      case None => #UNPREDICTABLE ("HI")
+                      case None => { UNPREDICTABLE_HI (); UNKNOWN }
                     }
    assign value = { hi <- Some (value); mark (w_hi (value)) }
 }
@@ -47,7 +52,7 @@ component HI :: dword
 component LO :: dword
 {
    value = match lo { case Some (v) => v
-                      case None => #UNPREDICTABLE ("LO")
+                      case None => { UNPREDICTABLE_LO (); UNKNOWN }
                     }
    assign value = { lo <- Some (value); mark (w_lo (value)) }
 }
