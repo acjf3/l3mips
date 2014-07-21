@@ -193,6 +193,7 @@ string instructionToString (i::instruction) =
      case TLBP                           => "tlbp"
      case ERET                           => "eret"
      case RDHWR (rt, rd)                 => op2r ("rdhwr", rt, rd)
+     case WAIT                           => "wait"
      case ReservedInstruction            => "???"
    }
 
@@ -344,5 +345,6 @@ word Encode (i::instruction) =
      case TLBP                           => '01000010000000000000000000001000'
      case ERET                           => '01000010000000000000000000011000'
      case RDHWR (rt, rd)                 => form6 (rt, rd, '111011')
+     case WAIT                           => '01000010000000000000000000100000'
      case ReservedInstruction            => 0
    }

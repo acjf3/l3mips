@@ -170,12 +170,12 @@ declare
 
 (bits(8) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
 {
-   index = vpn2<6:0> - 16;
+   index = vpn2<6:0> - [TLBEntries];
    e = TLB_direct (index);
    nmask`27 = ~[e.Mask];
    var found = if e.VPN2 && nmask == vpn2 && nmask and e.R == r
                   and (e.G or e.ASID == CP0.EntryHi.ASID) then
-                   list {(16 + [index], e)}
+                   list {([TLBEntries] + [index], e)}
                else Nil;
    for i in 0 .. TLBEntries - 1 do
    {
@@ -415,7 +415,7 @@ define TLBWI =
    {
      if [CP0.Index.Index] >= TLBEntries then
      {
-        j = CP0.EntryHi.VPN2<6:0> - 16;
+        j = CP0.EntryHi.VPN2<6:0> - [TLBEntries];
         TLB_direct (j) <- ModifyTLB (TLB_direct (j))
      }
      else
@@ -430,7 +430,7 @@ define TLBWR =
      SignalException(CpU)
    else
    {
-     j = CP0.EntryHi.VPN2<6:0> - 16;
+     j = CP0.EntryHi.VPN2<6:0> - [TLBEntries];
      old = TLB_direct (j);
      TLB_direct (j) <- ModifyTLB (old);
      when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
