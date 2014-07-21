@@ -1402,6 +1402,12 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
 }
 
 -----------------------------------
+-- WAIT (implemented as no-op)
+-----------------------------------
+
+define WAIT = ()
+
+-----------------------------------
 -- Rerserved instruction, i.e. unsuccessful decode.
 -----------------------------------
 define ReservedInstruction =
@@ -1555,6 +1561,7 @@ instruction Decode (w::word) =
       case '111 111 rs rt immediate' => Store (SD (rs, rt, immediate))
       case '101 111 base opn immediate' => CACHE (base, opn, immediate)
       case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
+      case '010 000 1000 0000 0000 0000 0000 100000' => WAIT
       case _ => ReservedInstruction
    }
 }
