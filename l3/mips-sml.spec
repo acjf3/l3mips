@@ -123,7 +123,8 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 10, 0 => CP0.&EntryHi <- value
          case 0, 11, 0 => {
                             CP0.Compare <- value<31:0>;
-                            CP0.Cause.IP<7> <- false
+                            CP0.Cause.IP<7> <- false;
+                            CP0.Cause.TI <- false
                           }
          case 0, 12, 0 => CP0.&Status <- value<31:0>
          case 0, 13, 0 => CP0.&Cause <- value<31:0>
@@ -478,13 +479,18 @@ word option Fetch =
    CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired then
                            [TLBEntries - 1]
                         else
-                            CP0.Random.Random - 1;
+                           CP0.Random.Random - 1;
+
+   when CP0.Compare == CP0.Count do
+   {
+      CP0.Cause.IP<7> <- true;
+      CP0.Cause.TI <- true
+   };
+
    when CP0.Status.IE and not (CP0.Status.EXL or CP0.Status.ERL) do
    {
-      if CP0.Status.IM<7> and CP0.Compare == CP0.Count then
+      if CP0.Status.IM<7> and CP0.Cause.IP<7> then
       {
-         CP0.Cause.TI <- true;
-         CP0.Cause.IP<7> <- true;
          SignalException (Int)
       }
       else if CP0.Status.IM<2> and JTAG_UART.control.WE and
