@@ -75,7 +75,8 @@ unit JTAG_UART_input (l::byte list) =
       {
          JTAG_UART.read_fifo <- t;
          JTAG_UART.data.RAVAIL <- [Length (t)];
-         JTAG_UART.control.AC <- true
+         JTAG_UART.control.AC <- true;
+         when not JTAG_UART.data.RVALID do JTAG_UART_load
       }
    };
    JTAG_UART.control.RI <- false
@@ -126,7 +127,7 @@ unit JTAG_UART_initialise (uart::nat) =
    JTAG_UART.data.RW_DATA <- 0;
    JTAG_UART.data.RVALID <- false;
    JTAG_UART.data.RAVAIL <- 0;
-   JTAG_UART.control.RE <- false;
+   JTAG_UART.control.RE <- true;
    JTAG_UART.control.WE <- false;
    JTAG_UART.control.RI <- false;
    JTAG_UART.control.WI <- false;

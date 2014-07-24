@@ -494,7 +494,7 @@ word option Fetch =
       }
       else if CP0.Status.IM<2> and JTAG_UART.control.RE and
               not JTAG_UART.control.RI and
-              JTAG_UART.read_threshold <= [JTAG_UART.data.RAVAIL] then
+              JTAG_UART.data.RVALID then
       {
          JTAG_UART.control.RI <- true;
          JTAG_UART_write_mm;
