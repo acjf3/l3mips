@@ -225,10 +225,9 @@ declare
 
 construct ExceptionType
    { Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
-     XTLBRefill }
+     XTLBRefillL, XTLBRefillS }
 
 unit ExceptionCode (ExceptionType::ExceptionType) =
-   when [ExceptionType] < 0n12 do
       CP0.Cause.ExcCode <-
          match ExceptionType
          {
@@ -244,7 +243,8 @@ unit ExceptionCode (ExceptionType::ExceptionType) =
             case CpU  => 0x0b -- Coprocessor Unusable
             case Ov   => 0x0c -- Arithmetic overflow
             case Tr   => 0x0d -- Trap
-            case _    => UNKNOWN
+            case XTLBRefillL => 0x02
+            case XTLBRefillS => 0x03
          }
 
 unit SignalException (ExceptionType::ExceptionType) =
@@ -262,7 +262,9 @@ unit SignalException (ExceptionType::ExceptionType) =
          CP0.Cause.BD <- false
       }
    };
-   vectorOffset = if ExceptionType == XTLBRefill and not CP0.Status.EXL then
+   vectorOffset = if (ExceptionType == XTLBRefillL or
+                      ExceptionType == XTLBRefillS)
+                      and not CP0.Status.EXL then
                      0x080`30
                   else
                      0x180;

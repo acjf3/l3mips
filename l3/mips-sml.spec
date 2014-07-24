@@ -267,7 +267,12 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
             match LookupTLB (vAddr<63:62>, vAddr<39:13>)
             {
                case Nil =>
-                  SignalTLBException (XTLBRefill, CP0.EntryHi.ASID, vAddr)
+                  {
+                     exc = if  LorS == LOAD
+                           then XTLBRefillL else XTLBRefillS;
+                     SignalTLBException (exc, CP0.EntryHi.ASID, vAddr)
+                  }
+ 
                case list {(_, e)} =>
                   {
                      EvenOddBit = match e.Mask
