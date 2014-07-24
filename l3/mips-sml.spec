@@ -102,7 +102,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       mark (w_c0 (reg, value));
       match n, reg, sel
       {
-         case 0,  0, 0 => CP0.Index.Index <- value<7:0>
+         case 0,  0, 0 => CP0.Index.Index <- value<5:0>
          case 0,  2, 0 => CP0.&EntryLo0 <- value
          case 0,  3, 0 => CP0.&EntryLo1 <- value
          case 0,  4, 0 => CP0.Context.PTEBase <- value<63:23>
@@ -164,20 +164,13 @@ record TLBEntry
 
 declare
 {
-   TLB_direct :: bits(7) -> TLBEntry
    TLB_assoc  :: bits(4) -> TLBEntry
    MEM :: mAddr -> dword                -- physical memory, doubleword access
 }
 
-(bits(8) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
+(bits(6) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
 {
-   index = vpn2<6:0> - [TLBEntries];
-   e = TLB_direct (index);
-   nmask`27 = ~[e.Mask];
-   var found = if e.VPN2 && nmask == vpn2 && nmask and e.R == r
-                  and (e.G or e.ASID == CP0.EntryHi.ASID) then
-                   list {([TLBEntries] + [index], e)}
-               else Nil;
+   var found = Nil;
    for i in 0 .. TLBEntries - 1 do
    {
       e = TLB_assoc ([i]);
@@ -376,13 +369,10 @@ define TLBP =
      {
         case Nil => CP0.Index.P <- true
         case list {(i, e)} =>
-           if e.G or e.ASID == CP0.EntryHi.ASID then
            {
               CP0.Index.P <- false;
               CP0.Index.Index <- i
            }
-           else
-              CP0.Index.P <- true
         case _ => #UNPREDICTABLE ("TLB: multiple matches")
      }
 
@@ -392,7 +382,7 @@ define TLBR =
    else
    {
      i = CP0.Index.Index;
-     if i >= [TLBEntries] then
+     if [i] >= TLBEntries then
         #UNPREDICTABLE ("TLBR: index > TLBEntries - 1")
      else
      {
@@ -420,10 +410,7 @@ define TLBWI =
    else
    {
      if [CP0.Index.Index] >= TLBEntries then
-     {
-        j = CP0.EntryHi.VPN2<6:0> - [TLBEntries];
-        TLB_direct (j) <- ModifyTLB (TLB_direct (j))
-     }
+        #UNPREDICTABLE ("TLBWI: index > TLBEntries - 1")
      else
      {
         i`4 = [CP0.Index.Index];
@@ -436,10 +423,8 @@ define TLBWR =
      SignalException(CpU)
    else
    {
-     j = CP0.EntryHi.VPN2<6:0> - [TLBEntries];
-     old = TLB_direct (j);
-     TLB_direct (j) <- ModifyTLB (old);
-     when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+     r`4 = [CP0.Random.Random];
+     TLB_assoc (r) <- ModifyTLB (TLB_assoc (r))
    }
 
 -------------------------
@@ -613,7 +598,7 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config3.TL   <- false;   -- Trace Logic implemented?
 
    -- Configuration register 6 (mimic BERI)
-   CP0.Config6.TLBSize <- 143;  -- Size of TLB - 1
+   CP0.Config6.TLBSize <- [TLBEntries-1];
    CP0.Config6.LTLB <- false;   -- Enable large TLB?
 
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
@@ -633,7 +618,6 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Wired.Wired <- 0;
    -- CP0.Wired.Wired <- 0x1;
    CP0.&HWREna <- 0;
-   TLB_direct <- InitMap (initTLB);
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
    BranchTo <- None;
