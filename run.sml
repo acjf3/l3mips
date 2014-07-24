@@ -13,6 +13,7 @@ val uart_delay = ref 5000
 val uart_countdown = ref (!uart_delay)
 val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
+val non_blocking_input = ref false
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -229,7 +230,7 @@ fun uart_output () =
          then ()
       else case !uart_out of
               SOME strm => TextIO.output (strm, s)
-            | NONE => TextIO.print ("UART out: " ^ s ^ "\n")
+            | NONE => TextIO.print s
    end
 
 fun uart_input () =
@@ -238,16 +239,25 @@ fun uart_input () =
    in
       if n = 0
          then ()
-      else let
-              val istrm =
-                 case !uart_in of
-                    SOME strm => strm
-                  | NONE => (print "UART in: "; TextIO.stdIn)
-           in
-              mips.JTAG_UART_input (stringToBytes (TextIO.inputN (istrm, n)))
+      else
+        let
+          val (readN, istrm) =
+            case !uart_in of
+                SOME strm => (n, strm)
+              | NONE => if   !non_blocking_input
+                        then case TextIO.canInput (TextIO.stdIn, n) of
+                                 NONE   => (0, TextIO.stdIn)
+                               | SOME x => (x, TextIO.stdIn)
+                        else (print "UART in: "; (n, TextIO.stdIn))
+        in
+          if readN > 0 then
+            ( mips.JTAG_UART_input (stringToBytes(TextIO.inputN(istrm,readN)))
             ; mips.JTAG_UART_write_mm ()
-           end
+            )
+          else ()
+        end
    end
+
 
 fun uart () =
    if !uart_delay <= 0 (* UART turned off *)
@@ -331,18 +341,22 @@ fun printUsage () =
       \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
       \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
       \Arguments:\n\
-      \  --cyles <number>         upper bound on instruction cycles\n\
-      \  --trace <level>          verbosity level (0 default, 2 maximum)\n\
-      \  --pc <address>           initial program counter value and\n\
-      \                           start address for main Intel Hex file\n\
-      \  --at <address> <file>    load extra Intel Hex <file> into physical\n\
-      \                           memory at location <address>\n\
-      \  --uart <address>         base physical address for UART memory-map\n\
-      \  --uart-delay <number>    UART cycle delay (determines baud rate)\n\
-      \  --uart-in <file>         UART input file (stdin if omitted)\n\
-      \  --uart-out <file>        UART output file (stdout if omitted)\n\
-      \  --format <format>        'raw' or 'hex' file format \n\
-      \  -h or --help             print this message\n\n")
+      \  --cyles <number>          upper bound on instruction cycles\n\
+      \  --trace <level>           verbosity level (0 default, 2 maximum)\n\
+      \  --pc <address>            initial program counter value and\n\
+      \                            start address for main Intel Hex file\n\
+      \  --at <address> <file>     load extra Intel Hex <file> into physical\n\
+      \                            memory at location <address>\n\
+      \  --uart <address>          base physical address for UART memory-map\n\
+      \  --uart-delay <number>     UART cycle delay (determines baud rate)\n\
+      \  --uart-in <file>          UART input file (stdin if omitted)\n\
+      \  --uart-out <file>         UART output file (stdout if omitted)\n\
+      \  --format <format>         'raw' or 'hex' file format \n\
+      \  --non-block <on|off>      non-blocking UART input 'on' or 'off' \n\
+      \  --ignore <string>         UNPREDICTABLE#(<string>) behaviour is \n\
+      \                            ignored (currently <string> must be \n\
+      \                            'HI' or 'LO')                       \n\
+      \  -h or --help              print this message\n\n")
 
 fun getNumber s =
    case IntExtra.fromString s of
@@ -381,6 +395,13 @@ fun getCode p =
       loop []
    end
 
+fun processOptions s commandLine =
+  case processOption s commandLine of
+      (NONE, rest)   => ([], rest)
+    | (SOME x, rest) => let val (xs, rest2) = processOptions s rest
+                        in  (x::xs, rest2)
+                        end
+
 val () =
    case getArguments () of
       ["--help"] => printUsage ()
@@ -391,7 +412,20 @@ val () =
                         NONE       => false
                       | SOME "raw" => true
                       | SOME "hex" => false
-                      | _          => failExit "Format must be raw or hex\n"
+                      | _          => failExit "--format must be raw or hex\n"
+          val (igns, l) = processOptions "--ignore" l
+          val () = List.app (fn x =>
+                     case x of
+                         "HI" => mips.UNPREDICTABLE_HI := (fn _ => ())
+                       | "LO" => mips.UNPREDICTABLE_LO := (fn _ => ())
+                       | _    => failExit "Unknown argument to --ignore"
+                   ) igns
+          val (nb, l) = processOption "--non-block" l
+          val () = case nb of
+                       NONE       => ()
+                     | SOME "on"  => non_blocking_input := true
+                     | SOME "off" => non_blocking_input := false
+                     | _          => failExit "--non-block must be on or off\n"
           val (p, l) = processOption "--pc" l
           val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l
@@ -401,6 +435,10 @@ val () =
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, Int.min (t, 2))
+          val () = if   (!trace_level > 0) andalso (!non_blocking_input)
+                   then failExit ( "Tracing and non-blocking input "
+                                 ^ "do not work together." )
+                   else ()
           val (d, l) = processOption "--uart-delay" l
           val () =
              uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
