@@ -330,8 +330,9 @@ in
       ; if 0 < !uart_delay then uart_output () else ()
       )
       handle mips.UNPREDICTABLE s =>
-        failExit ("UNPREDICTABLE \"" ^ s ^ "\" (PC=0x" ^
-                    BitsN.toHexString(!mips.PC) ^ ")\n")
+        ( dumpRegisters ()
+        ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
+        )
 end
 
 (* ------------------------------------------------------------------------
