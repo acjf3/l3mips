@@ -320,26 +320,23 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
    }
 }
 
--- Update JTAG_UART memory-map
+-- Pimitive memory load (with memory-mapped devices)
 
 word flip_endian (w::word) = match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
-
-unit JTAG_UART_write_mm =
-   MEM (JTAG_UART.base_address) <-
-     flip_endian (JTAG_UART.&data) : flip_endian (JTAG_UART.&control)
-
--- Pimitive memory load
 
 dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
 {  a = pAddr<39:3>;
-   d = MEM (a);
-   when a == JTAG_UART.base_address and pAddr<2:0> == 0 do
+   var ret;
+   if a == JTAG_UART.base_address then
    {
-      JTAG_UART_load;
-      JTAG_UART_write_mm
-   };
-   return d
+     ret <- flip_endian (JTAG_UART.&data)
+          : flip_endian (JTAG_UART.&control);
+     when pAddr<2:0> == 0 do JTAG_UART_load
+   }
+   else
+     ret <- MEM (a);
+   return ret
 }
 
 word loadWord32 (a::pAddr) =
@@ -358,8 +355,7 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
    mark (w_mem (pAddr, mask, AccessLength, MemElem));
    if a == JTAG_UART.base_address then
    {
-      JTAG_UART_store (mask, MemElem);
-      JTAG_UART_write_mm
+      JTAG_UART_store (mask, MemElem)
    }
    else
       MEM(a) <- MEM(a) && ~mask || MemElem && mask
@@ -499,7 +495,6 @@ word option Fetch =
               JTAG_UART.write_threshold <= [JTAG_UART.control.WSPACE] then
       {
          JTAG_UART.control.WI <- true;
-         JTAG_UART_write_mm;
          CP0.Cause.IP<2> <- true;
          SignalException (Int)
       }
@@ -508,7 +503,6 @@ word option Fetch =
               JTAG_UART.data.RVALID then
       {
          JTAG_UART.control.RI <- true;
-         JTAG_UART_write_mm;
          CP0.Cause.IP<2> <- true;
          SignalException (Int)
       }
@@ -638,9 +632,8 @@ unit initMips (pc::nat, uart::nat) =
    PC <- [pc];
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
-   JTAG_UART_initialise (uart);
+   JTAG_UART_initialise (uart)
    -- addTLB ([JTAG_UART.base_address] : '000', 0);
-   JTAG_UART_write_mm
 }
 
 bool done =
