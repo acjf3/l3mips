@@ -39,6 +39,21 @@ record JTAG_UART
 declare JTAG_UART :: JTAG_UART
 
 -------------------------------------------------------------------
+-- update interrupt bit
+-------------------------------------------------------------------
+
+unit JTAG_UART_update_interrupt_bit () =
+{
+  readIntr = JTAG_UART.control.RE and JTAG_UART.data.RVALID;
+  when JTAG_UART.control.RI <> readIntr do
+  {
+    JTAG_UART.control.RI  <- readIntr;
+    PIC.external_intrs<0> <- readIntr;
+    PIC_update ()
+  }
+}
+
+-------------------------------------------------------------------
 -- load
 -------------------------------------------------------------------
 
@@ -59,7 +74,7 @@ unit JTAG_UART_load =
          JTAG_UART.read_fifo <- t
       }
    };
-   JTAG_UART.control.RI <- false -- could have cleared read interrupt
+   JTAG_UART_update_interrupt_bit ()
 }
 
 -------------------------------------------------------------------
@@ -79,7 +94,7 @@ unit JTAG_UART_input (l::byte list) =
          when not JTAG_UART.data.RVALID do JTAG_UART_load
       }
    };
-   JTAG_UART.control.RI <- false
+   JTAG_UART_update_interrupt_bit ()
 }
 
 -------------------------------------------------------------------
@@ -96,7 +111,7 @@ unit JTAG_UART_store (mask::dword, MemElem::dword) =
    when mask<24> do JTAG_UART.control.RE <- MemElem<24>;
    when mask<25> do JTAG_UART.control.WE <- MemElem<25>;
    when mask<18> and MemElem<18> do JTAG_UART.control.AC <- false;
-   JTAG_UART.control.WI <- false  -- could have cleared write interrupt
+   JTAG_UART_update_interrupt_bit ()
 }
 
 -------------------------------------------------------------------
@@ -110,6 +125,7 @@ byte list JTAG_UART_output =
    JTAG_UART.write_fifo <- Nil;
    JTAG_UART.control.WSPACE <- -1;
    JTAG_UART.control.WI <- false;
+   JTAG_UART_update_interrupt_bit ();
    return l
 }
 

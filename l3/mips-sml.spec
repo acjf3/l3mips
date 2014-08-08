@@ -322,18 +322,19 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
 
 -- Pimitive memory load (with memory-mapped devices)
 
-word flip_endian (w::word) = match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
-
 dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
 {  a = pAddr<39:3>;
    var ret;
    if a == JTAG_UART.base_address then
    {
-     ret <- flip_endian (JTAG_UART.&data)
-          : flip_endian (JTAG_UART.&control);
+     ret <- flip_endian_word (JTAG_UART.&data)
+          : flip_endian_word (JTAG_UART.&control);
      when pAddr<2:0> == 0 do JTAG_UART_load
    }
+   else if a >= PIC.base_address
+       and a < (PIC.base_address+1072) then
+     ret <- PIC_load(a)
    else
      ret <- MEM (a);
    return ret
@@ -354,9 +355,10 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
    mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
    mark (w_mem (pAddr, mask, AccessLength, MemElem));
    if a == JTAG_UART.base_address then
-   {
       JTAG_UART_store (mask, MemElem)
-   }
+   else if a >= PIC.base_address
+       and a < (PIC.base_address+1072) then
+      PIC_store(a, mask, MemElem)
    else
       MEM(a) <- MEM(a) && ~mask || MemElem && mask
 }
@@ -486,29 +488,15 @@ word option Fetch =
 
    when CP0.Status.IE and not (CP0.Status.EXL or CP0.Status.ERL) do
    {
-      if CP0.Status.IM<7> and CP0.Cause.IP<7> then
-      {
-         SignalException (Int)
-      }
-      else if CP0.Status.IM<2> and JTAG_UART.control.WE and
-              not JTAG_UART.control.WI and
-              JTAG_UART.write_threshold <= [JTAG_UART.control.WSPACE] then
-      {
-         JTAG_UART.control.WI <- true;
-         CP0.Cause.IP<2> <- true;
-         SignalException (Int)
-      }
-      else if CP0.Status.IM<2> and JTAG_UART.control.RE and
-              not JTAG_UART.control.RI and
-              JTAG_UART.data.RVALID then
-      {
-         JTAG_UART.control.RI <- true;
-         CP0.Cause.IP<2> <- true;
-         SignalException (Int)
-      }
-      else
-         nothing
+      -- Set IP bits using PIC output
+      CP0.Cause.IP<6:2> <- PIC.mips_ip_bits<4:0>;
+      CP0.Cause.IP<7>   <- CP0.Cause.IP<7> or PIC.mips_ip_bits<5>;
+
+      -- If any interrupts pending, raise an exception
+      when (CP0.Status.IM<7:2> && CP0.Cause.IP<7:2>) <> 0 do
+        SignalException (Int)
    };
+
    if exceptionSignalled then
       None
    else if PC<1:0> == 0 then
@@ -621,7 +609,6 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Index.Index <- 0x0;
    CP0.Random.Random <- [TLBEntries-1];
    CP0.Wired.Wired <- 0;
-   -- CP0.Wired.Wired <- 0x1;
    CP0.&HWREna <- 0;
    TLB_assoc <- InitMap (initTLB);
    BranchDelay <- None;
@@ -632,7 +619,8 @@ unit initMips (pc::nat, uart::nat) =
    PC <- [pc];
    MEM <- InitMap (0x0);
    gpr <- InitMap (0xAAAAAAAAAAAAAAAA);
-   JTAG_UART_initialise (uart)
+   JTAG_UART_initialise (uart);
+   PIC_initialise (0x7f804000)
    -- addTLB ([JTAG_UART.base_address] : '000', 0);
 }
 
