@@ -151,7 +151,7 @@ define ArithR > SUBU (rs::reg, rt::reg, rd::reg) =
 {
    when NotWordValue (GPR(rs)) or NotWordValue (GPR(rt))
      do #UNPREDICTABLE("SUBU: NotWordValue");
-   temp = GPR(rs)<32:0> - GPR(rt)<32:0>;
+   temp = GPR(rs)<31:0> - GPR(rt)<31:0>;
    GPR(rd) <- SignExtend (temp)
 }
 
