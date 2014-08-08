@@ -28,6 +28,7 @@ declare PIC :: PIC
 
 -- To be called whenever there are modifications to:
 --   * PIC.config_regs, or
+--   * PIC.ip_bits, or
 --   * PIC.external_intrs.
 
 unit PIC_update () =
