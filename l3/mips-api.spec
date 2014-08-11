@@ -181,3 +181,8 @@ define TLBWR = SignalException (ResI)
 -------------------------
 define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
    SignalException (ResI)
+
+-------------------------
+-- RDHWR rt, rd
+-------------------------
+define RDHWR (rt::reg, rd::reg) = SignalException (ResI)

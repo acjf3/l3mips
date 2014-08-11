@@ -303,10 +303,3 @@ bool KernelMode = CP0.Status.KSU == '00' or CP0.Status.EXL or CP0.Status.ERL
 bool BigEndianMem = CP0.Config.BE
 bits(1) ReverseEndian = [CP0.Status.RE and UserMode]
 bits(1) BigEndianCPU  = [BigEndianMem] ?? ReverseEndian
-
-word flip_endian_word (w::word) =
-  match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
-
-dword flip_endian_dword (dw::dword) =
-  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
-                   h : g : f : e : d : c : b : a }

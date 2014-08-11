@@ -24,6 +24,14 @@ declare log :: event list
 unit mark (e::event) = log <- e @ log
 unit unmark = log <- Tail (log)
 
+
+word flip_endian_word (w::word) =
+  match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+
+dword flip_endian_dword (dw::dword) =
+  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
+                  h : g : f : e : d : c : b : a }
+
 nat TLBEntries = 16
 
 --------------------------------------------------
