@@ -11,6 +11,8 @@ val () = HolExport.spec ("mips-base.spec, mips-api.spec, mips.spec", "hol/mips")
 val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
                        \mips-sml.spec, mips.spec, mips-encode.spec"
 
+val () = SMLExport.setFunctor true
+val () = SMLExport.setFunctor false
 val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
                      \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
 
