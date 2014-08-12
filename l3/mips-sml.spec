@@ -383,7 +383,11 @@ define TLBP =
    else
      match LookupTLB (CP0.EntryHi.R, CP0.EntryHi.VPN2)
      {
-        case Nil => CP0.Index.P <- true
+        case Nil =>
+           {
+              CP0.Index.P <- true;
+              CP0.Index.Index <- UNKNOWN
+           }
         case list {(i, e)} =>
            {
               CP0.Index.P <- false;
