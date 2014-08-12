@@ -183,10 +183,12 @@ declare
    index`8 = if [vpn2<6:0>] >= TLBEntries
              then [vpn2<6:0>] else 128 + [vpn2<6:0>];
    nmask`27 = ~[e.Mask];
-   var found = if e.VPN2 && nmask == vpn2 && nmask and e.R == r
-                  and (e.G or e.ASID == CP0.EntryHi.ASID) then
-                   list {(index, e)}
-               else Nil;
+   var found = Nil;
+   when CP0.Config6.LTLB do
+     found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
+                    and (e.G or e.ASID == CP0.EntryHi.ASID) then
+                     list {(index, e)}
+              else Nil;
    for i in 0 .. TLBEntries - 1 do
    {
       e = TLB_assoc ([i]);
@@ -438,10 +440,18 @@ define TLBWR =
      SignalException(CpU)
    else
    {
-     j = CP0.EntryHi.VPN2<6:0>;
-     old = TLB_direct (j);
-     TLB_direct (j) <- ModifyTLB (old);
-     when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+     if CP0.Config6.LTLB then
+     {
+       j = CP0.EntryHi.VPN2<6:0>;
+       old = TLB_direct (j);
+       TLB_direct (j) <- ModifyTLB (old);
+       when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+     }
+     else
+     {
+       j = CP0.Random.Random;
+       TLB_assoc ([j]) <- ModifyTLB (TLB_assoc ([j]))
+     }
    }
 
 -------------------------
