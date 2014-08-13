@@ -285,7 +285,7 @@ fun loop mx i =
           | NONE => ("-", "failed instruction fetch")
       val exl0 = #EXL (#Status (!mips.CP0))
    in
-      print (StringCvt.padRight #" " 6 (Int.toString i) ^ " " ^
+      print ("instr " ^ StringCvt.padRight #" " 9 (Int.toString i) ^ " " ^
              hex64 (!mips.PC) ^ " : " ^ h ^ "   " ^ a ^ "\n")
     ; uart ()
     ; mips.Next ()
