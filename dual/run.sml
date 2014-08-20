@@ -182,7 +182,10 @@ local
    fun readReg i = hex64 (mips.GPR (BitsN.fromNat (i, 5)))
 in
    fun dumpRegisters (core) =
-     let val pc = mips.Map.lookup(!mips.c_PC, 0)
+     let
+       val savedProcID = !mips.procID
+       val pc = mips.Map.lookup(!mips.c_PC, 0)
+       val () = mips.procID := BitsN.B(core, BitsN.size (!mips.procID))
      in
         print "======   Registers   ======\n"
       ; print ("Core = " ^ Int.toString(core) ^ "\n")
@@ -192,6 +195,7 @@ in
            fn i =>
               print ("Reg " ^ (if i < 10 then " " else "") ^
                      Int.toString i ^ " " ^ readReg i ^ "\n"))
+      ; mips.procID := savedProcID
     end
    fun dumpRegistersOnCP0_26 () =
       case !mips.log of
@@ -283,7 +287,8 @@ val () = mips.UNPREDICTABLE_HI :=
 
 fun loop mx i =
    let
-      val () = mips.procID := BitsN.B(!current_core_id, 1)
+      val () = mips.procID := BitsN.B(!current_core_id,
+                                      BitsN.size(!mips.procID))
       val coreId = !current_core_id
       val () = current_core_id := (if !current_core_id = 0 then 1 else 0)
       val (h, a) =
@@ -314,7 +319,8 @@ fun loop mx i =
 fun decr i = if i <= 0 then i else i - 1
 
 fun pureLoop mx =
-   ( mips.procID := BitsN.B(!current_core_id, 1)
+   ( mips.procID := BitsN.B(!current_core_id,
+                            BitsN.size(!mips.procID))
    ; current_core_id := (if !current_core_id = 0 then 1 else 0)
    ; uart ()
    ; mips.Next ()
@@ -329,9 +335,9 @@ in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t pureLoop mx
    fun run pc_uart mx code raw =
-      ( mips.procID := BitsN.B(1, 1)
+      ( mips.procID := BitsN.B(1, BitsN.size(!mips.procID))
       ; mips.initMips pc_uart
-      ; mips.procID := BitsN.B(0, 1)
+      ; mips.procID := BitsN.B(0, BitsN.size(!mips.procID))
       ; mips.initMips pc_uart
       ; List.app
           (fn (a, s) =>
