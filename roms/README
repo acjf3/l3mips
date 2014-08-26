@@ -21,4 +21,4 @@ Booting takes around 10 mins on a modern PC.
 For users in the Computer Laboratory, a dual-core kernel image is
 available in:
 
-  /usr/groups/ctsrd/cheri/20140819-cheribsd-cheri-sim-2core-mdroot-singleuser-kernel.bz2
+  /usr/groups/ctsrd/cheri/20140819-cheribsd-beri-sim-2core-mdroot-singleuser-kernel.bz2
