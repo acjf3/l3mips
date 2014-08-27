@@ -22,3 +22,8 @@ For users in the Computer Laboratory, a dual-core kernel image is
 available in:
 
   /usr/groups/ctsrd/cheri/20140819-cheribsd-beri-sim-2core-mdroot-singleuser-kernel.bz2
+
+The dual core simulation can be run using :
+
+  l3mips --nbcore 2 --non-block on --ignore HI --ignore LO --format raw \
+  --at 1048576 20140819-cheribsd-beri-sim-2core-mdroot-singleuser-kernel simboot.mem
