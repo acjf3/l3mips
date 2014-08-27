@@ -15,6 +15,7 @@ val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
 val current_core_id = ref 0
+val nb_core = ref 1
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -199,7 +200,7 @@ in
     end
    fun dumpRegistersOnCP0_26 () =
       case !mips.log of
-         [mips.w_c0 (BitsN.B (26, 5), _)] => (dumpRegisters 0; dumpRegisters 1)
+         [mips.w_c0 (BitsN.B (26, 5), _)] => (List.tabulate(!nb_core, dumpRegisters);())
        | _ => ()
 end
 
@@ -321,10 +322,15 @@ fun decr i = if i <= 0 then i else i - 1
 fun pureLoop mx =
    ( mips.procID := BitsN.B(!current_core_id,
                             BitsN.size(!mips.procID))
-   ; current_core_id := (if !current_core_id = 0 then 1 else 0)
+   ; current_core_id := (!current_core_id + 1) mod !nb_core
    ; uart ()
    ; mips.Next ()
    ; dumpRegistersOnCP0_26 ()
+   (*
+   ; print (Int.toString(!current_core_id)^" current core\n")
+   ; print (Int.toString(!nb_core)^" nb_core\n")
+   ; print (Int.toString(!mips.totalCore)^" mips.totalCore\n")
+   *)
    ; if mips.done () orelse (mx = 1) then (print "done\n")
      else pureLoop (decr mx)
    )
@@ -335,10 +341,10 @@ in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t pureLoop mx
    fun run pc_uart mx code raw =
-      ( mips.procID := BitsN.B(1, BitsN.size(!mips.procID))
-      ; mips.initMips pc_uart
-      ; mips.procID := BitsN.B(0, BitsN.size(!mips.procID))
-      ; mips.initMips pc_uart
+      ( List.tabulate(!nb_core,
+        fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
+                 mips.initMips pc_uart))
+      ; mips.totalCore := !nb_core
       ; List.app
           (fn (a, s) =>
              ( print ("Loading " ^ s ^ "... ")
@@ -352,8 +358,7 @@ in
       ; if 0 < !uart_delay then uart_output () else ()
       )
       handle mips.UNPREDICTABLE s =>
-        ( dumpRegisters 0
-        ; dumpRegisters 1
+        ( List.tabulate(!nb_core, dumpRegisters)
         ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
         )
 end
@@ -368,12 +373,13 @@ fun printUsage () =
       \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
       \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
       \Arguments:\n\
-      \  --cyles <number>          upper bound on instruction cycles\n\
+      \  --cycles <number>          upper bound on instruction cycles\n\
       \  --trace <level>           verbosity level (0 default, 2 maximum)\n\
       \  --pc <address>            initial program counter value and\n\
       \                            start address for main Intel Hex file\n\
       \  --at <address> <file>     load extra Intel Hex <file> into physical\n\
       \                            memory at location <address>\n\
+      \  --nbcore <number>         number of core(s) (default is 1)\n\
       \  --uart <address>          base physical address for UART memory-map\n\
       \  --uart-delay <number>     UART cycle delay (determines baud rate)\n\
       \  --uart-in <file>          UART input file (stdin if omitted)\n\
@@ -397,6 +403,7 @@ fun getArguments () =
         | "-h" => "--help"
         | "-p" => "--pc"
         | "-a" => "--at"
+        | "-n" => "--nbcore"
         | s => s)
       (CommandLine.arguments ())
 
@@ -459,6 +466,8 @@ val () =
           val u = Option.getOpt (Option.map getNumber u, 0x000000007f000000)
           val (c, l) = processOption "--cycles" l
           val c = Option.getOpt (Option.map getNumber c, ~1)
+          val (n, l) = processOption "--nbcore" l
+          val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, Int.min (t, 2))

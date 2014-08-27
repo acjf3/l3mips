@@ -96,9 +96,9 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 13, 0 => [CP0.&Cause]
          case 0, 14, 0 =>  CP0.EPC
          case 0, 15, 0 => [CP0.PRId]
-         case 0, 15, 1 => ZeroExtend( (1 :: bits(16))
+         case 0, 15, 1 => ZeroExtend( ([totalCore - 1] :: bits(16))
                                     : ([procID] :: bits(16)) )
-         case 0, 15, 6 => ZeroExtend( (1 :: bits(16))
+         case 0, 15, 6 => ZeroExtend( ([totalCore - 1] :: bits(16))
                                     : ([procID] :: bits(16)) )
          case 0, 16, 0 => [CP0.&Config]
          case 0, 16, 1 => [CP0.&Config1]
@@ -369,20 +369,21 @@ dword LoadMemory (CCA::CCA, AccessLength::bits(3),
                   pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
 {  a = pAddr<39:3>;
    var ret;
+
+   var found = false;
    if a == JTAG_UART.base_address then
    {
+     found <- true;
      ret <- flip_endian_word (JTAG_UART.&data)
           : flip_endian_word (JTAG_UART.&control);
      when pAddr<2:0> == 0 do JTAG_UART_load
    }
-   else if a >= PIC_base_address(0)
-       and a < (PIC_base_address(0)+1072) then
-     ret <- PIC_load(0, a)
-   else if a >= PIC_base_address(1)
-       and a < (PIC_base_address(1)+1072) then
-     ret <- PIC_load(1, a)
-   else
-     ret <- MEM (a);
+   else for core in 0 .. (totalCore - 1) do
+     when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+        {found <- true; ret <- PIC_load([core], a)};
+
+   when found == false do
+      ret <- MEM (a);
    return ret
 }
 
@@ -400,17 +401,17 @@ unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword,
    l = 64 - ([AccessLength] + 1 + [pAddr<2:0>]) * 0n8;
    mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
    mark (w_mem (pAddr, mask, AccessLength, MemElem));
+
+   var found = false;
    if a == JTAG_UART.base_address then
-      JTAG_UART_store (mask, MemElem)
-   else if a >= PIC_base_address(0)
-       and a < (PIC_base_address(0)+1072) then
-      PIC_store(0, a, mask, MemElem)
-   else if a >= PIC_base_address(1)
-       and a < (PIC_base_address(1)+1072) then
-      PIC_store(1, a, mask, MemElem)
-   else
+      {found <- true; JTAG_UART_store (mask, MemElem)}
+   else for core in 0 .. (totalCore - 1) do
+      when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+         {found <- true; PIC_store([core], a, mask, MemElem)};
+
+   when found == false do
    {
-      for core in 0 .. 1 do
+      for core in 0 .. (totalCore - 1) do
         when core <> [procID] and
              c_LLbit([core]) == Some (true) and
              c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
@@ -528,7 +529,7 @@ define RDHWR (rt::reg, rd::reg) =
       {
          case  0 => GPR(rt) <- 0
          case  2 => GPR(rt) <- SignExtend(CP0.Count)
-         case  3 => GPR(rt) <- 1
+         case  3 => GPR(rt) <- [totalCore - 1]
          case 29 => GPR(rt) <- CP0.UsrLocal
          case _  => SignalException(ResI)
       }
@@ -661,11 +662,8 @@ unit initMips (pc::nat, uart::nat) =
    PC <- [pc];
    when procID == 0 do MEM <- InitMap (0x0);
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;
-   JTAG_UART_initialise (uart);
-   if procID == 0 then
-     PIC_initialise (0x7f804000)
-   else
-     PIC_initialise (0x7f808000)
+   when procID == 0 do JTAG_UART_initialise (uart);
+   PIC_initialise (0x7f804000 + [procID] * 0x4000)
 }
 
 bool done =

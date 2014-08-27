@@ -3,13 +3,15 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
-type CCA   = bits(3)
-type reg   = bits(5)
-type byte  = bits(8)
-type half  = bits(16)
-type word  = bits(32)
-type dword = bits(64)
-type vAddr = bits(64)
+type id     = bits(8)          -- max 256 cores
+type reg    = bits(5)
+type id_reg = bits(6)          -- width(id_reg) = width(id) + width(reg)
+type CCA    = bits(3)
+type byte   = bits(8)
+type half   = bits(16)
+type word   = bits(32)
+type dword  = bits(64)
+type vAddr  = bits(64)
 
 exception UNPREDICTABLE :: string
 
@@ -92,7 +94,7 @@ register ConfigRegister1 :: word
     9-7 : DA        -- Dcache associativity
       6 : C2        -- Co-processor 2 implemented?
       5 : MD        -- MDMX ASE implemented?
-      4 : PC        -- Performance counter registers implemented?
+      4 : PCR       -- Performance counter registers implemented?
       3 : WR        -- Watch registers implemented?
       2 : CA        -- Code compression (MIPS16) implemented?
       1 : EP        -- EJTAG implemented?
@@ -206,17 +208,88 @@ record CP0
 -- The register state space
 --================================================
 
+-- Each piece of state is local to a core.
+
+type RegFile = reg -> dword
+
 declare
 {
-   gpr          :: reg -> dword   -- general purpose registers
-   PC           :: dword          -- the program counter
-   hi           :: dword option   -- multiply and divide register high result
-   lo           :: dword option   -- multiply and divide register low result
-   CP0          :: CP0            -- CP0 registers
-   BranchDelay  :: dword option   -- Branch to be taken after instruction
-   BranchTo     :: dword option   -- Requested branch
-   LLbit        :: bool option    -- Load link flag
-   exceptionSignalled :: bool     -- flag exceptions to pick up in branch delay
+  c_gpr          :: id -> RegFile       -- general purpose registers
+  c_PC           :: id -> dword         -- the program counter
+  c_hi           :: id -> dword option  -- mul/div register high result
+  c_lo           :: id -> dword option  -- mul/div register low result
+  c_CP0          :: id -> CP0           -- CP0 registers
+  c_BranchDelay  :: id -> dword option  -- Branch to be taken after instruction
+  c_BranchTo     :: id -> dword option  -- Requested branch
+  c_LLbit        :: id -> bool option   -- Load link flag
+  c_exceptionSignalled :: id -> bool    -- flag exceptions to pick up
+                                        -- in branch delay
+}
+
+-- Total amount of core(s)
+declare totalCore :: nat
+
+-- ID of the core executing current instruction
+declare procID :: id
+
+-- The following components provide read/write access to state of the
+-- core whose id equals procID.  For example, writing "gpr(r)" refers
+-- general purpose register "r" in the core whose id equals procID.
+
+component gpr (n::reg) :: dword
+{
+   value = { m = c_gpr(procID); m(n) }
+   assign value = { var m = c_gpr(procID)
+                  ; m(n) <- value
+                  ; c_gpr(procID) <- m }
+}
+
+component PC :: dword
+{
+   value = c_PC(procID)
+   assign value = c_PC(procID) <- value
+}
+
+component hi :: dword option
+{
+   value = c_hi(procID)
+   assign value = c_hi(procID) <- value
+}
+
+component lo :: dword option
+{
+   value = c_lo(procID)
+   assign value = c_lo(procID) <- value
+}
+
+component CP0 :: CP0
+{
+   value = c_CP0(procID)
+   assign value = c_CP0(procID) <- value
+}
+
+component BranchDelay :: dword option
+{
+   value = c_BranchDelay(procID)
+   assign value = c_BranchDelay(procID) <- value
+}
+
+component BranchTo :: dword option
+{
+   value = c_BranchTo(procID)
+   assign value = c_BranchTo(procID) <- value
+}
+
+component LLbit :: bool option
+{
+   value = c_LLbit(procID)
+   assign value = c_LLbit(procID) <- value
+}
+
+component exceptionSignalled :: bool
+{
+   value = c_exceptionSignalled(procID)
+   assign value = c_exceptionSignalled(procID) <- value
 }
 
 --------------------------------------------------
