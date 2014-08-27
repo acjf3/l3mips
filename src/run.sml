@@ -291,7 +291,7 @@ fun loop mx i =
       val () = mips.procID := BitsN.B(!current_core_id,
                                       BitsN.size(!mips.procID))
       val coreId = !current_core_id
-      val () = current_core_id := (if !current_core_id = 0 then 1 else 0)
+      val () = current_core_id := (coreId+1) mod !nb_core
       val (h, a) =
          case mips.Fetch () of
             SOME w => (hex32 w, mips.instructionToString (mips.Decode w))
@@ -344,6 +344,7 @@ in
       ( List.tabulate(!nb_core,
         fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
                  mips.initMips pc_uart))
+      ; print ("Initialised cores: " ^ Int.toString(!nb_core) ^ "\n")
       ; mips.totalCore := !nb_core
       ; List.app
           (fn (a, s) =>
