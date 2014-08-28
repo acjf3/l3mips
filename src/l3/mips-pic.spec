@@ -36,7 +36,7 @@ unit PIC_update (id :: id) =
   ip <- 0;
   when PIC_ip_bits(id) <> 0 or ext <> 0 do
     for i in 0 .. 127 do
-      when PIC_ip_bits(id)<i> or ext<i> do 
+      when PIC_ip_bits(id)<i> or ext<i> do
       {
         reg = config_regs([i]);
         ip<[reg.IRQ]> <- ip<[reg.IRQ]> or reg.EN

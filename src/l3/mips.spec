@@ -5,9 +5,6 @@
 
 {-
 
-val () = Runtime.LoadF "mips-base.spec, mips-api.spec, mips.spec"
-val () = HolExport.spec ("mips-base.spec, mips-api.spec, mips.spec", "hol/mips")
-
 val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
                        \mips-sml.spec, mips.spec, mips-encode.spec"
 

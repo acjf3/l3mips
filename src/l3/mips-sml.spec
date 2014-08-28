@@ -129,7 +129,6 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
                             CP0.Wired.Wired <- value<7:0>;
                             CP0.Random.Random <- [TLBEntries-1]
                           }
-           
          case 0,  7, 0 => {
                             CP0.HWREna.CPUNum <- value<0>;
                             CP0.HWREna.CC     <- value<2>;
@@ -206,7 +205,7 @@ component TLB_assoc (i::bits(4)) :: TLBEntry
 {
    value = { var m = c_TLB_assoc(procID); m(i) }
    assign value = { var m = c_TLB_assoc(procID)
-                  ; m(i) <- value 
+                  ; m(i) <- value
                   ; c_TLB_assoc(procID) <- m}
 }
 
@@ -316,7 +315,6 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, LorS::LorS) =
                            then XTLBRefillL else XTLBRefillS;
                      SignalTLBException (exc, CP0.EntryHi.ASID, vAddr)
                   }
- 
                case list {(_, e)} =>
                   {
                      EvenOddBit = match e.Mask
@@ -536,7 +534,7 @@ define RDHWR (rt::reg, rd::reg) =
    }
    else
      SignalException(ResI)
-      
+
 --------------------------------------------------
 -- Instruction fetch
 --------------------------------------------------
