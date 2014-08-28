@@ -527,9 +527,9 @@ define RDHWR (rt::reg, rd::reg) =
    {
       match rd
       {
-         case  0 => GPR(rt) <- 0
+         case  0 => GPR(rt) <- [totalCore - 1]
          case  2 => GPR(rt) <- SignExtend(CP0.Count)
-         case  3 => GPR(rt) <- [totalCore - 1]
+         case  3 => GPR(rt) <- 1
          case 29 => GPR(rt) <- CP0.UsrLocal
          case _  => SignalException(ResI)
       }

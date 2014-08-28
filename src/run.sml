@@ -200,7 +200,7 @@ in
     end
    fun dumpRegistersOnCP0_26 () =
       case !mips.log of
-         [mips.w_c0 (BitsN.B (26, 5), _)] => (List.tabulate(!nb_core, dumpRegisters);())
+         [mips.w_c0 (BitsN.B (26, 5), _)] => dumpRegisters(BitsN.toInt(!mips.procID))
        | _ => ()
 end
 
@@ -326,11 +326,6 @@ fun pureLoop mx =
    ; uart ()
    ; mips.Next ()
    ; dumpRegistersOnCP0_26 ()
-   (*
-   ; print (Int.toString(!current_core_id)^" current core\n")
-   ; print (Int.toString(!nb_core)^" nb_core\n")
-   ; print (Int.toString(!mips.totalCore)^" mips.totalCore\n")
-   *)
    ; if mips.done () orelse (mx = 1) then (print "done\n")
      else pureLoop (decr mx)
    )
@@ -344,7 +339,6 @@ in
       ( List.tabulate(!nb_core,
         fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
                  mips.initMips pc_uart))
-      ; print ("Initialised cores: " ^ Int.toString(!nb_core) ^ "\n")
       ; mips.totalCore := !nb_core
       ; List.app
           (fn (a, s) =>
