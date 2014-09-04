@@ -8,7 +8,12 @@ LIBSRC=lib/Runtime.sig lib/Runtime.sml\
        lib/Ptree.sig lib/Ptree.sml\
        lib/MutableMap.sig lib/MutableMap.sml
 SRCDIR=src
-L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec mips-sml.spec mips.spec mips-encode.spec
+L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec mips-sml.spec
+ifdef CAP
+L3SRCBASE+=mips-cheri-instructions.spec mips.spec mips-cheri-decode.spec mips-decode.spec mips-cheri-encode.spec mips-encode.spec
+else
+L3SRCBASE+=mips-cp2default-instructions.spec mips.spec mips-cp2default-decode.spec mips-decode.spec mips-cp2default-encode.spec mips-encode.spec
+endif
 L3SRC=$(patsubst %, src/l3/%, $(L3SRCBASE))
 
 all: l3mips
@@ -21,4 +26,4 @@ l3mips: ${LIBSRC} ${SRCDIR}/mips.sig ${SRCDIR}/mips.sml ${SRCDIR}/run.sml ${SRCD
 
 clean:
 	rm -f l3mips
-	#rm -f ${SRCDIR}/mips.sig ${SRCDIR}/mips.sml
+	rm -f ${SRCDIR}/mips.sig ${SRCDIR}/mips.sml

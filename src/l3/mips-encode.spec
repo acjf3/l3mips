@@ -194,6 +194,11 @@ string instructionToString (i::instruction) =
      case ERET                           => "eret"
      case RDHWR (rt, rd)                 => op2r ("rdhwr", rt, rd)
      case WAIT                           => "wait"
+     case COP2 (_)                       => COP2InstructionToString(i)
+     case LWC2 (_)                       => LWC2InstructionToString(i)
+     case LDC2 (_)                       => LDC2InstructionToString(i)
+     case SWC2 (_)                       => SWC2InstructionToString(i)
+     case SDC2 (_)                       => SDC2InstructionToString(i)
      case ReservedInstruction            => "???"
    }
 
@@ -346,5 +351,10 @@ word Encode (i::instruction) =
      case ERET                           => '01000010000000000000000000011000'
      case RDHWR (rt, rd)                 => form6 (rt, rd, '111011')
      case WAIT                           => '01000010000000000000000000100000'
+     case COP2 (_)                       => COP2Encode(i)
+     case LWC2 (_)                       => LWC2Encode(i)
+     case LDC2 (_)                       => LDC2Encode(i)
+     case SWC2 (_)                       => SWC2Encode(i)
+     case SDC2 (_)                       => SDC2Encode(i)
      case ReservedInstruction            => 0
    }
