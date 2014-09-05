@@ -3,6 +3,18 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
+{-
+
+val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
+                       \mips-sml.spec, mips.spec, mips-encode.spec"
+
+val () = SMLExport.setFunctor true
+val () = SMLExport.setFunctor false
+val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
+                     \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
+
+-}
+
 type id     = bits(8)          -- max 256 cores
 type reg    = bits(5)
 type id_reg = bits(6)          -- width(id_reg) = width(id) + width(reg)
@@ -320,39 +332,6 @@ unit ExceptionCode (ExceptionType::ExceptionType) =
             case XTLBRefillS => 0x03
          }
 
-unit SignalException (ExceptionType::ExceptionType) =
-{
-   when not CP0.Status.EXL do
-   {
-      if IsSome (BranchDelay) then
-      {
-         CP0.EPC <- PC - 4;
-         CP0.Cause.BD <- true
-      }
-      else
-      {
-         CP0.EPC <- PC;
-         CP0.Cause.BD <- false
-      }
-   };
-   vectorOffset = if (ExceptionType == XTLBRefillL or
-                      ExceptionType == XTLBRefillS)
-                      and not CP0.Status.EXL then
-                     0x080`30
-                  else
-                     0x180;
-   ExceptionCode (ExceptionType);
-   CP0.Status.EXL <- true;
-   vectorBase = if CP0.Status.BEV then
-                   0xFFFF_FFFF_BFC0_0200`64
-                else
-                   0xFFFF_FFFF_8000_0000;
-   BranchDelay <- None;
-   BranchTo <- None;
-   PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
-   exceptionSignalled <- true
-}
-
 --------------------------------------------------
 -- Memory access
 --------------------------------------------------
@@ -376,3 +355,11 @@ bool KernelMode = CP0.Status.KSU == '00' or CP0.Status.EXL or CP0.Status.ERL
 bool BigEndianMem = CP0.Config.BE
 bits(1) ReverseEndian = [CP0.Status.RE and UserMode]
 bits(1) BigEndianCPU  = [BigEndianMem] ?? ReverseEndian
+
+bool NotWordValue(value::dword) =
+{  top = value<63:32>;
+   if value<31> then
+      top <> 0xFFFF_FFFF
+   else
+      top <> 0x0
+}

@@ -9,18 +9,23 @@
 # /!\ inclusion order matters /!\
 #######################################
 L3SRCDIR=src/l3
-L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec mips-sml.spec mips-memaccess.spec
+L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec
 ifdef CAP
+L3SRCBASE+=cheri/mips-cheri-state.spec
+L3SRCBASE+=cheri/mips-cheri-exception.spec
+L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cheri/mips-cheri-memaccess.spec
 L3SRCBASE+=cheri/mips-cheri-instructions.spec
-L3SRCBASE+=mips.spec
+L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=cheri/mips-cheri-decode.spec
 L3SRCBASE+=mips-decode.spec
 L3SRCBASE+=cheri/mips-cheri-encode.spec
 else
+L3SRCBASE+=mips-exception.spec
+L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=mips-memaccess.spec
 L3SRCBASE+=mips-cp2default-instructions.spec
-L3SRCBASE+=mips.spec
+L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=mips-cp2default-decode.spec
 L3SRCBASE+=mips-decode.spec
 L3SRCBASE+=mips-cp2default-encode.spec
