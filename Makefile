@@ -20,6 +20,7 @@ L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=cheri/mips-cheri-decode.spec
 L3SRCBASE+=mips-decode.spec
 L3SRCBASE+=cheri/mips-cheri-encode.spec
+L3SRCBASE+=cheri/mips-cheri-init.spec
 else
 L3SRCBASE+=mips-exception.spec
 L3SRCBASE+=mips-sml.spec
@@ -29,8 +30,9 @@ L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=mips-cp2default-decode.spec
 L3SRCBASE+=mips-decode.spec
 L3SRCBASE+=mips-cp2default-encode.spec
+L3SRCBASE+=mips-cp2default-init.spec
 endif
-L3SRCBASE+=mips-encode.spec
+L3SRCBASE+=mips-encode.spec mips-init.spec
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 
 # sml lib sources

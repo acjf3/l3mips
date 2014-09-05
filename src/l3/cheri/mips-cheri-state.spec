@@ -39,6 +39,12 @@ register Capability :: bits (257)
     63-0    : length    -- 64 length bits
 }
 
+register CapCause :: bits (16)
+{
+    15-8 : ExcCode  -- 8 bits exception code
+    7-0  : RegNum   -- 8 bits register number
+}
+
 --------------------------------
 -- Capability coprocessor state
 --------------------------------
@@ -47,8 +53,21 @@ type CapRegFile = reg -> Capability
 
 declare
 {
-  c_pcc     :: id -> Capability    -- program counter capability
-  c_capr    :: id -> CapRegFile    -- capability register file
+    c_capcause:: id -> CapCause      -- capability exception cause register
+    c_pcc     :: id -> Capability    -- program counter capability
+    c_capr    :: id -> CapRegFile    -- capability register file
+}
+
+component capcause :: CapCause
+{
+   value = c_capcause(procID)
+   assign value = c_capcause(procID) <- value
+}
+
+component PCC :: Capability
+{
+   value = c_pcc(procID)
+   assign value = c_pcc(procID) <- value
 }
 
 component CAPR (n::reg) :: Capability
