@@ -1,29 +1,59 @@
-LIBSRC=lib/Runtime.sig lib/Runtime.sml\
-       lib/IntExtra.sig lib/IntExtra.sml\
-       lib/Nat.sig lib/Nat.sml\
-       lib/L3.sig lib/L3.sml\
-       lib/Bitstring.sig lib/Bitstring.sml\
-       lib/BitsN.sig lib/BitsN.sml\
-       lib/FP64.sig lib/FP64.sml\
-       lib/Ptree.sig lib/Ptree.sml\
-       lib/MutableMap.sig lib/MutableMap.sml
-SRCDIR=src
-L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec mips-sml.spec
+#######################################
+# Makefile for the L3 mips simulator ##
+#######################################
+
+# The CAP environement variable, when defined,
+# enables the CHERI capability coprocessor
+
+# generating the L3 source list
+# /!\ inclusion order matters /!\
+#######################################
+L3SRCDIR=src/l3
+L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec mips-sml.spec mips-memaccess.spec
 ifdef CAP
-L3SRCBASE+=mips-cheri-instructions.spec mips.spec mips-cheri-decode.spec mips-decode.spec mips-cheri-encode.spec mips-encode.spec
+L3SRCBASE+=cheri/mips-cheri-memaccess.spec
+L3SRCBASE+=cheri/mips-cheri-instructions.spec
+L3SRCBASE+=mips.spec
+L3SRCBASE+=cheri/mips-cheri-decode.spec
+L3SRCBASE+=mips-decode.spec
+L3SRCBASE+=cheri/mips-cheri-encode.spec
 else
-L3SRCBASE+=mips-cp2default-instructions.spec mips.spec mips-cp2default-decode.spec mips-decode.spec mips-cp2default-encode.spec mips-encode.spec
+L3SRCBASE+=mips-memaccess.spec
+L3SRCBASE+=mips-cp2default-instructions.spec
+L3SRCBASE+=mips.spec
+L3SRCBASE+=mips-cp2default-decode.spec
+L3SRCBASE+=mips-decode.spec
+L3SRCBASE+=mips-cp2default-encode.spec
 endif
-L3SRC=$(patsubst %, src/l3/%, $(L3SRCBASE))
+L3SRCBASE+=mips-encode.spec
+L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
+
+# sml lib sources
+#######################################
+SMLSRCDIR=src/sml
+SMLLIBDIR=src/sml/lib
+SMLLIBSRC=Runtime.sig Runtime.sml\
+          IntExtra.sig IntExtra.sml\
+          Nat.sig Nat.sml\
+          L3.sig L3.sml\
+          Bitstring.sig Bitstring.sml\
+          BitsN.sig BitsN.sml\
+          FP64.sig FP64.sml\
+          Ptree.sig Ptree.sml\
+          MutableMap.sig MutableMap.sml
+SMLLIB=$(patsubst %, $(SMLLIBDIR)/%, $(SMLLIBSRC))
+
+# make targets
+#######################################
 
 all: l3mips
 
-${SRCDIR}/mips.sig ${SRCDIR}/mips.sml: ${L3SRC}
-	echo 'SMLExport.spec ("${L3SRC}", "${SRCDIR}/mips")' | l3
+${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
+	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
-l3mips: ${LIBSRC} ${SRCDIR}/mips.sig ${SRCDIR}/mips.sml ${SRCDIR}/run.sml ${SRCDIR}/l3mips.mlb
-	mlton -default-type intinf -verbose 1 -output ./l3mips ${SRCDIR}/l3mips.mlb
+l3mips: ${SMLLIB} ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml ${SMLSRCDIR}/run.sml ${SMLSRCDIR}/l3mips.mlb
+	mlton -default-type intinf -verbose 1 -output ./l3mips ${SMLSRCDIR}/l3mips.mlb
 
 clean:
 	rm -f l3mips
-	rm -f ${SRCDIR}/mips.sig ${SRCDIR}/mips.sml
+	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
