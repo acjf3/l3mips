@@ -99,3 +99,14 @@ word option Fetch =
       None
    }
 }
+
+-----------------------------------
+-- JALR rs (rd = 31 implied)
+-- JALR rd, rs
+-----------------------------------
+define Branch > JALR (rs::reg, rd::reg) =
+{
+   temp = GPR(rs);
+   GPR(rd) <- PC + 8;
+   BranchTo <- Some (temp)
+}

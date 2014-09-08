@@ -2,35 +2,48 @@
 # Makefile for the L3 mips simulator ##
 #######################################
 
-# The CAP environement variable, when defined,
+# The CAP environment variable, when defined,
 # enables the CHERI capability coprocessor
 
 # generating the L3 source list
 # /!\ inclusion order matters /!\
 #######################################
 L3SRCDIR=src/l3
-L3SRCBASE=mips-base.spec mips-pic.spec mips-uart.spec
 ifdef CAP
-L3SRCBASE+=cheri/mips-cheri-state.spec
-L3SRCBASE+=cheri/mips-cheri-exception.spec
+L3SRCBASE+=cheri/tlb-types.spec
+L3SRCBASE+=mips-types.spec
+L3SRCBASE+=mips-base.spec
+L3SRCBASE+=mips-pic.spec
+L3SRCBASE+=mips-uart.spec
+L3SRCBASE+=cheri/state.spec
+L3SRCBASE+=cheri/exception.spec
+L3SRCBASE+=mips-tlb.spec
+L3SRCBASE+=cheri/tlb-translate.spec
 L3SRCBASE+=mips-sml.spec
-L3SRCBASE+=cheri/mips-cheri-memaccess.spec
-L3SRCBASE+=cheri/mips-cheri-instructions.spec
+L3SRCBASE+=cheri/memaccess.spec
+L3SRCBASE+=cheri/instructions.spec
 L3SRCBASE+=mips-instructions.spec
-L3SRCBASE+=cheri/mips-cheri-decode.spec
+L3SRCBASE+=cheri/decode.spec
 L3SRCBASE+=mips-decode.spec
-L3SRCBASE+=cheri/mips-cheri-encode.spec
-L3SRCBASE+=cheri/mips-cheri-init.spec
+L3SRCBASE+=cheri/encode.spec
+L3SRCBASE+=cheri/init.spec
 else
+L3SRCBASE+=mips-tlb-types.spec
+L3SRCBASE+=mips-types.spec
+L3SRCBASE+=mips-base.spec
+L3SRCBASE+=mips-pic.spec
+L3SRCBASE+=mips-uart.spec
 L3SRCBASE+=mips-exception.spec
+L3SRCBASE+=mips-tlb.spec
+L3SRCBASE+=mips-tlb-translate.spec
 L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=mips-memaccess.spec
-L3SRCBASE+=mips-cp2default-instructions.spec
+L3SRCBASE+=cp2-null/instructions.spec
 L3SRCBASE+=mips-instructions.spec
-L3SRCBASE+=mips-cp2default-decode.spec
+L3SRCBASE+=cp2-null/decode.spec
 L3SRCBASE+=mips-decode.spec
-L3SRCBASE+=mips-cp2default-encode.spec
-L3SRCBASE+=mips-cp2default-init.spec
+L3SRCBASE+=cp2-null/encode.spec
+L3SRCBASE+=cp2-null/init.spec
 endif
 L3SRCBASE+=mips-encode.spec mips-init.spec
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
@@ -59,7 +72,7 @@ ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
 l3mips: ${SMLLIB} ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml ${SMLSRCDIR}/run.sml ${SMLSRCDIR}/l3mips.mlb
-	mlton -default-type intinf -verbose 1 -output ./l3mips ${SMLSRCDIR}/l3mips.mlb
+	mlton -inline 1000 -default-type intinf -verbose 1 -output ./l3mips ${SMLSRCDIR}/l3mips.mlb
 
 clean:
 	rm -f l3mips

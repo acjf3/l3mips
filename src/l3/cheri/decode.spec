@@ -3,8 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-pattern drop5 :: bits (5)
-
 instruction COP2Decode (v::bits(26)) =
 {
     match v
@@ -16,7 +14,7 @@ instruction COP2Decode (v::bits(26)) =
         case '00000 rd cb _ 110'          => COP2(CHERICOP2(CGet(CGetSealed(rd, cb))))
         case '00000 rd cb _ 000'          => COP2(CHERICOP2(CGet(CGetPerm(rd, cb))))
         case '00000 rd cb _ 001'          => COP2(CHERICOP2(CGet(CGetType(rd, cb))))
-        case '00000 drop5 cd _ 111'       => COP2(CHERICOP2(CGet(CGetPCC(cd))))
+        case '00000 _`5 cd _ 111'         => COP2(CHERICOP2(CGet(CGetPCC(cd))))
         case '00000 rd 00000 _ 100'       => COP2(CHERICOP2(CGet(CGetCause(rd))))
         case '00100 00000 00000 rt _ 100' => COP2(CHERICOP2(CSet(CSetCause(rt))))
         case '00100 cd cb rt _ 010'       => COP2(CHERICOP2(CSet(CIncBase(cd, cb, rt))))
@@ -25,14 +23,14 @@ instruction COP2Decode (v::bits(26)) =
         case '00100 cd cb rt _ 000'       => COP2(CHERICOP2(CSet(CAndPerm(cd, cb, rt))))
         case '01101 cd cb rt _ 001'       => COP2(CHERICOP2(CSet(CSetOffset(cd, cb, rt))))
         case '00100 cd cb rt _ 001'       => COP2(CHERICOP2(CSet(CSetType(cd, cb, rt))))
-        case '01011 cs drop5 rt _ 000'    => COP2(CHERICOP2(CCheck(CCheckPerm(cs, rt))))
+        case '01011 cs _`5 rt _ 000'      => COP2(CHERICOP2(CCheck(CCheckPerm(cs, rt))))
         case '01011 cs cb _ 001'          => COP2(CHERICOP2(CCheck(CCheckType(cs, cb))))
         case '00100 cd cb rt _ 111'       => COP2(CHERICOP2(CSet(CFromPtr(cd, cb, rt))))
         case '01100 rd cb ct _'           => COP2(CHERICOP2(CGet(CToPtr(rd, cb, ct))))
         case '01110 rd cb ct _ t'         => COP2(CHERICOP2(CPtrCmp(rd, cb, ct, t)))
         case '01001 cb offset'            => COP2(CHERICOP2(CBTU(cb, offset)))
         case '01010 cb offset'            => COP2(CHERICOP2(CBTS(cb, offset)))
-        case '01000 drop5 cb _'           => COP2(CHERICOP2(CJR(cb)))
+        case '01000 _`5 cb _'             => COP2(CHERICOP2(CJR(cb)))
         case '00111 cd cb _'              => COP2(CHERICOP2(CJALR(cd, cb)))
         case '00001 cd cs _'              => COP2(CHERICOP2(CSealCode(cd, cs)))
         case '00010 cd cs ct _'           => COP2(CHERICOP2(CSealData(cd, cs, ct)))
@@ -55,6 +53,7 @@ instruction LWC2Decode (v::bits(26)) =
         case _                     => COP2(CHERICOP2(UnknownCapInstruction))
     }
 }
+
 instruction LDC2Decode (v::bits(26)) =
 {
     match v
@@ -63,6 +62,7 @@ instruction LDC2Decode (v::bits(26)) =
         case _                 => COP2(CHERICOP2(UnknownCapInstruction))
     }
 }
+
 instruction SWC2Decode (v::bits(26)) =
 {
     match v
@@ -72,6 +72,7 @@ instruction SWC2Decode (v::bits(26)) =
         case _                     => COP2(CHERICOP2(UnknownCapInstruction))
     }
 }
+
 instruction SDC2Decode (v::bits(26)) =
 {
     match v

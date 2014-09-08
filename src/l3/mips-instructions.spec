@@ -1201,17 +1201,6 @@ define Branch > JR (rs::reg) =
    BranchTo <- Some (GPR(rs))
 
 -----------------------------------
--- JALR rs (rd = 31 implied)
--- JALR rd, rs
------------------------------------
-define Branch > JALR (rs::reg, rd::reg) =
-{
-   temp = GPR(rs);
-   GPR(rd) <- PC + 8;
-   BranchTo <- Some (temp)
-}
-
------------------------------------
 -- BEQ rs, rt, offset
 -----------------------------------
 define Branch > BEQ (rs::reg, rt::reg, offset::bits(16)) =

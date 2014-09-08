@@ -3,18 +3,21 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-unit COP2Init () = ()
-{-
-    capcause <- 0;
+unit COP2Init () =
+{
+    var defaultCapCause :: CapCause;
+    defaultCapCause.ExcCode <- 0;
+    defaultCapCause.RegNum <- 0;
+    capcause <- defaultCapCause;
     var defaultCap :: Capability;
-    defaultCap.tag <- 1;
-    defaultCap.sealed <- 0;
+    defaultCap.tag <- true;
+    defaultCap.sealed <- false;
     defaultCap.offset <- 0;
     defaultCap.base <- 0;
-    defaultCap.lenght <- ~0;
+    defaultCap.length <- ~0;
     defaultCap.otype <- 0;
     defaultCap.perms <- ~0;
     defaultCap.reserved <- ~0;
     PCC <- defaultCap;
-    for i in 0 .. 31 do CAPR([i]) <- defaultCap;
--}
+    for i in 0 .. 31 do CAPR([i]) <- defaultCap
+}
