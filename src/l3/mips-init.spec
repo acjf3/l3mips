@@ -3,6 +3,8 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
+TLBEntry initTLB = { var e::TLBEntry; e.R <- '10'; return e }
+
 unit initMips (pc::nat, uart::nat) =
 {
    -- Configuration register (mimic BERI)

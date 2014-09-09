@@ -3,16 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
--- Internal access checking
-
-vAddr checkAccess (vAddr::vAddr, cap::Capability) =
-{
-    ret = vAddr + cap.base;
-    if (ret > cap.base + cap.length) then SignalException(C2E)
-    else ();
-    return ret
-}
-
 -----------------
 -- Data accesses
 -----------------
@@ -100,13 +90,19 @@ word option Fetch =
     if exceptionSignalled then None
     else if PC<1:0> == 0 then
     {
-        pc, cca = AddressTranslation (checkAccess (PC, PCC), INSTRUCTION, LOAD);
-        --pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
-        if exceptionSignalled then None else Some (loadWord32 (pc))
+        vAddr = PC + PCC.base;
+        var perms::Perms;
+        &perms <- PCC.perms;
+        if (vAddr > PCC.base + PCC.length) then {SignalCapException(capExcLength, 0xff); None}
+        else if not perms.permit_execute then {SignalCapException(capExcPermExe, 0xff); None}
+        else {
+            pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
+            if exceptionSignalled then None else Some (loadWord32 (pc))
+        }
     }
     else
     {
-        CP0.BadVAddr <- PC;
+        CP0.BadVAddr <- PCC.base + PC;
         SignalException (AdEL);
         None
     }

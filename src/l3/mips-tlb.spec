@@ -7,23 +7,6 @@ type pAddr = bits(40)
 
 nat TLBEntries = 16
 
-record TLBEntry
-{
-   Mask :: bits(12)
-   R    :: bits(2)
-   VPN2 :: bits(27)
-   G    :: bool
-   ASID :: bits(8)
-   PFN0 :: bits(28)
-   PFN1 :: bits(28)
-   C0   :: bits(3)
-   C1   :: bits(3)
-   D0   :: bool
-   D1   :: bool
-   V0   :: bool
-   V1   :: bool
-}
-
 -- Each core has its own TLB, with both associative and direct-mapped
 -- regions.  (See BERI manual.)
 
@@ -229,9 +212,3 @@ define TLBWR =
        TLB_assoc ([j]) <- ModifyTLB (TLB_assoc ([j]))
      }
    }
-
---------------------------------------------------
--- Initialisation and termination
---------------------------------------------------
-
-TLBEntry initTLB = { var e; e.R <- '10'; return e }
