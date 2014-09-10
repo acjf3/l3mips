@@ -635,11 +635,9 @@ define Trap > TNEI (rs::reg, immediate::bits(16)) =
 unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (BYTE, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      memdoubleword = LoadMemory (CCA, BYTE, pAddr, vAddr, DATA);
       byte = vAddr<2:0> ?? BigEndianCPU^3;
       membyte`8 = memdoubleword <7 + 8 * [byte] : 8 * [byte]>;
       GPR(rt) <- if unsigned then ZeroExtend (membyte)
@@ -658,11 +656,9 @@ unit loadHalf (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (HALFWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian^2 : '0'));
-         memdoubleword = LoadMemory (CCA, HALFWORD, pAddr, vAddr, DATA);
          byte = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
          memhalf`16 = memdoubleword <15 + 8 * [byte] : 8 * [byte]>;
          GPR(rt) <- if unsigned then
@@ -685,11 +681,9 @@ unit loadWord (link::bool, base::reg, rt::reg, offset::bits(16),
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (WORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian : '00'));
-         memdoubleword = LoadMemory (CCA, WORD, pAddr, vAddr, DATA);
          byte = vAddr<2:0> ?? (BigEndianCPU : '00');
          memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
          GPR(rt) <- if unsigned then
@@ -717,10 +711,9 @@ unit loadDoubleword (link::bool, base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (DOUBLEWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         memdoubleword = LoadMemory (CCA, DOUBLEWORD, pAddr, vAddr, DATA);
          GPR(rt) <- memdoubleword;
          if link then
          {
@@ -768,14 +761,11 @@ define Load > LLD (base::reg, rt::reg, offset::bits(16)) =
 define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   memdoubleword, pAddr = LoadMemory ('0' : byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      memdoubleword = LoadMemory (CCA, '0' : byte, pAddr, vAddr, DATA);
       temp`32 =
          match word, byte
          {
@@ -799,14 +789,11 @@ define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   memdoubleword, pAddr = LoadMemory (WORD - ('0' : byte), vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      memdoubleword = LoadMemory (CCA, WORD - ('0' : byte), pAddr, vAddr, DATA);
       temp`32 =
          match word, byte
          {
@@ -832,13 +819,10 @@ define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   memdoubleword, pAddr = LoadMemory (byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      memdoubleword = LoadMemory (CCA, byte, pAddr, vAddr, DATA);
       GPR(rt) <-
          match byte
          {
@@ -861,13 +845,10 @@ define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   memdoubleword, pAddr = LoadMemory (DOUBLEWORD - byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      memdoubleword = LoadMemory (CCA, DOUBLEWORD - byte, pAddr, vAddr, DATA);
       GPR(rt) <-
          match byte
          {

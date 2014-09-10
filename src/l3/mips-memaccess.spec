@@ -5,26 +5,43 @@
 
 -- Pimitive memory load (with memory-mapped devices)
 
-dword LoadMemory (CCA::CCA, AccessLength::bits(3),
-                  pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
-{  a = pAddr<39:3>;
-   var ret;
+dword * pAddr LoadMemory (AccessLength::bits(3), vAddr::vAddr,
+                            IorD::IorD, AccessType::AccessType) =
+{
+    var pAddr;
+    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    pAddr <- tmp;
+    pAddr<2:0> <- match AccessLength
+    {
+        case BYTE     => (pAddr<2:0> ?? ReverseEndian^3)
+        case HALFWORD => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case WORD     => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case _        =>  pAddr<2:0>
+    };
+    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    if not exceptionSignalled then
+    {
+        a = pAddr<39:3>;
+        var ret;
 
-   var found = false;
-   if a == JTAG_UART.base_address then
-   {
-     found <- true;
-     ret <- flip_endian_word (JTAG_UART.&data)
-          : flip_endian_word (JTAG_UART.&control);
-     when pAddr<2:0> == 0 do JTAG_UART_load
-   }
-   else for core in 0 .. (totalCore - 1) do
-     when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
-        {found <- true; ret <- PIC_load([core], a)};
+        var found = false;
+        if a == JTAG_UART.base_address then
+        {
+            found <- true;
+            ret <- flip_endian_word (JTAG_UART.&data)
+                : flip_endian_word (JTAG_UART.&control);
+            when pAddr<2:0> == 0 do JTAG_UART_load
+        }
+        else for core in 0 .. (totalCore - 1) do
+            when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+                {found <- true; ret <- PIC_load([core], a)};
 
-   when found == false do
-      ret <- MEM (a);
-   return ret
+        when found == false do
+            ret <- MEM (a);
+
+        return (ret, pAddr)
+    }
+    else return UNKNOWN
 }
 
 word loadWord32 (a::pAddr) =
