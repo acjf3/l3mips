@@ -871,15 +871,10 @@ define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 define Store > SB (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      bytesel = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-      StoreMemory (CCA, BYTE, datadoubleword, pAddr, vAddr, DATA);
-      LLbit <- None
-   }
+   bytesel = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+   pAddr = StoreMemory (BYTE, datadoubleword, vAddr, DATA, STORE);
+   when not exceptionSignalled do LLbit <- None
 }
 
 -----------------------------------
@@ -895,15 +890,10 @@ define Store > SH (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian^2 : '0'));
-         bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
-         datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-         StoreMemory (CCA, HALFWORD, datadoubleword, pAddr, vAddr, DATA);
-         LLbit <- None
-      }
+      bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
+      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+      pAddr = StoreMemory (HALFWORD, datadoubleword, vAddr, DATA, STORE);
+      when not exceptionSignalled do LLbit <- None
    }
 }
 
@@ -923,14 +913,10 @@ unit storeWord (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian : '00'));
-         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
-         datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-         StoreMemory (CCA, WORD, datadoubleword, pAddr, vAddr, DATA)
-      }
+      bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
+      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+      pAddr = StoreMemory (WORD, datadoubleword, vAddr, DATA, STORE);
+      ()
    }
 }
 
@@ -944,12 +930,9 @@ unit storeDoubleword (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         datadoubleword = GPR(rt);
-         StoreMemory (CCA, DOUBLEWORD, datadoubleword, pAddr, vAddr, DATA)
-      }
+      datadoubleword = GPR(rt);
+      pAddr = StoreMemory (DOUBLEWORD, datadoubleword, vAddr, DATA, STORE);
+      ()
    }
 }
 
@@ -997,25 +980,21 @@ define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
 define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b11;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      datadoubleword`64 =
-         match byte
-         {
-           case 0 => [GPR(rt)<31:24>]
-           case 1 => [GPR(rt)<31:16>]
-           case 2 => [GPR(rt)<31:8>]
-           case 3 => [GPR(rt)<31:0>]
-         };
-      datadoubleword =
-         if word == '1' then datadoubleword << 32 else datadoubleword;
-      StoreMemory (CCA, [byte], datadoubleword, pAddr, vAddr, DATA)
-   }
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   datadoubleword`64 =
+      match byte
+      {
+        case 0 => [GPR(rt)<31:24>]
+        case 1 => [GPR(rt)<31:16>]
+        case 2 => [GPR(rt)<31:8>]
+        case 3 => [GPR(rt)<31:0>]
+      };
+   datadoubleword =
+      if word == '1' then datadoubleword << 32 else datadoubleword;
+   vAddr = if BigEndianMem then vAddr else vAddr && ~0b11;
+   pAddr = StoreMemory ([byte], datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1024,27 +1003,23 @@ define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr && ~0b11 else pAddr;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      datadoubleword =
-         match word, byte
-         {
-            case 0, 0 => [GPR(rt)<31:0>]
-            case 0, 1 => [GPR(rt)<23:0>] << 8
-            case 0, 2 => [GPR(rt)<15:0>] << 16
-            case 0, 3 => [GPR(rt)<7:0>]  << 24
-            case 1, 0 => [GPR(rt)<31:0>] << 32
-            case 1, 1 => [GPR(rt)<23:0>] << 40
-            case 1, 2 => [GPR(rt)<15:0>] << 48
-            case 1, 3 => [GPR(rt)<7:0>]  << 56
-         };
-      StoreMemory (CCA, WORD - [byte], datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   datadoubleword =
+      match word, byte
+      {
+         case 0, 0 => [GPR(rt)<31:0>]
+         case 0, 1 => [GPR(rt)<23:0>] << 8
+         case 0, 2 => [GPR(rt)<15:0>] << 16
+         case 0, 3 => [GPR(rt)<7:0>]  << 24
+         case 1, 0 => [GPR(rt)<31:0>] << 32
+         case 1, 1 => [GPR(rt)<23:0>] << 40
+         case 1, 2 => [GPR(rt)<15:0>] << 48
+         case 1, 3 => [GPR(rt)<7:0>]  << 56
+      };
+   vAddr = if BigEndianMem then vAddr && ~0b11 else vAddr;
+   pAddr = StoreMemory (WORD - [byte], datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1053,26 +1028,22 @@ define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword =
-         match byte
-         {
-            case 0 => [GPR(rt)<63:56>]
-            case 1 => [GPR(rt)<63:48>]
-            case 2 => [GPR(rt)<63:40>]
-            case 3 => [GPR(rt)<63:32>]
-            case 4 => [GPR(rt)<63:24>]
-            case 5 => [GPR(rt)<63:16>]
-            case 6 => [GPR(rt)<63:8>]
-            case 7 =>  GPR(rt)
-         };
-      StoreMemory (CCA, byte, datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword =
+      match byte
+      {
+         case 0 => [GPR(rt)<63:56>]
+         case 1 => [GPR(rt)<63:48>]
+         case 2 => [GPR(rt)<63:40>]
+         case 3 => [GPR(rt)<63:32>]
+         case 4 => [GPR(rt)<63:24>]
+         case 5 => [GPR(rt)<63:16>]
+         case 6 => [GPR(rt)<63:8>]
+         case 7 =>  GPR(rt)
+      };
+   vAddr = if BigEndianMem then vAddr else vAddr && ~0b111;
+   pAddr = StoreMemory (byte, datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1081,26 +1052,22 @@ define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 define Store > SDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr && ~0b111 else pAddr;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword =
-         match byte
-         {
-            case 0 =>  GPR(rt)
-            case 1 => [GPR(rt)<55:0>] << 8
-            case 2 => [GPR(rt)<47:0>] << 16
-            case 3 => [GPR(rt)<39:0>] << 24
-            case 4 => [GPR(rt)<31:0>] << 32
-            case 5 => [GPR(rt)<23:0>] << 40
-            case 6 => [GPR(rt)<15:0>] << 48
-            case 7 => [GPR(rt)<7:0>] << 56
-         };
-      StoreMemory (CCA, DOUBLEWORD - byte, datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword =
+      match byte
+      {
+         case 0 =>  GPR(rt)
+         case 1 => [GPR(rt)<55:0>] << 8
+         case 2 => [GPR(rt)<47:0>] << 16
+         case 3 => [GPR(rt)<39:0>] << 24
+         case 4 => [GPR(rt)<31:0>] << 32
+         case 5 => [GPR(rt)<23:0>] << 40
+         case 6 => [GPR(rt)<15:0>] << 48
+         case 7 => [GPR(rt)<7:0>] << 56
+      };
+   vAddr = if BigEndianMem then vAddr && ~0b111 else vAddr;
+   pAddr = StoreMemory (DOUBLEWORD - byte, datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------

@@ -52,33 +52,46 @@ word loadWord32 (a::pAddr) =
     if a<2> then d<31:0> else d<63:32>
 }
 
-unit StoreMemory (CCA::CCA, AccessLength::bits(3), MemElem::dword, pAddr::pAddr, vAddr::vAddr, IorD::IorD) =
+pAddr StoreMemory (AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
-    a = pAddr<39:3>;
-    l = 64 - ([AccessLength] + 1 + [pAddr<2:0>]) * 0n8;
-    mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-    mark (w_mem (pAddr, mask, AccessLength, MemElem));
-    var found = false;
-    if a == JTAG_UART.base_address then
+    var pAddr;
+    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    pAddr <- tmp;
+    pAddr<2:0> <- match AccessLength
     {
-        found <- true;
-        JTAG_UART_store (mask, MemElem)
-    }
-    else for core in 0 .. (totalCore - 1) do
+        case BYTE     => (pAddr<2:0> ?? ReverseEndian^3)
+        case HALFWORD => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case WORD     => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case _        =>  pAddr<2:0>
+    };
+    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    if not exceptionSignalled then
+    {
+        a = pAddr<39:3>;
+        l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
+        mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
+        mark (w_mem (pAddr, mask, AccessLength, MemElem));
+
+        var found = false;
+        if a == JTAG_UART.base_address then
+            {found <- true; JTAG_UART_store (mask, MemElem)}
+        else for core in 0 .. (totalCore - 1) do
         when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+            {found <- true; PIC_store([core], a, mask, MemElem)};
+
+        when found == false do
         {
-            found <- true;
-            PIC_store([core], a, mask, MemElem)
+            for core in 0 .. (totalCore - 1) do
+                when core <> [procID] and
+                    c_LLbit([core]) == Some (true) and
+                    c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
+                        c_LLbit([core]) <- Some (false);
+            MEM(a) <- MEM(a) && ~mask || MemElem && mask
         };
-    when found == false do
-    {
-        for core in 0 .. (totalCore - 1) do
-            when core <> [procID] and
-                c_LLbit([core]) == Some (true) and
-                c_CP0([core]).LLAddr<39:3> == pAddr<39:3>
-                do c_LLbit([core]) <- Some (false);
-        MEM(a) <- MEM(a) && ~mask || MemElem && mask
+        return pAddr
     }
+    else return UNKNOWN
 }
 
 -------------------------
