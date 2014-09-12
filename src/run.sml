@@ -16,6 +16,7 @@ val uart_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
 val current_core_id = ref 0
 val nb_core = ref 1
+val schedule = ref (NONE: TextIO.instream option)
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -273,6 +274,30 @@ fun uart () =
    else uart_countdown := !uart_countdown - 1
 
 (* ------------------------------------------------------------------------
+   Schedule (denoting order in which cores are interleaved)  
+   ------------------------------------------------------------------------ *)
+
+(* Returns next core id from given text stream *)
+fun readNextCoreId stream =
+  case TextIO.inputLine stream of
+    NONE => failExit ("Reached end of schedule\n")
+  | SOME line =>
+        if line = "" then failExit ("Reached end of schedule\n")
+        else 
+          case IntExtra.fromString (String.extract(line, 0,
+                 SOME (String.size(line)-1))) of
+              NONE   => failExit ("Bad core id in schedule: " ^ line)
+            | SOME i => if i >= !nb_core then (
+                          failExit ("Core id in schedule >= nb_core: " ^ line)
+                        ) else i
+
+(* Returns id of next core to run *)
+fun scheduleNext () = 
+  case !schedule of
+    NONE        => (!current_core_id+1) mod !nb_core
+  | SOME stream => readNextCoreId stream
+
+(* ------------------------------------------------------------------------
    Define UNPREDICTABLE "LO" and UNPREDICTABLE "HI" behaviour
    ------------------------------------------------------------------------ *)
 
@@ -291,7 +316,6 @@ fun loop mx i =
       val () = mips.procID := BitsN.B(!current_core_id,
                                       BitsN.size(!mips.procID))
       val coreId = !current_core_id
-      val () = current_core_id := (coreId+1) mod !nb_core
       val (h, a) =
          case mips.Fetch () of
             SOME w => (hex32 w, mips.instructionToString (mips.Decode w))
@@ -309,7 +333,8 @@ fun loop mx i =
     ; if mips.done () orelse i = mx
          then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
       else 
-        let val exl1 = #EXL (#Status (
+        let val () = current_core_id := scheduleNext ()
+            val exl1 = #EXL (#Status (
                          mips.Map.lookup(!mips.c_CP0, coreId)))
         in loop mx (if not exl0 andalso exl1
                        then (print "exception\n"; i)
@@ -322,12 +347,13 @@ fun decr i = if i <= 0 then i else i - 1
 fun pureLoop mx =
    ( mips.procID := BitsN.B(!current_core_id,
                             BitsN.size(!mips.procID))
-   ; current_core_id := (!current_core_id + 1) mod !nb_core
    ; uart ()
    ; mips.Next ()
    ; dumpRegistersOnCP0_26 ()
    ; if mips.done () orelse (mx = 1) then (print "done\n")
-     else pureLoop (decr mx)
+     else ( current_core_id := scheduleNext ()
+          ; pureLoop (decr mx)
+          )
    )
 
 local
@@ -381,6 +407,7 @@ fun printUsage () =
       \  --uart-out <file>         UART output file (stdout if omitted)\n\
       \  --format <format>         'raw' or 'hex' file format \n\
       \  --non-block <on|off>      non-blocking UART input 'on' or 'off' \n\
+      \  --schedule <file>         file of core ids indicating schedule\n\
       \  --ignore <string>         UNPREDICTABLE#(<string>) behaviour is \n\
       \                            ignored (currently <string> must be \n\
       \                            'HI' or 'LO')                       \n\
@@ -475,6 +502,8 @@ val () =
              uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
           val (ui, l) = processOption "--uart-in" l
           val () = uart_in := Option.map TextIO.openIn ui
+          val (sch, l) = processOption "--schedule" l
+          val () = schedule := Option.map TextIO.openIn sch
           val (uo, l) = processOption "--uart-out" l
           val () = uart_out := Option.map TextIO.openOut uo
           fun closeStreams () =
