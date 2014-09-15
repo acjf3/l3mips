@@ -313,6 +313,7 @@ val () = mips.UNPREDICTABLE_HI :=
 
 fun loop mx i =
    let
+      val () = current_core_id := scheduleNext ()
       val () = mips.procID := BitsN.B(!current_core_id,
                                       BitsN.size(!mips.procID))
       val coreId = !current_core_id
@@ -333,8 +334,7 @@ fun loop mx i =
     ; if mips.done () orelse i = mx
          then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
       else 
-        let val () = current_core_id := scheduleNext ()
-            val exl1 = #EXL (#Status (
+        let val exl1 = #EXL (#Status (
                          mips.Map.lookup(!mips.c_CP0, coreId)))
         in loop mx (if not exl0 andalso exl1
                        then (print "exception\n"; i)
@@ -345,15 +345,14 @@ fun loop mx i =
 fun decr i = if i <= 0 then i else i - 1
 
 fun pureLoop mx =
-   ( mips.procID := BitsN.B(!current_core_id,
+   ( current_core_id := scheduleNext ()
+   ; mips.procID := BitsN.B(!current_core_id,
                             BitsN.size(!mips.procID))
    ; uart ()
    ; mips.Next ()
    ; dumpRegistersOnCP0_26 ()
    ; if mips.done () orelse (mx = 1) then (print "done\n")
-     else ( current_core_id := scheduleNext ()
-          ; pureLoop (decr mx)
-          )
+     else pureLoop (decr mx)
    )
 
 local
