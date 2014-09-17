@@ -8,8 +8,6 @@
 val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
                        \mips-sml.spec, mips.spec, mips-encode.spec"
 
-val () = SMLExport.setFunctor true
-val () = SMLExport.setFunctor false
 val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
                      \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
 
@@ -26,6 +24,9 @@ bool NotWordValue(value::dword) =
    else
       top <> 0x0
 }
+
+unit CheckBranch =
+   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
 
 -----------------------------------
 -- ADDI rt, rs, immediate
@@ -1165,6 +1166,8 @@ define SYSCALL = SignalException (Sys)
 -- ERET
 -----------------------------------
 define ERET =
+{
+   CheckBranch;
    if CP0.Status.CU0 or KernelMode then
    {
       if CP0.Status.ERL then
@@ -1181,6 +1184,7 @@ define ERET =
    }
    else
      SignalException (CpU)
+}
 
 -----------------------------------
 -- MTC0 rt, rd
@@ -1260,43 +1264,55 @@ define Branch > JALR (rs::reg, rd::reg) =
 -- BEQ rs, rt, offset
 -----------------------------------
 define Branch > BEQ (rs::reg, rt::reg, offset::bits(16)) =
-   when GPR(rs) == GPR(rt) do
+   if GPR(rs) == GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BNE rs, rt, offset
 -----------------------------------
 define Branch > BNE (rs::reg, rt::reg, offset::bits(16)) =
-   when GPR(rs) <> GPR(rt) do
+   if GPR(rs) <> GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BLEZ rs, offset
 -----------------------------------
 define Branch > BLEZ (rs::reg, offset::bits(16)) =
-   when GPR(rs) <= 0 do
+   if GPR(rs) <= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BGTZ rs, offset
 -----------------------------------
 define Branch > BGTZ (rs::reg, offset::bits(16)) =
-   when GPR(rs) > 0 do
+   if GPR(rs) > 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BLTZ rs, offset
 -----------------------------------
 define Branch > BLTZ (rs::reg, offset::bits(16)) =
-   when GPR(rs) < 0 do
+   if GPR(rs) < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BGEZ rs, offset
 -----------------------------------
 define Branch > BGEZ (rs::reg, offset::bits(16)) =
-   when GPR(rs) >= 0 do
+   if GPR(rs) >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 
 -----------------------------------
 -- BLTZAL rs, offset
@@ -1305,8 +1321,10 @@ define Branch > BLTZAL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   when temp < 0 do
+   if temp < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 }
 
 -----------------------------------
@@ -1316,8 +1334,10 @@ define Branch > BGEZAL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   when temp >= 0 do
+   if temp >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
+   else
+      CheckBranch
 }
 
 -----------------------------------
@@ -1327,7 +1347,10 @@ define Branch > BEQL (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) == GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BNEL rs, rt, offset
@@ -1336,7 +1359,10 @@ define Branch > BNEL (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) <> GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BLEZL rs, offset
@@ -1345,7 +1371,10 @@ define Branch > BLEZL (rs::reg, offset::bits(16)) =
    if GPR(rs) <= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BGTZL rs, offset
@@ -1354,7 +1383,10 @@ define Branch > BGTZL (rs::reg, offset::bits(16)) =
    if GPR(rs) > 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BLTZL rs, offset
@@ -1363,7 +1395,10 @@ define Branch > BLTZL (rs::reg, offset::bits(16)) =
    if GPR(rs) < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BGEZL rs, offset
@@ -1372,7 +1407,10 @@ define Branch > BGEZL (rs::reg, offset::bits(16)) =
    if GPR(rs) >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 
 -----------------------------------
 -- BLTZALL rs, offset
@@ -1384,7 +1422,10 @@ define Branch > BLTZALL (rs::reg, offset::bits(16)) =
    if temp < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 }
 
 -----------------------------------
@@ -1397,7 +1438,10 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
    if temp >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
+   {
+      CheckBranch;
       PC <- PC + 4
+   }
 }
 
 -----------------------------------
@@ -1411,6 +1455,8 @@ define WAIT = ()
 -----------------------------------
 define ReservedInstruction =
    SignalException (ResI)
+
+define Unpredictable = #UNPREDICTABLE("Unpredictable instruction")
 
 define Run
 
@@ -1497,6 +1543,7 @@ instruction Decode (w::word) =
       case '000 001 rs 01 011 immediate' => Trap (TLTIU (rs, immediate))
       case '000 001 rs 01 100 immediate' => Trap (TEQI (rs, immediate))
       case '000 001 rs 01 110 immediate' => Trap (TNEI (rs, immediate))
+      case '000 001 11111 10 0 _`2 immediate' => Unpredictable
       case '000 001 rs 10 000 immediate' => Branch (BLTZAL (rs, immediate))
       case '000 001 rs 10 001 immediate' => Branch (BGEZAL (rs, immediate))
       case '000 001 rs 10 010 immediate' => Branch (BLTZALL (rs, immediate))
