@@ -8,8 +8,6 @@
 val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
                        \mips-sml.spec, mips.spec, mips-encode.spec"
 
-val () = SMLExport.setFunctor true
-val () = SMLExport.setFunctor false
 val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
                      \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
 
@@ -213,11 +211,3 @@ bits(3) BYTE       = 0`3
 bits(3) HALFWORD   = 1`3
 bits(3) WORD       = 3`3
 bits(3) DOUBLEWORD = 7`3
-
-bool NotWordValue(value::dword) =
-{  top = value<63:32>;
-   if value<31> then
-      top <> 0xFFFF_FFFF
-   else
-      top <> 0x0
-}

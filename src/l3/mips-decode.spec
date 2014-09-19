@@ -75,6 +75,7 @@ instruction Decode (w::word) =
       case '000 001 rs 01 011 immediate' => Trap (TLTIU (rs, immediate))
       case '000 001 rs 01 100 immediate' => Trap (TEQI (rs, immediate))
       case '000 001 rs 01 110 immediate' => Trap (TNEI (rs, immediate))
+      case '000 001 11111 10 0 _`2 immediate' => Unpredictable
       case '000 001 rs 10 000 immediate' => Branch (BLTZAL (rs, immediate))
       case '000 001 rs 10 001 immediate' => Branch (BGEZAL (rs, immediate))
       case '000 001 rs 10 010 immediate' => Branch (BLTZALL (rs, immediate))

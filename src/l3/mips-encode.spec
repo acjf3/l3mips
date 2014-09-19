@@ -199,6 +199,7 @@ string instructionToString (i::instruction) =
      case LDC2 (_)                       => LDC2InstructionToString(i)
      case SWC2 (_)                       => SWC2InstructionToString(i)
      case SDC2 (_)                       => SDC2InstructionToString(i)
+     case Unpredictable                  => "???"
      case ReservedInstruction            => "???"
    }
 
@@ -356,5 +357,6 @@ word Encode (i::instruction) =
      case LDC2 (_)                       => LDC2Encode(i)
      case SWC2 (_)                       => SWC2Encode(i)
      case SDC2 (_)                       => SDC2Encode(i)
+     case Unpredictable                  => '00000111111100000000000000000000'
      case ReservedInstruction            => 0
    }
