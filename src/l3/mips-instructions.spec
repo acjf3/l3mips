@@ -1,32 +1,7 @@
 ---------------------------------------------------------------------------
--- Model of the 64-bit MIPS ISA (MIPS III with some extra instructions)
+-- The standard MIPS instructions implementation
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
-
-{-
-
-val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
-                       \mips-sml.spec, mips.spec, mips-encode.spec"
-
-val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
-                     \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
-
--}
-
---================================================
--- Instructions
---================================================
-
-bool NotWordValue(value::dword) =
-{  top = value<63:32>;
-   if value<31> then
-      top <> 0xFFFF_FFFF
-   else
-      top <> 0x0
-}
-
-unit CheckBranch =
-   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
 
 -----------------------------------
 -- ADDI rt, rs, immediate
@@ -660,11 +635,9 @@ define Trap > TNEI (rs::reg, immediate::bits(16)) =
 unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (BYTE, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      memdoubleword = LoadMemory (CCA, BYTE, pAddr, vAddr, DATA);
       byte = vAddr<2:0> ?? BigEndianCPU^3;
       membyte`8 = memdoubleword <7 + 8 * [byte] : 8 * [byte]>;
       GPR(rt) <- if unsigned then ZeroExtend (membyte)
@@ -683,11 +656,9 @@ unit loadHalf (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (HALFWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian^2 : '0'));
-         memdoubleword = LoadMemory (CCA, HALFWORD, pAddr, vAddr, DATA);
          byte = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
          memhalf`16 = memdoubleword <15 + 8 * [byte] : 8 * [byte]>;
          GPR(rt) <- if unsigned then
@@ -710,11 +681,9 @@ unit loadWord (link::bool, base::reg, rt::reg, offset::bits(16),
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (WORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian : '00'));
-         memdoubleword = LoadMemory (CCA, WORD, pAddr, vAddr, DATA);
          byte = vAddr<2:0> ?? (BigEndianCPU : '00');
          memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
          GPR(rt) <- if unsigned then
@@ -742,10 +711,9 @@ unit loadDoubleword (link::bool, base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (DOUBLEWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
-         memdoubleword = LoadMemory (CCA, DOUBLEWORD, pAddr, vAddr, DATA);
          GPR(rt) <- memdoubleword;
          if link then
          {
@@ -793,14 +761,11 @@ define Load > LLD (base::reg, rt::reg, offset::bits(16)) =
 define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   memdoubleword, pAddr = LoadMemory ('0' : byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      memdoubleword = LoadMemory (CCA, '0' : byte, pAddr, vAddr, DATA);
       temp`32 =
          match word, byte
          {
@@ -824,14 +789,11 @@ define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   memdoubleword, pAddr = LoadMemory (WORD - ('0' : byte), vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      memdoubleword = LoadMemory (CCA, WORD - ('0' : byte), pAddr, vAddr, DATA);
       temp`32 =
          match word, byte
          {
@@ -857,13 +819,10 @@ define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   memdoubleword, pAddr = LoadMemory (byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      memdoubleword = LoadMemory (CCA, byte, pAddr, vAddr, DATA);
       GPR(rt) <-
          match byte
          {
@@ -886,13 +845,10 @@ define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   memdoubleword, pAddr = LoadMemory (DOUBLEWORD - byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      memdoubleword = LoadMemory (CCA, DOUBLEWORD - byte, pAddr, vAddr, DATA);
       GPR(rt) <-
          match byte
          {
@@ -915,15 +871,10 @@ define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 define Store > SB (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      bytesel = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-      StoreMemory (CCA, BYTE, datadoubleword, pAddr, vAddr, DATA);
-      LLbit <- None
-   }
+   bytesel = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+   pAddr = StoreMemory (BYTE, datadoubleword, vAddr, DATA, STORE);
+   when not exceptionSignalled do LLbit <- None
 }
 
 -----------------------------------
@@ -939,15 +890,10 @@ define Store > SH (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian^2 : '0'));
-         bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
-         datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-         StoreMemory (CCA, HALFWORD, datadoubleword, pAddr, vAddr, DATA);
-         LLbit <- None
-      }
+      bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
+      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+      pAddr = StoreMemory (HALFWORD, datadoubleword, vAddr, DATA, STORE);
+      when not exceptionSignalled do LLbit <- None
    }
 }
 
@@ -967,14 +913,10 @@ unit storeWord (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? (ReverseEndian : '00'));
-         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
-         datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-         StoreMemory (CCA, WORD, datadoubleword, pAddr, vAddr, DATA)
-      }
+      bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
+      datadoubleword = GPR(rt) << (0n8 * [bytesel]);
+      pAddr = StoreMemory (WORD, datadoubleword, vAddr, DATA, STORE);
+      ()
    }
 }
 
@@ -988,12 +930,9 @@ unit storeDoubleword (base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-      when not exceptionSignalled do
-      {
-         datadoubleword = GPR(rt);
-         StoreMemory (CCA, DOUBLEWORD, datadoubleword, pAddr, vAddr, DATA)
-      }
+      datadoubleword = GPR(rt);
+      pAddr = StoreMemory (DOUBLEWORD, datadoubleword, vAddr, DATA, STORE);
+      ()
    }
 }
 
@@ -1041,25 +980,21 @@ define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
 define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b11;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      datadoubleword`64 =
-         match byte
-         {
-           case 0 => [GPR(rt)<31:24>]
-           case 1 => [GPR(rt)<31:16>]
-           case 2 => [GPR(rt)<31:8>]
-           case 3 => [GPR(rt)<31:0>]
-         };
-      datadoubleword =
-         if word == '1' then datadoubleword << 32 else datadoubleword;
-      StoreMemory (CCA, [byte], datadoubleword, pAddr, vAddr, DATA)
-   }
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   datadoubleword`64 =
+      match byte
+      {
+        case 0 => [GPR(rt)<31:24>]
+        case 1 => [GPR(rt)<31:16>]
+        case 2 => [GPR(rt)<31:8>]
+        case 3 => [GPR(rt)<31:0>]
+      };
+   datadoubleword =
+      if word == '1' then datadoubleword << 32 else datadoubleword;
+   vAddr = if BigEndianMem then vAddr else vAddr && ~0b11;
+   pAddr = StoreMemory ([byte], datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1068,27 +1003,23 @@ define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr && ~0b11 else pAddr;
-      byte = vAddr<1:0> ?? BigEndianCPU^2;
-      word = vAddr<2:2> ?? BigEndianCPU;
-      datadoubleword =
-         match word, byte
-         {
-            case 0, 0 => [GPR(rt)<31:0>]
-            case 0, 1 => [GPR(rt)<23:0>] << 8
-            case 0, 2 => [GPR(rt)<15:0>] << 16
-            case 0, 3 => [GPR(rt)<7:0>]  << 24
-            case 1, 0 => [GPR(rt)<31:0>] << 32
-            case 1, 1 => [GPR(rt)<23:0>] << 40
-            case 1, 2 => [GPR(rt)<15:0>] << 48
-            case 1, 3 => [GPR(rt)<7:0>]  << 56
-         };
-      StoreMemory (CCA, WORD - [byte], datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<1:0> ?? BigEndianCPU^2;
+   word = vAddr<2:2> ?? BigEndianCPU;
+   datadoubleword =
+      match word, byte
+      {
+         case 0, 0 => [GPR(rt)<31:0>]
+         case 0, 1 => [GPR(rt)<23:0>] << 8
+         case 0, 2 => [GPR(rt)<15:0>] << 16
+         case 0, 3 => [GPR(rt)<7:0>]  << 24
+         case 1, 0 => [GPR(rt)<31:0>] << 32
+         case 1, 1 => [GPR(rt)<23:0>] << 40
+         case 1, 2 => [GPR(rt)<15:0>] << 48
+         case 1, 3 => [GPR(rt)<7:0>]  << 56
+      };
+   vAddr = if BigEndianMem then vAddr && ~0b11 else vAddr;
+   pAddr = StoreMemory (WORD - [byte], datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1097,26 +1028,22 @@ define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr else pAddr && ~0b111;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword =
-         match byte
-         {
-            case 0 => [GPR(rt)<63:56>]
-            case 1 => [GPR(rt)<63:48>]
-            case 2 => [GPR(rt)<63:40>]
-            case 3 => [GPR(rt)<63:32>]
-            case 4 => [GPR(rt)<63:24>]
-            case 5 => [GPR(rt)<63:16>]
-            case 6 => [GPR(rt)<63:8>]
-            case 7 =>  GPR(rt)
-         };
-      StoreMemory (CCA, byte, datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword =
+      match byte
+      {
+         case 0 => [GPR(rt)<63:56>]
+         case 1 => [GPR(rt)<63:48>]
+         case 2 => [GPR(rt)<63:40>]
+         case 3 => [GPR(rt)<63:32>]
+         case 4 => [GPR(rt)<63:24>]
+         case 5 => [GPR(rt)<63:16>]
+         case 6 => [GPR(rt)<63:8>]
+         case 7 =>  GPR(rt)
+      };
+   vAddr = if BigEndianMem then vAddr else vAddr && ~0b111;
+   pAddr = StoreMemory (byte, datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1125,26 +1052,22 @@ define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 define Store > SDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
-   when not exceptionSignalled do
-   {
-      pAddr = pAddr<PSIZE - 1 : 3> : (pAddr<2:0> ?? ReverseEndian^3);
-      pAddr = if BigEndianMem then pAddr && ~0b111 else pAddr;
-      byte = vAddr<2:0> ?? BigEndianCPU^3;
-      datadoubleword =
-         match byte
-         {
-            case 0 =>  GPR(rt)
-            case 1 => [GPR(rt)<55:0>] << 8
-            case 2 => [GPR(rt)<47:0>] << 16
-            case 3 => [GPR(rt)<39:0>] << 24
-            case 4 => [GPR(rt)<31:0>] << 32
-            case 5 => [GPR(rt)<23:0>] << 40
-            case 6 => [GPR(rt)<15:0>] << 48
-            case 7 => [GPR(rt)<7:0>] << 56
-         };
-      StoreMemory (CCA, DOUBLEWORD - byte, datadoubleword,  pAddr, vAddr, DATA)
-   }
+   byte = vAddr<2:0> ?? BigEndianCPU^3;
+   datadoubleword =
+      match byte
+      {
+         case 0 =>  GPR(rt)
+         case 1 => [GPR(rt)<55:0>] << 8
+         case 2 => [GPR(rt)<47:0>] << 16
+         case 3 => [GPR(rt)<39:0>] << 24
+         case 4 => [GPR(rt)<31:0>] << 32
+         case 5 => [GPR(rt)<23:0>] << 40
+         case 6 => [GPR(rt)<15:0>] << 48
+         case 7 => [GPR(rt)<7:0>] << 56
+      };
+   vAddr = if BigEndianMem then vAddr && ~0b111 else vAddr;
+   pAddr = StoreMemory (DOUBLEWORD - byte, datadoubleword, vAddr, DATA, STORE);
+   ()
 }
 
 -----------------------------------
@@ -1161,30 +1084,6 @@ define BREAK = SignalException (Bp)
 -- SYSCALL
 -----------------------------------
 define SYSCALL = SignalException (Sys)
-
------------------------------------
--- ERET
------------------------------------
-define ERET =
-{
-   CheckBranch;
-   if CP0.Status.CU0 or KernelMode then
-   {
-      if CP0.Status.ERL then
-      {
-         PC <- CP0.ErrorEPC - 4;
-         CP0.Status.ERL <- false
-      }
-      else
-      {
-         PC <- CP0.EPC - 4;
-         CP0.Status.EXL <- false
-      };
-      LLbit <- Some (false)
-   }
-   else
-     SignalException (CpU)
-}
 
 -----------------------------------
 -- MTC0 rt, rd
@@ -1248,17 +1147,6 @@ define Branch > JAL (instr_index::bits(26)) =
 -----------------------------------
 define Branch > JR (rs::reg) =
    BranchTo <- Some (GPR(rs))
-
------------------------------------
--- JALR rs (rd = 31 implied)
--- JALR rd, rs
------------------------------------
-define Branch > JALR (rs::reg, rd::reg) =
-{
-   temp = GPR(rs);
-   GPR(rd) <- PC + 8;
-   BranchTo <- Some (temp)
-}
 
 -----------------------------------
 -- BEQ rs, rt, offset
@@ -1470,177 +1358,3 @@ define Run
 -- Floating-point
 -- RDHWR
 -------------------------------------------------------
-
---================================================
--- Instruction decoding
---================================================
-
-instruction Decode (w::word) =
-{
-   match w
-   {
-      case '000 000 00000 rt rd imm5 000 000' => Shift (SLL (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 000 010' => Shift (SRL (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 000 011' => Shift (SRA (rt, rd, imm5))
-      case '000 000 rs rt rd 00000 000 100' => Shift (SLLV (rs, rt, rd))
-      case '000 000 rs rt rd 00000 000 110' => Shift (SRLV (rs, rt, rd))
-      case '000 000 rs rt rd 00000 000 111' => Shift (SRAV (rs, rt, rd))
-      case '000 000 rs 00000 00000 hint 001 000' => Branch (JR (rs))
-      case '000 000 rs 00000 rd hint 001 001' => Branch (JALR (rs, rd))
-      case '000 000 rs rt rd 00000 001 010' => ArithR (MOVZ (rs, rt, rd))
-      case '000 000 rs rt rd 00000 001 011' => ArithR (MOVN (rs, rt, rd))
-      case '000 000 00000 code 001 100' => SYSCALL
-      case '000 000 00000 code 001 101' => BREAK
-      case '000 000 00000 00000 00000 imm5 001 111' => SYNC (imm5)
-      case '000 000 00000 00000 rd 00000 010 000' => MultDiv (MFHI (rd))
-      case '000 000 rs 00000 00000 00000 010 001' => MultDiv (MTHI (rs))
-      case '000 000 00000 00000 rd 00000 010 010' => MultDiv (MFLO (rd))
-      case '000 000 rs 00000 00000 00000 010 011' => MultDiv (MTLO (rs))
-      case '000 000 rs rt rd 00000 010 100' => Shift (DSLLV (rs, rt, rd))
-      case '000 000 rs rt rd 00000 010 110' => Shift (DSRLV (rs, rt, rd))
-      case '000 000 rs rt rd 00000 010 111' => Shift (DSRAV (rs, rt, rd))
-      case '000 000 rs rt 00000 00000 011 000' => MultDiv (MULT (rs, rt))
-      case '000 000 rs rt 00000 00000 011 001' => MultDiv (MULTU (rs, rt))
-      case '000 000 rs rt 00000 00000 011 010' => MultDiv (DIV (rs, rt))
-      case '000 000 rs rt 00000 00000 011 011' => MultDiv (DIVU (rs, rt))
-      case '000 000 rs rt 00000 00000 011 100' => MultDiv (DMULT (rs, rt))
-      case '000 000 rs rt 00000 00000 011 101' => MultDiv (DMULTU (rs, rt))
-      case '000 000 rs rt 00000 00000 011 110' => MultDiv (DDIV (rs, rt))
-      case '000 000 rs rt 00000 00000 011 111' => MultDiv (DDIVU (rs, rt))
-      case '000 000 rs rt rd 00000 100 000' => ArithR (ADD (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 001' => ArithR (ADDU (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 010' => ArithR (SUB (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 011' => ArithR (SUBU (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 100' => ArithR (AND (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 101' => ArithR (OR (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 110' => ArithR (XOR (rs, rt, rd))
-      case '000 000 rs rt rd 00000 100 111' => ArithR (NOR (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 010' => ArithR (SLT (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 011' => ArithR (SLTU (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 100' => ArithR (DADD (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 101' => ArithR (DADDU (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 110' => ArithR (DSUB (rs, rt, rd))
-      case '000 000 rs rt rd 00000 101 111' => ArithR (DSUBU (rs, rt, rd))
-      case '000 000 rs rt code 110 000' => Trap (TGE (rs, rt))
-      case '000 000 rs rt code 110 001' => Trap (TGEU (rs, rt))
-      case '000 000 rs rt code 110 010' => Trap (TLT (rs, rt))
-      case '000 000 rs rt code 110 011' => Trap (TLTU (rs, rt))
-      case '000 000 rs rt code 110 100' => Trap (TEQ (rs, rt))
-      case '000 000 rs rt code 110 110' => Trap (TNE (rs, rt))
-      case '000 000 00000 rt rd imm5 111 000' => Shift (DSLL (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 111 010' => Shift (DSRL (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 111 011' => Shift (DSRA (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 111 100' => Shift (DSLL32 (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 111 110' => Shift (DSRL32 (rt, rd, imm5))
-      case '000 000 00000 rt rd imm5 111 111' => Shift (DSRA32 (rt, rd, imm5))
-      case '000 001 rs 00 000 immediate' => Branch (BLTZ (rs, immediate))
-      case '000 001 rs 00 001 immediate' => Branch (BGEZ (rs, immediate))
-      case '000 001 rs 00 010 immediate' => Branch (BLTZL (rs, immediate))
-      case '000 001 rs 00 011 immediate' => Branch (BGEZL (rs, immediate))
-      case '000 001 rs 01 000 immediate' => Trap (TGEI (rs, immediate))
-      case '000 001 rs 01 001 immediate' => Trap (TGEIU (rs, immediate))
-      case '000 001 rs 01 010 immediate' => Trap (TLTI (rs, immediate))
-      case '000 001 rs 01 011 immediate' => Trap (TLTIU (rs, immediate))
-      case '000 001 rs 01 100 immediate' => Trap (TEQI (rs, immediate))
-      case '000 001 rs 01 110 immediate' => Trap (TNEI (rs, immediate))
-      case '000 001 11111 10 0 _`2 immediate' => Unpredictable
-      case '000 001 rs 10 000 immediate' => Branch (BLTZAL (rs, immediate))
-      case '000 001 rs 10 001 immediate' => Branch (BGEZAL (rs, immediate))
-      case '000 001 rs 10 010 immediate' => Branch (BLTZALL (rs, immediate))
-      case '000 001 rs 10 011 immediate' => Branch (BGEZALL (rs, immediate))
-      case '000 010 immediate' => Branch (J (immediate))
-      case '000 011 immediate' => Branch (JAL (immediate))
-      case '010 000 10000000000000000000 000001' => TLBR
-      case '010 000 10000000000000000000 000010' => TLBWI
-      case '010 000 10000000000000000000 000110' => TLBWR
-      case '010 000 10000000000000000000 001000' => TLBP
-      case '010 000 10000000000000000000 011000' => ERET
-      case '010 000 00 000 rt rd 00000000 sel' => CP (MFC0 (rt, rd, sel))
-      case '010 000 00 001 rt rd 00000000 sel' => CP (DMFC0 (rt, rd, sel))
-      case '010 000 00 100 rt rd 00000000 sel' => CP (MTC0 (rt, rd, sel))
-      case '010 000 00 101 rt rd 00000000 sel' => CP (DMTC0 (rt, rd, sel))
-      case '000 110 rs 00000 immediate' => Branch (BLEZ (rs, immediate))
-      case '000 111 rs 00000 immediate' => Branch (BGTZ (rs, immediate))
-      case '001 111 00000 rt immediate' => ArithI (LUI (rt, immediate))
-      case '010 110 rs 00000 immediate' => Branch (BLEZL (rs, immediate))
-      case '010 111 rs 00000 immediate' => Branch (BGTZL (rs, immediate))
-      case '011 100 rs rt 00000 00000 000000' => MultDiv (MADD (rs, rt))
-      case '011 100 rs rt 00000 00000 000001' => MultDiv (MADDU (rs, rt))
-      case '011 100 rs rt 00000 00000 000100' => MultDiv (MSUB (rs, rt))
-      case '011 100 rs rt 00000 00000 000101' => MultDiv (MSUBU (rs, rt))
-      case '011 100 rs rt rd 00000 000010' => MultDiv (MUL (rs, rt, rd))
-      case '000 100 rs rt immediate' => Branch (BEQ (rs, rt, immediate))
-      case '000 101 rs rt immediate' => Branch (BNE (rs, rt, immediate))
-      case '001 000 rs rt immediate' => ArithI (ADDI (rs, rt, immediate))
-      case '001 001 rs rt immediate' => ArithI (ADDIU (rs, rt, immediate))
-      case '001 010 rs rt immediate' => ArithI (SLTI (rs, rt, immediate))
-      case '001 011 rs rt immediate' => ArithI (SLTIU (rs, rt, immediate))
-      case '001 100 rs rt immediate' => ArithI (ANDI (rs, rt, immediate))
-      case '001 101 rs rt immediate' => ArithI (ORI (rs, rt, immediate))
-      case '001 110 rs rt immediate' => ArithI (XORI (rs, rt, immediate))
-      case '010 100 rs rt immediate' => Branch (BEQL (rs, rt, immediate))
-      case '010 101 rs rt immediate' => Branch (BNEL (rs, rt, immediate))
-      case '011 000 rs rt immediate' => ArithI (DADDI (rs, rt, immediate))
-      case '011 001 rs rt immediate' => ArithI (DADDIU (rs, rt, immediate))
-      case '011 010 rs rt immediate' => Load (LDL (rs, rt, immediate))
-      case '011 011 rs rt immediate' => Load (LDR (rs, rt, immediate))
-      case '100 000 rs rt immediate' => Load (LB (rs, rt, immediate))
-      case '100 001 rs rt immediate' => Load (LH (rs, rt, immediate))
-      case '100 010 rs rt immediate' => Load (LWL (rs, rt, immediate))
-      case '100 011 rs rt immediate' => Load (LW (rs, rt, immediate))
-      case '100 100 rs rt immediate' => Load (LBU (rs, rt, immediate))
-      case '100 101 rs rt immediate' => Load (LHU (rs, rt, immediate))
-      case '100 110 rs rt immediate' => Load (LWR (rs, rt, immediate))
-      case '100 111 rs rt immediate' => Load (LWU (rs, rt, immediate))
-      case '101 000 rs rt immediate' => Store (SB (rs, rt, immediate))
-      case '101 001 rs rt immediate' => Store (SH (rs, rt, immediate))
-      case '101 010 rs rt immediate' => Store (SWL (rs, rt, immediate))
-      case '101 011 rs rt immediate' => Store (SW (rs, rt, immediate))
-      case '101 100 rs rt immediate' => Store (SDL (rs, rt, immediate))
-      case '101 101 rs rt immediate' => Store (SDR (rs, rt, immediate))
-      case '101 110 rs rt immediate' => Store (SWR (rs, rt, immediate))
-      case '110 000 rs rt immediate' => Load (LL (rs, rt, immediate))
-      case '110 100 rs rt immediate' => Load (LLD (rs, rt, immediate))
-      case '110 111 rs rt immediate' => Load (LD (rs, rt, immediate))
-      case '111 000 rs rt immediate' => Store (SC (rs, rt, immediate))
-      case '111 100 rs rt immediate' => Store (SCD (rs, rt, immediate))
-      case '111 111 rs rt immediate' => Store (SD (rs, rt, immediate))
-      case '101 111 base opn immediate' => CACHE (base, opn, immediate)
-      case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
-      case '010 000 1000 0000 0000 0000 0000 100000' => WAIT
-      case _ => ReservedInstruction
-   }
-}
-
-
-
---================================================
--- The next state function
---================================================
-
-unit Next =
-{
-   match Fetch
-   {
-      case Some (w) => Run (Decode (w))
-      case None => nothing
-   } ;
-   match BranchDelay, BranchTo
-   {
-      case None, None => when not exceptionSignalled do PC <- PC + 4
-      case Some (addr), None =>
-      {
-         BranchDelay <- None;
-         PC <- addr
-      }
-      case None, Some (addr) =>
-      {
-         BranchDelay <- Some (addr);
-         BranchTo <- None;
-         PC <- PC + 4
-      }
-      case _ => #UNPREDICTABLE("Branch follows branch")
-   };
-   exceptionSignalled <- false;
-   CP0.Count <- CP0.Count + 1
-}
