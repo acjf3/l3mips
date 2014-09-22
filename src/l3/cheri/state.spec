@@ -10,21 +10,21 @@
 register Perms :: bits (31)
 {
     30-15 : soft
-       14 : access_CR28
-       13 : access_CR27
-       12 : access_CR29
-       11 : access_CR30
-       10 : access_CR31
-        9 : reserved
-        8 : permit_set_type
-        7 : permit_seal
-        6 : permit_store_ephemeral_cap
-        5 : permit_store_cap
-        4 : permit_load_cap
-        3 : permit_store
-        2 : permit_load
-        1 : permit_execute
-        0 : non_ephemeral
+       14 : Access_KR2C
+       13 : Access_KR1C
+       12 : Access_KCC
+       11 : Access_KDC
+       10 : Access_EPCC
+        9 : Reserved
+        8 : Permit_Set_Type
+        7 : Permit_Seal
+        6 : Permit_Store_Local_Capability
+        5 : Permit_Store_Capability
+        4 : Permit_Load_Capability
+        3 : Permit_Store
+        2 : Permit_Load
+        1 : Permit_Execute
+        0 : Global
 }
 
 register Capability :: bits (257)

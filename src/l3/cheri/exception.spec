@@ -130,6 +130,13 @@ unit SignalCapException (capException::CapException, regNum::bits(8)) =
     SignalException(C2E)
 }
 
+unit SignalCapException_v (regNum::bits(5)) =
+    if (regNum == 30) then SignalCapException(capExcAccKDC, ZeroExtend(regNum))
+    else if (regNum == 29) then SignalCapException(capExcAccKCC, ZeroExtend(regNum))
+    else if (regNum == 27) then SignalCapException(capExcAccKR1C, ZeroExtend(regNum))
+    else if (regNum == 28) then SignalCapException(capExcAccKR2C, ZeroExtend(regNum))
+    else ()
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------

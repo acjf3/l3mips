@@ -3,11 +3,25 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+bool register_inaccessible(cb::reg) =
+{
+    var perms::Perms;
+    &perms <- PCC.perms;
+    return (((cb == 31) and not perms.Access_EPCC)
+     or ((cb == 30) and not perms.Access_KDC)
+     or ((cb == 29) and not perms.Access_KCC)
+     or ((cb == 28) and not perms.Access_KR2C)
+     or ((cb == 27) and not perms.Access_KR1C))
+}
+
 -----------------------------------
 -- CGetBase rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetBase (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+        GPR(rd) <- CAPR(cb).base
 
 -----------------------------------
 -- CGetOffset rd, cb
