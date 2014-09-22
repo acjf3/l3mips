@@ -123,7 +123,8 @@ word option Fetch =
         vAddr = PC + PCC.base;
         var perms::Perms;
         &perms <- PCC.perms;
-        if (vAddr > PCC.base + PCC.length) then {SignalCapException(capExcLength, 0xff); None}
+
+        if (vAddr >+ PCC.base + PCC.length) then {SignalCapException(capExcLength, 0xff); None}
         else if not perms.permit_execute then {SignalCapException(capExcPermExe, 0xff); None}
         else {
             pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
