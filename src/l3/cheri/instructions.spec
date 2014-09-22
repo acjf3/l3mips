@@ -27,49 +27,96 @@ define COP2 > CHERICOP2 > CGet > CGetBase (rd::reg, cb::reg) =
 -- CGetOffset rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetOffset (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+        GPR(rd) <- CAPR(cb).offset
 
 -----------------------------------
 -- CGetLen rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetLen (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+        GPR(rd) <- CAPR(cb).length
 
 -----------------------------------
 -- CGetTag rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetTag (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+    {
+        GPR(rd)<0> <- CAPR(cb).tag;
+        GPR(rd)<63:1> <- 0
+    }
 
 -----------------------------------
 -- CGetSealed rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetSealed (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+    {
+        GPR(rd)<0> <- CAPR(cb).sealed;
+        GPR(rd)<63:1> <- 0
+    }
 
 -----------------------------------
 -- CGetPerm rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+    {
+        GPR(rd)<14:0> <- CAPR(cb).perms<14:0>;
+        GPR(rd)<63:15> <- 0
+    }
 
 -----------------------------------
 -- CGetType rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else
+    {
+        GPR(rd)<23:0> <- CAPR(cb).otype;
+        GPR(rd)<63:24> <- 0
+    }
 
 -----------------------------------
 -- CGetPCC cd
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else
+    {
+        CAPR(cd) <- PCC;
+        CAPR(cd).offset <- PC
+    }
 
 -----------------------------------
 -- CGetCause rd
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
-    ()
+{
+    var perms::Perms;
+    &perms <- PCC.perms;
+    if not perms.Access_EPCC then
+        SignalCapException(capExcAccEPCC,0xff)
+    else
+    {
+        GPR(rd)<7:0> <- capcause.RegNum;
+        GPR(rd)<15:8> <- capcause.ExcCode;
+        GPR(rd)<63:16> <- 0
+    }
+}
 
 -----------------------------------
 -- CSetCause rt
