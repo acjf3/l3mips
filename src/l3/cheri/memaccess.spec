@@ -124,8 +124,8 @@ word option Fetch =
         var perms::Perms;
         &perms <- PCC.perms;
 
-        if (vAddr >+ PCC.base + PCC.length) then {SignalCapException(capExcLength, 0xff); None}
-        else if not perms.Permit_Execute then {SignalCapException(capExcPermExe, 0xff); None}
+        if (vAddr >+ PCC.base + PCC.length) then {SignalCapException_noReg(capExcLength); None}
+        else if not perms.Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
         else {
             pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
             if exceptionSignalled then None else Some (loadWord32 (pc))

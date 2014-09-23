@@ -98,7 +98,7 @@ construct CapException
     capExcAccKR2C            -- Access_KR2C
 }
 
-unit SignalCapException (capException::CapException, regNum::bits(8)) =
+unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
 {
     capcause.ExcCode <- match capException
     {
@@ -129,6 +129,12 @@ unit SignalCapException (capException::CapException, regNum::bits(8)) =
     capcause.RegNum  <- regNum;
     SignalException(C2E)
 }
+
+unit SignalCapException (capException::CapException, regNum::bits(5)) =
+    SignalCapException_internal (capException, ZeroExtend(regNum))
+
+unit SignalCapException_noReg (capException::CapException) =
+    SignalCapException_internal (capException, 0xff)
 
 unit SignalCapException_v (regNum::bits(5)) =
     if (regNum == 30) then SignalCapException(capExcAccKDC, ZeroExtend(regNum))

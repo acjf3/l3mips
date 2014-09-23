@@ -109,7 +109,7 @@ define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
     var perms::Perms;
     &perms <- PCC.perms;
     if not perms.Access_EPCC then
-        SignalCapException(capExcAccEPCC,0xff)
+        SignalCapException_noReg(capExcAccEPCC)
     else
     {
         GPR(rd)<7:0> <- capcause.RegNum;
@@ -122,37 +122,108 @@ define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 -- CSetCause rt
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetCause (rt::reg) =
-    ()
+{
+    var perms::Perms;
+    &perms <- PCC.perms;
+    if not perms.Access_EPCC then
+        SignalCapException_noReg(capExcAccEPCC)
+    else
+    {
+        capcause.ExcCode <- GPR(rt)<15:8>;
+        capcause.RegNum <- GPR(rt)<7:0>
+    }
+}
 
 -----------------------------------
 -- CIncBase
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CIncBase (cd::reg, cb::reg, rt::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag and GPR(rt) <> 0 then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed and GPR(rt) <> 0 then
+        SignalCapException(capExcSeal,cb)
+    else if GPR(rt) >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).base <- CAPR(cb).base + GPR(rt);
+        CAPR(cd).length <- CAPR(cb).length - GPR(rt)
+    }
 
 -----------------------------------
 -- CSetLen
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetLen (cd::reg, cb::reg, rt::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if GPR(rt) >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).length <- GPR(rt)
+    }
 
 -----------------------------------
 -- CClearTag
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).tag <- false
+    }
 
 -----------------------------------
 -- CAndPerm
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).perms <- CAPR(cd).perms && GPR(rt)<30:0>
+    }
 
 -----------------------------------
 -- CSetOffset
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).offset <- GPR(rt)
+    }
 
 -----------------------------------
 -- CSetType
@@ -164,31 +235,140 @@ define COP2 > CHERICOP2 > CSet > CSetType (cd::reg, cb::reg, rt::reg) =
 -- CCheckPerm
 -----------------------------------
 define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
-    ()
+    if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if not CAPR(cs).tag then
+        SignalCapException(capExcTag,cs)
+    else if CAPR(cs).perms && GPR(rt)<30:0> <> GPR(rt)<30:0> then
+        SignalCapException(capExcUser,cs)
+    else
+        ()
 
 -----------------------------------
 -- CChecType
 -----------------------------------
 define COP2 > CHERICOP2 > CCheck > CCheckType (cs::reg, cb::reg) =
-    ()
+    if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cs).tag then
+        SignalCapException(capExcTag,cs)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if not CAPR(cs).sealed then
+        SignalCapException(capExcSeal,cs)
+    else if not CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if CAPR(cs).otype <> CAPR(cb).otype then
+        SignalCapException(capExcType,cs)
+    else
+        ()
 
 -----------------------------------
 -- CFromPtr
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if GPR(rt) == 0 then
+    {
+        CAPR(cd).tag <- false;
+        CAPR(cd).sealed <- false;
+        CAPR(cd).perms <- 0;
+        CAPR(cd).base <- 0;
+        CAPR(cd).length <- 0;
+        CAPR(cd).offset <- 0;
+        CAPR(cd).otype <- 0;
+        CAPR(cd).reserved <- 0
+    }
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if not CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if GPR(rt) > CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).base <- CAPR(cb).base + GPR(rt);
+        CAPR(cd).length <- CAPR(cb).length - GPR(rt)
+    }
 
 -----------------------------------
 -- CToPtr
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
-    ()
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if register_inaccessible(ct) then
+        SignalCapException_v(ct)
+    else if not CAPR(ct).tag then
+        SignalCapException(capExcTag,ct)
+    else if not CAPR(cb).tag then
+        GPR(rd) <- 0
+    else
+        GPR(rd) <- CAPR(cb).base + CAPR(cb).offset - CAPR(ct).base
 
 -----------------------------------
 -- CPtrCmp
 -----------------------------------
 define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
-    ()
+{
+    var equal;
+    var less;
+    var greater;
+    var lessu;
+    var greateru;
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if register_inaccessible(ct) then
+        SignalCapException_v(ct)
+    else if CAPR(cb).tag <> CAPR(ct).tag then
+    {
+        equal = false;
+        if CAPR(cb).tag then
+        {
+            less <- false;
+            lessu <- false;
+            greater <- true;
+            greateru <- true
+        }
+        else
+        {
+            less <- true;
+            lessu <- true;
+            greater <- false;
+            greateru <- false
+        }
+    }
+    else
+    {
+        cursor1 = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
+        cursor2 = CAPR(ct).base + CAPR(ct).offset; -- mod 2^64
+        equal <- cursor1 == cursor2;
+        less <- cursor1 < cursor2;
+        greater <- cursor1 > cursor2;
+        lessu <- cursor1 <+ cursor2;
+        greateru <- cursor1 >+ cursor2
+    };
+    if t == 0 then
+        GPR(rd) <- [equal]
+    else if t == 1 then
+        GPR(rd) <- [not equal]
+    else if t == 2 then
+        GPR(rd) <- [less]
+    else if t == 3 then
+        GPR(rd) <- [less or equal]
+    else if t == 4 then
+        GPR(rd) <- [lessu]
+    else if t == 5 then
+        GPR(rd) <- [lessu or equal]
+    else
+        ()
+}
 
 -----------------------------------
 -- CBTU
