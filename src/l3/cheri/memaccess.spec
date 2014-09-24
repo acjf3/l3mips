@@ -15,10 +15,11 @@ dword * pAddr LoadMemory (AccessLength::bits(3), vAddr::vAddr,
     pAddr <- tmp;
     pAddr<2:0> <- match AccessLength
     {
-        case BYTE     => (pAddr<2:0> ?? ReverseEndian^3)
-        case HALFWORD => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
-        case WORD     => (pAddr<2:0> ?? (ReverseEndian : '00'))
-        case _        =>  pAddr<2:0>
+        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
+        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case 7 =>  pAddr<2:0>
+        case _ => #UNPREDICTABLE ("bad access length")
     };
     pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     if not exceptionSignalled then
@@ -60,10 +61,11 @@ pAddr StoreMemory (AccessLength::bits(3), MemElem::dword,
     pAddr <- tmp;
     pAddr<2:0> <- match AccessLength
     {
-        case BYTE     => (pAddr<2:0> ?? ReverseEndian^3)
-        case HALFWORD => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
-        case WORD     => (pAddr<2:0> ?? (ReverseEndian : '00'))
-        case _        =>  pAddr<2:0>
+        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
+        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case 7 =>  pAddr<2:0>
+        case _ => #UNPREDICTABLE ("bad access length")
     };
     pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     if not exceptionSignalled then

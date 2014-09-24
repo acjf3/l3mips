@@ -5,13 +5,12 @@
 
 bool register_inaccessible(cb::reg) =
 {
-    var perms::Perms;
-    &perms <- PCC.perms;
-    return (((cb == 31) and not perms.Access_EPCC)
-     or ((cb == 30) and not perms.Access_KDC)
-     or ((cb == 29) and not perms.Access_KCC)
-     or ((cb == 28) and not perms.Access_KR2C)
-     or ((cb == 27) and not perms.Access_KR1C))
+    perms = Perms(PCC.perms);
+    return (cb == 31 and not perms.Access_EPCC
+         or cb == 30 and not perms.Access_KDC
+         or cb == 29 and not perms.Access_KCC
+         or cb == 28 and not perms.Access_KR2C
+         or cb == 27 and not perms.Access_KR1C)
 }
 
 -----------------------------------
@@ -106,8 +105,7 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 {
-    var perms::Perms;
-    &perms <- PCC.perms;
+    perms = Perms(PCC.perms);
     if not perms.Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
@@ -123,8 +121,7 @@ define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetCause (rt::reg) =
 {
-    var perms::Perms;
-    &perms <- PCC.perms;
+    perms = Perms(PCC.perms);
     if not perms.Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
