@@ -226,7 +226,7 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
 -- CSetType
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetType (cd::reg, cb::reg, rt::reg) =
-    ()
+    nothing
 
 -----------------------------------
 -- CCheckPerm
@@ -239,7 +239,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
     else if CAPR(cs).perms && GPR(rt)<30:0> <> GPR(rt)<30:0> then
         SignalCapException(capExcUser,cs)
     else
-        ()
+        nothing
 
 -----------------------------------
 -- CChecType
@@ -260,7 +260,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckType (cs::reg, cb::reg) =
     else if CAPR(cs).otype <> CAPR(cb).otype then
         SignalCapException(capExcType,cs)
     else
-        ()
+        nothing
 
 -----------------------------------
 -- CFromPtr
@@ -364,98 +364,213 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
     else if t == 5 then
         GPR(rd) <- [lessu or equal]
     else
-        ()
+        nothing
 }
 
 -----------------------------------
 -- CBTU
 -----------------------------------
 define COP2 > CHERICOP2 > CBTU (cb::reg, offset::bits(16)) =
-    ()
+{
+    CheckBranch;
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        if PC + SignExtend(offset) + 4 >+ PCC.length then
+            SignalCapException_noReg(capExcLength)
+        else
+            BranchTo <- Some (PC + SignExtend(offset) << 2)
+    else
+        nothing
+}
 
 -----------------------------------
 -- CBTS
 -----------------------------------
 define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
-    ()
+{
+    CheckBranch;
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if CAPR(cb).tag then
+        if PC + SignExtend(offset) + 4 >+ PCC.length then
+            SignalCapException_noReg(capExcLength)
+        else
+            BranchTo <- Some (PC + SignExtend(offset) << 2)
+    else
+        nothing
+}
 
 -----------------------------------
 -- CSC
 -----------------------------------
 define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CLC
 -----------------------------------
 define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CLoad
 -----------------------------------
 define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::bits(1), t::bits(2)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CLLD
 -----------------------------------
 define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CStore
 -----------------------------------
 define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CSCD
 -----------------------------------
 define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
-    ()
+    nothing
 
 -----------------------------------
 -- CJR
 -----------------------------------
 define COP2 > CHERICOP2 > CJR (cb::reg) =
-    ()
+{
+    CheckBranch;
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if Perms(CAPR(cb).perms).Permit_Execute then
+        SignalCapException(capExcPermExe,cb)
+    else if Perms(CAPR(cb).perms).Global then
+        SignalCapException(capExcGlobal,cb)
+    else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+        SignalException(AdEL)
+    else
+    {
+        PCC <- CAPR(cb);
+        BranchTo <- Some (CAPR(cb).offset)
+    }
+}
 
 -----------------------------------
 -- CJALR
 -----------------------------------
 define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
-    ()
+{
+    CheckBranch;
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if Perms(CAPR(cb).perms).Permit_Execute then
+        SignalCapException(capExcPermExe,cb)
+    else if Perms(CAPR(cb).perms).Global then
+        SignalCapException(capExcGlobal,cb)
+    else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+        SignalException(AdEL)
+    else
+    {
+        CAPR(cd) <- PCC;
+        CAPR(cd).offset <- PC;
+        PCC <- CAPR(cb);
+        BranchTo <- Some (CAPR(cb).offset)
+    }
+}
 
 -----------------------------------
--- CSealCode
+-- CSeal
 -----------------------------------
-define COP2 > CHERICOP2 > CSealCode (cd::reg, cs::reg) =
-    ()
-
------------------------------------
--- CSealData
------------------------------------
-define COP2 > CHERICOP2 > CSealData (cd::reg, cs::reg, ct::reg) =
-    ()
+define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if register_inaccessible(ct) then
+        SignalCapException_v(ct)
+    else if not CAPR(ct).tag then
+        SignalCapException(capExcTag,ct)
+    else if not CAPR(cs).tag then
+        SignalCapException(capExcTag,cs)
+    else if CAPR(ct).sealed then
+        SignalCapException(capExcSeal,ct)
+    else if CAPR(cs).sealed then
+        SignalCapException(capExcSeal,cs)
+    else if not Perms(CAPR(ct).perms).Permit_Seal then
+        SignalCapException(capExcPermSeal,ct)
+    else if CAPR(ct).offset >=+ CAPR(ct).length then
+        SignalCapException(capExcLength,ct)
+{- FIXME
+    else if (CAPR(ct).base + CAPR(ct).offset) >+= 16777216 then
+        SignalCapException(capExcLength,ct)
+-}
+    else
+    {
+        CAPR(cd) <- CAPR(cs);
+        CAPR(cd).sealed <- true;
+        CAPR(cd).otype <- (CAPR(ct).base + CAPR(ct).offset)<23:0>
+    }
 
 -----------------------------------
 -- CUnseal
 -----------------------------------
 define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
-    ()
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if register_inaccessible(ct) then
+        SignalCapException_v(ct)
+    else if not CAPR(cs).tag then
+        SignalCapException(capExcTag,cs)
+    else if not CAPR(ct).tag then
+        SignalCapException(capExcTag,ct)
+    else if CAPR(cs).sealed then
+        SignalCapException(capExcSeal,cs)
+    else if CAPR(ct).sealed then
+        SignalCapException(capExcSeal,ct)
+    else if CAPR(ct).offset >=+ CAPR(ct).length then
+        SignalCapException(capExcLength,ct)
+    else if (CAPR(ct).base + CAPR(ct).offset)<23:0> <> CAPR(cs).otype then
+        SignalCapException(capExcType,ct)
+    else if not Perms(CAPR(ct).perms).Permit_Seal then
+        SignalCapException(capExcPermSeal,ct)
+    else
+    {
+        CAPR(cd) <- CAPR(cs);
+        CAPR(cd).sealed <- false;
+        CAPR(cd).otype <- 0;
+        Perms(CAPR(cd).perms).Global <- Perms(CAPR(cs).perms).Global and Perms(CAPR(ct).perms).Global 
+    }
 
 -----------------------------------
 -- CCall
 -----------------------------------
 define COP2 > CHERICOP2 > CCall (cs::reg, cb::reg) =
-    ()
+    nothing
 
 -----------------------------------
 -- CReturn
 -----------------------------------
 define COP2 > CHERICOP2 > CReturn =
-    ()
+    nothing
 
 -------------------------------------------------------------
 -- Unknown Capability Instruction, i.e. unsuccessful decode.
