@@ -5,13 +5,13 @@
 
 -- Pimitive memory load (with memory-mapped devices)
 
-dword * pAddr LoadMemory (AccessLength::bits(3), vAddr::vAddr,
+dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
                             IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
     pAddr <- tmp;
-    pAddr<2:0> <- match AccessLength
+    pAddr<2:0> <- match MemType
     {
         case 0 => (pAddr<2:0> ?? ReverseEndian^3)
         case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
@@ -53,13 +53,13 @@ word loadWord32 (a::pAddr) =
 
 -- Pimitive memory store. Big-endian.
 
-pAddr StoreMemory (AccessLength::bits(3), MemElem::dword,
+pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
     pAddr <- tmp;
-    pAddr<2:0> <- match AccessLength
+    pAddr<2:0> <- match MemType
     {
         case 0 => (pAddr<2:0> ?? ReverseEndian^3)
         case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))

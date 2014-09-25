@@ -635,7 +635,7 @@ define Trap > TNEI (rs::reg, immediate::bits(16)) =
 unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   memdoubleword, pAddr = LoadMemory (BYTE, vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (BYTE, BYTE, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
       byte = vAddr<2:0> ?? BigEndianCPU^3;
@@ -656,7 +656,7 @@ unit loadHalf (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
    }
    else
    {
-      memdoubleword, pAddr = LoadMemory (HALFWORD, vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (HALFWORD, HALFWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
          byte = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
@@ -681,7 +681,7 @@ unit loadWord (link::bool, base::reg, rt::reg, offset::bits(16),
    }
    else
    {
-      memdoubleword, pAddr = LoadMemory (WORD, vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (WORD, WORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
          byte = vAddr<2:0> ?? (BigEndianCPU : '00');
@@ -711,7 +711,7 @@ unit loadDoubleword (link::bool, base::reg, rt::reg, offset::bits(16)) =
    }
    else
    {
-      memdoubleword, pAddr = LoadMemory (DOUBLEWORD, vAddr, DATA, LOAD);
+      memdoubleword, pAddr = LoadMemory (DOUBLEWORD, DOUBLEWORD, vAddr, DATA, LOAD);
       when not exceptionSignalled do
       {
          GPR(rt) <- memdoubleword;
@@ -763,7 +763,7 @@ define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
    vAddr = SignExtend (offset) + GPR(base);
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
-   memdoubleword, pAddr = LoadMemory ('0' : byte, vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (WORD, '0' : byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
       temp`32 =
@@ -791,7 +791,7 @@ define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
    vAddr = SignExtend (offset) + GPR(base);
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
-   memdoubleword, pAddr = LoadMemory (WORD - ('0' : byte), vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (WORD, WORD - ('0' : byte), vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
       temp`32 =
@@ -820,7 +820,7 @@ define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
    byte = vAddr<2:0> ?? BigEndianCPU^3;
-   memdoubleword, pAddr = LoadMemory (byte, vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (DOUBLEWORD, byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
       GPR(rt) <-
@@ -846,7 +846,7 @@ define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = SignExtend (offset) + GPR(base);
    byte = vAddr<2:0> ?? BigEndianCPU^3;
-   memdoubleword, pAddr = LoadMemory (DOUBLEWORD - byte, vAddr, DATA, LOAD);
+   memdoubleword, pAddr = LoadMemory (DOUBLEWORD, DOUBLEWORD - byte, vAddr, DATA, LOAD);
    when not exceptionSignalled do
    {
       GPR(rt) <-
@@ -873,7 +873,7 @@ define Store > SB (base::reg, rt::reg, offset::bits(16)) =
    vAddr = SignExtend (offset) + GPR(base);
    bytesel = vAddr<2:0> ?? BigEndianCPU^3;
    datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-   pAddr = StoreMemory (BYTE, datadoubleword, vAddr, DATA, STORE);
+   pAddr = StoreMemory (BYTE, BYTE, datadoubleword, vAddr, DATA, STORE);
    when not exceptionSignalled do LLbit <- None
 }
 
@@ -892,7 +892,7 @@ define Store > SH (base::reg, rt::reg, offset::bits(16)) =
    {
       bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
       datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-      pAddr = StoreMemory (HALFWORD, datadoubleword, vAddr, DATA, STORE);
+      pAddr = StoreMemory (HALFWORD, HALFWORD, datadoubleword, vAddr, DATA, STORE);
       when not exceptionSignalled do LLbit <- None
    }
 }
@@ -915,7 +915,7 @@ unit storeWord (base::reg, rt::reg, offset::bits(16)) =
    {
       bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
       datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-      pAddr = StoreMemory (WORD, datadoubleword, vAddr, DATA, STORE);
+      pAddr = StoreMemory (WORD, WORD, datadoubleword, vAddr, DATA, STORE);
       ()
    }
 }
@@ -931,7 +931,7 @@ unit storeDoubleword (base::reg, rt::reg, offset::bits(16)) =
    else
    {
       datadoubleword = GPR(rt);
-      pAddr = StoreMemory (DOUBLEWORD, datadoubleword, vAddr, DATA, STORE);
+      pAddr = StoreMemory (DOUBLEWORD, DOUBLEWORD, datadoubleword, vAddr, DATA, STORE);
       ()
    }
 }
@@ -993,7 +993,7 @@ define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
    datadoubleword =
       if word == '1' then datadoubleword << 32 else datadoubleword;
    vAddr = if BigEndianMem then vAddr else vAddr && ~0b11;
-   pAddr = StoreMemory ([byte], datadoubleword, vAddr, DATA, STORE);
+   pAddr = StoreMemory (WORD, [byte], datadoubleword, vAddr, DATA, STORE);
    ()
 }
 
@@ -1018,7 +1018,7 @@ define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
          case 1, 3 => [GPR(rt)<7:0>]  << 56
       };
    vAddr = if BigEndianMem then vAddr && ~0b11 else vAddr;
-   pAddr = StoreMemory (WORD - [byte], datadoubleword, vAddr, DATA, STORE);
+   pAddr = StoreMemory (WORD, WORD - [byte], datadoubleword, vAddr, DATA, STORE);
    ()
 }
 
@@ -1042,7 +1042,7 @@ define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
          case 7 =>  GPR(rt)
       };
    vAddr = if BigEndianMem then vAddr else vAddr && ~0b111;
-   pAddr = StoreMemory (byte, datadoubleword, vAddr, DATA, STORE);
+   pAddr = StoreMemory (DOUBLEWORD, byte, datadoubleword, vAddr, DATA, STORE);
    ()
 }
 
@@ -1066,7 +1066,7 @@ define Store > SDR (base::reg, rt::reg, offset::bits(16)) =
          case 7 => [GPR(rt)<7:0>] << 56
       };
    vAddr = if BigEndianMem then vAddr && ~0b111 else vAddr;
-   pAddr = StoreMemory (DOUBLEWORD - byte, datadoubleword, vAddr, DATA, STORE);
+   pAddr = StoreMemory (DOUBLEWORD, DOUBLEWORD - byte, datadoubleword, vAddr, DATA, STORE);
    ()
 }
 
