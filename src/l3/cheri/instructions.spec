@@ -405,13 +405,66 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
 -- CSC
 -----------------------------------
 define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
-    nothing
+    if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Store_Capability then
+        SignalCapException(capExcPermStoreCap,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Store_Local_Capability
+            and CAPR(cs).tag and not Perms(CAPR(cs).perms).Global then
+        SignalCapException(capExcPermStoreLocalCap,cb)
+    else
+    {
+        cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
+        addr = cursor + GPR(rt) + SignExtend(offset);
+        if GPR(rt) + SignExtend(offset) + 32 >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if GPR(rt) + SignExtend(offset) < 0 then
+            SignalCapException(capExcLength,cb)
+        else if addr<4:0> <> '00000' then
+            SignalException(AdES)
+        else
+        {
+            StoreCap(addr,CAPR(cs));
+            LLbit <- None
+        }
+    }
 
 -----------------------------------
 -- CLC
 -----------------------------------
 define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
-    nothing
+    if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Load_Capability then
+        SignalCapException(capExcPermLoadCap,cb)
+    else
+    {
+        cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
+        addr = cursor + GPR(rt) + SignExtend(offset);
+        if GPR(rt) + SignExtend(offset) + 32 >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if GPR(rt) + SignExtend(offset) < 0 then
+            SignalCapException(capExcLength,cb)
+        else if addr<4:0> <> '00000' then
+            SignalException(AdEL)
+        else
+        {
+            CAPR(cd) <- LoadCap(addr);
+            LLbit <- None
+        }
+    }
 
 -----------------------------------
 -- CLoad
@@ -517,10 +570,8 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcPermSeal,ct)
     else if CAPR(ct).offset >=+ CAPR(ct).length then
         SignalCapException(capExcLength,ct)
-{- FIXME
-    else if (CAPR(ct).base + CAPR(ct).offset) >+= 16777216 then
+    else if (CAPR(ct).base + CAPR(ct).offset) >=+ 0x0000000001000000 then
         SignalCapException(capExcLength,ct)
--}
     else
     {
         CAPR(cd) <- CAPR(cs);
@@ -557,20 +608,20 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         CAPR(cd) <- CAPR(cs);
         CAPR(cd).sealed <- false;
         CAPR(cd).otype <- 0;
-        Perms(CAPR(cd).perms).Global <- Perms(CAPR(cs).perms).Global and Perms(CAPR(ct).perms).Global 
+        Perms(CAPR(cd).perms).Global <- Perms(CAPR(cs).perms).Global and Perms(CAPR(ct).perms).Global
     }
 
 -----------------------------------
 -- CCall
 -----------------------------------
 define COP2 > CHERICOP2 > CCall (cs::reg, cb::reg) =
-    nothing
+    SignalCapException(capExcCall,cs)
 
 -----------------------------------
 -- CReturn
 -----------------------------------
 define COP2 > CHERICOP2 > CReturn =
-    nothing
+    SignalCapException_noReg(capExcRet)
 
 -------------------------------------------------------------
 -- Unknown Capability Instruction, i.e. unsuccessful decode.
