@@ -470,7 +470,45 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
 -- CLoad
 -----------------------------------
 define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::bits(1), t::bits(2)) =
-    nothing
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Load then
+        SignalCapException(capExcPermLoad,cb)
+    else
+    {
+        var access;
+        var size;
+        var aligned;
+        cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
+        addr = cursor + GPR(rt) + SignExtend(offset);
+        match t
+        {
+           case 0 => { size <- 1; access <- BYTE; aligned <- addr<0> == false}
+           case 1 => { size <- 2; access <- HALFWORD; aligned <- addr<1:0> == 0}
+           case 2 => { size <- 4; access <- WORD; aligned <- addr<2:0> == 0}
+           case 3 => { size <- 8; access <- DOUBLEWORD; aligned <- addr<3:0> == 0}
+        };
+        if SignExtend(offset) + GPR(rt) + size >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if SignExtend(offset) + GPR(rt) < 0 then
+            SignalCapException(capExcLength,cb)
+        else if not aligned then
+            SignalException(AdEL)
+        else if s == 0 then
+        {
+            pAddr, data = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            GPR(rd) <- ZeroExtend(data)
+        }
+        else
+        {
+            pAddr, data = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            GPR(rd) <- SignExtend(data)
+        }
+    }
 
 -----------------------------------
 -- CLLD

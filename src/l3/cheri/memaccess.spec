@@ -9,13 +9,13 @@ declare TAG:: bits(35) -> bool
 -- Data accesses
 -----------------
 
-dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType) =
+dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
+                            IorD::IorD, AccessType::AccessType, cap::reg) =
 {
-    final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
-    if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not Perms(CAPR(0).perms).Permit_Load then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
+    final_vAddr = vAddr + CAPR(cap).base + CAPR(cap).offset;
+    if (final_vAddr <+ CAPR(cap).base) then {SignalCapException(capExcLength,cap); UNKNOWN}
+    else if (final_vAddr >+ CAPR(cap).base + CAPR(cap).length) then {SignalCapException(capExcLength,cap); UNKNOWN}
+    else if not Perms(CAPR(cap).perms).Permit_Load then {SignalCapException(capExcPermLoad, cap); UNKNOWN}
     else
     {
         var pAddr;
@@ -55,6 +55,10 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
         else return UNKNOWN
     }
 }
+
+dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+                            IorD::IorD, AccessType::AccessType) =
+    LoadMemoryCap(MemType, vAddr, IorD, AccessType, 0)
 
 Capability LoadCap (vAddr::vAddr) =
 {
