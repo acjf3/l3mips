@@ -314,7 +314,7 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
 {
-    var equal;
+    var equal = false;
     var less;
     var greater;
     var lessu;
@@ -324,8 +324,6 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
     else if register_inaccessible(ct) then
         SignalCapException_v(ct)
     else if CAPR(cb).tag <> CAPR(ct).tag then
-    {
-        equal = false;
         if CAPR(cb).tag then
         {
             less <- false;
@@ -340,7 +338,6 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
             greater <- false;
             greateru <- false
         }
-    }
     else
     {
         cursor1 = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
@@ -351,20 +348,16 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
         lessu <- cursor1 <+ cursor2;
         greateru <- cursor1 >+ cursor2
     };
-    if t == 0 then
-        GPR(rd) <- [equal]
-    else if t == 1 then
-        GPR(rd) <- [not equal]
-    else if t == 2 then
-        GPR(rd) <- [less]
-    else if t == 3 then
-        GPR(rd) <- [less or equal]
-    else if t == 4 then
-        GPR(rd) <- [lessu]
-    else if t == 5 then
-        GPR(rd) <- [lessu or equal]
-    else
-        nothing
+    match t
+    {
+       case 0 => GPR(rd) <- [equal]
+       case 1 => GPR(rd) <- [not equal]
+       case 2 => GPR(rd) <- [less]
+       case 3 => GPR(rd) <- [less or equal]
+       case 4 => GPR(rd) <- [lessu]
+       case 5 => GPR(rd) <- [lessu or equal]
+       case _ => nothing
+    }
 }
 
 -----------------------------------
