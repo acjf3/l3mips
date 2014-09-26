@@ -500,13 +500,15 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
             SignalException(AdEL)
         else if s == 0 then
         {
-            pAddr, data = LoadMemoryCap(access, addr, DATA, LOAD, cb);
-            GPR(rd) <- ZeroExtend(data)
+            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            GPR(rd) <- ZeroExtend(data);
+            LLbit <- None
         }
         else
         {
-            pAddr, data = LoadMemoryCap(access, addr, DATA, LOAD, cb);
-            GPR(rd) <- SignExtend(data)
+            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            GPR(rd) <- SignExtend(data);
+            LLbit <- None
         }
     }
 
@@ -514,19 +516,106 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
 -- CLLD
 -----------------------------------
 define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
-    nothing
+{
+    cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
+    addr = cursor + GPR(rt) + SignExtend(offset);
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Load then
+        SignalCapException(capExcPermLoad,cb)
+    else if SignExtend(offset) + GPR(rt) + 8 >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else if SignExtend(offset) + GPR(rt) < 0 then
+        SignalCapException(capExcLength,cb)
+    else if addr<3:0> <> 0 then
+        SignalException(AdEL)
+    else
+    {
+        data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD, cb);
+        GPR(rd) <- data;
+        LLbit <- Some (true);
+        CP0.LLAddr <- [pAddr]
+    }
+}
 
 -----------------------------------
 -- CStore
 -----------------------------------
 define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2)) =
-    nothing
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Store then
+        SignalCapException(capExcPermStore,cb)
+    else
+    {
+        var access;
+        var size;
+        var data;
+        var aligned;
+        cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
+        addr = cursor + GPR(rt) + SignExtend(offset);
+        match t
+        {
+           case 0 => { size <- 1; access <- BYTE; data <- ZeroExtend(GPR(rs)<7:0>); aligned <- addr<0> == false}
+           case 1 => { size <- 2; access <- HALFWORD; data <- ZeroExtend(GPR(rs)<15:0>); aligned <- addr<1:0> == 0}
+           case 2 => { size <- 4; access <- WORD; data <- ZeroExtend(GPR(rs)<31:0>); aligned <- addr<2:0> == 0}
+           case 3 => { size <- 8; access <- DOUBLEWORD; data <- GPR(rs); aligned <- addr<3:0> == 0}
+        };
+        if SignExtend(offset) + GPR(rt) + size >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if SignExtend(offset) + GPR(rt) < 0 then
+            SignalCapException(capExcLength,cb)
+        else if not aligned then
+            SignalException(AdES)
+        else
+        {
+            pAddr = StoreMemoryCap(access, access, data, addr, DATA, STORE, cb);
+            LLbit <- None
+        }
+    }
 
 -----------------------------------
 -- CSCD
 -----------------------------------
 define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
-    nothing
+{
+    cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
+    addr = cursor + GPR(rt) + SignExtend(offset);
+    if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not CAPR(cb).tag then
+        SignalCapException(capExcTag,cb)
+    else if CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else if not Perms(CAPR(cb).perms).Permit_Store then
+        SignalCapException(capExcPermStore,cb)
+    else if SignExtend(offset) + GPR(rt) + 32 >+ CAPR(cb).length then
+        SignalCapException(capExcLength,cb)
+    else if SignExtend(offset) + GPR(rt) < 0 then
+        SignalCapException(capExcLength,cb)
+    else if addr<4:0> <> 0 then
+        SignalException(AdES)
+    else
+        match LLbit
+        {
+            case None => #UNPREDICTABLE("SCD: LLbit not set")
+            case Some (false) => GPR(rs) <- 0
+            case Some (true) =>
+            {
+                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD, cb);
+                LLbit <- None;
+                GPR(rs) <- 1
+            }
+        }
+}
 
 -----------------------------------
 -- CJR

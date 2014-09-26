@@ -94,13 +94,13 @@ word loadWord32 (a::pAddr) =
     if a<2> then d<31:0> else d<63:32>
 }
 
-pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cap::reg) =
 {
-    final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
-    if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not Perms(CAPR(0).perms).Permit_Store then {SignalCapException(capExcPermStore, 0); UNKNOWN}
+    final_vAddr = vAddr + CAPR(cap).base + CAPR(cap).offset;
+    if (final_vAddr <+ CAPR(cap).base) then {SignalCapException(capExcLength,cap); UNKNOWN}
+    else if (final_vAddr >+ CAPR(cap).base + CAPR(cap).length) then {SignalCapException(capExcLength,cap); UNKNOWN}
+    else if not Perms(CAPR(cap).perms).Permit_Store then {SignalCapException(capExcPermStore, cap); UNKNOWN}
     else
     {
         var pAddr;
@@ -137,13 +137,17 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                         c_LLbit([core]) == Some (true) and
                         c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
                             c_LLbit([core]) <- Some (false);
-                MEM(a) <- MEM(a) && ~mask || MemElem && mask
+                MEM(a) <- MEM(a) && ~mask || MemElem && mask;
+                TAG(a<36:2>) <- false
             };
             return pAddr
         }
         else return UNKNOWN
     }
 }
+pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+    StoreMemoryCap (MemType, AccessLength, MemElem, vAddr, IorD, AccessType, 0)
 
 unit StoreCap (vAddr::vAddr, Capability::Capability) =
 {
