@@ -7,6 +7,7 @@ instruction COP2Decode (v::bits(26)) =
    COP2(CHERICOP2
       (match v
        {
+           case '00100 _ 110'                => DumpCapReg
            case '00000 rd cb _ 010'          => CGet(CGetBase(rd, cb))
            case '01101 rd cb _ 010'          => CGet(CGetOffset(rd, cb))
            case '00000 rd cb _ 011'          => CGet(CGetLen(rd, cb))

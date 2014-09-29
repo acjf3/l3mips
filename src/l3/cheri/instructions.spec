@@ -14,6 +14,11 @@ bool register_inaccessible(cb::reg) =
 }
 
 -----------------------------------
+-- dump capability registers
+-----------------------------------
+define COP2 > CHERICOP2 > DumpCapReg = mark(dump_c2())
+
+-----------------------------------
 -- CGetBase rd, cb
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetBase (rd::reg, cb::reg) =
@@ -105,8 +110,7 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 {
-    perms = Perms(PCC.perms);
-    if not perms.Access_EPCC then
+    if not Perms(PCC.perms).Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
     {
@@ -121,8 +125,7 @@ define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetCause (rt::reg) =
 {
-    perms = Perms(PCC.perms);
-    if not perms.Access_EPCC then
+    if not Perms(PCC.perms).Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
     {
@@ -415,9 +418,9 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if GPR(rt) + SignExtend(offset) + 32 >+ CAPR(cb).length then
+        if ('0':GPR(rt)) + SignExtend(offset) + 32 >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
-        else if GPR(rt) + SignExtend(offset) < 0 then
+        else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if addr<4:0> <> '00000' then
             SignalException(AdES)
@@ -446,9 +449,9 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if GPR(rt) + SignExtend(offset) + 32 >+ CAPR(cb).length then
+        if ('0':GPR(rt)) + SignExtend(offset) + 32 >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
-        else if GPR(rt) + SignExtend(offset) < 0 then
+        else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if addr<4:0> <> '00000' then
             SignalException(AdEL)
@@ -485,21 +488,21 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
            case 2 => { size <- 4; access <- WORD; aligned <- addr<2:0> == 0}
            case 3 => { size <- 8; access <- DOUBLEWORD; aligned <- addr<3:0> == 0}
         };
-        if SignExtend(offset) + GPR(rt) + size >+ CAPR(cb).length then
+        if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
-        else if SignExtend(offset) + GPR(rt) < 0 then
+        else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
             SignalException(AdEL)
         else if s == 0 then
         {
-            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
             GPR(rd) <- ZeroExtend(data);
             LLbit <- None
         }
         else
         {
-            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD, cb);
+            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
             GPR(rd) <- SignExtend(data);
             LLbit <- None
         }
@@ -520,15 +523,15 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcSeal,cb)
     else if not Perms(CAPR(cb).perms).Permit_Load then
         SignalCapException(capExcPermLoad,cb)
-    else if SignExtend(offset) + GPR(rt) + 8 >+ CAPR(cb).length then
+    else if SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':CAPR(cb).length) then
         SignalCapException(capExcLength,cb)
-    else if SignExtend(offset) + GPR(rt) < 0 then
+    else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<3:0> <> 0 then
         SignalException(AdEL)
     else
     {
-        data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD, cb);
+        data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD);
         GPR(rd) <- data;
         LLbit <- Some (true);
         CP0.LLAddr <- [pAddr]
@@ -562,16 +565,16 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
            case 2 => { size <- 4; access <- WORD; data <- ZeroExtend(GPR(rs)<31:0>); aligned <- addr<2:0> == 0}
            case 3 => { size <- 8; access <- DOUBLEWORD; data <- GPR(rs); aligned <- addr<3:0> == 0}
         };
-        if SignExtend(offset) + GPR(rt) + size >+ CAPR(cb).length then
+        if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
-        else if SignExtend(offset) + GPR(rt) < 0 then
+        else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
             SignalException(AdES)
         else
         {
-            pAddr = StoreMemoryCap(access, access, data, addr, DATA, STORE, cb);
-            LLbit <- None
+            StoreMemoryCap(access, access, data, addr, DATA, STORE);
+            LLbit <-None
         }
     }
 
@@ -590,9 +593,9 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcSeal,cb)
     else if not Perms(CAPR(cb).perms).Permit_Store then
         SignalCapException(capExcPermStore,cb)
-    else if SignExtend(offset) + GPR(rt) + 32 >+ CAPR(cb).length then
+    else if SignExtend(offset) + ('0':GPR(rt)) + 32 >+ ('0':CAPR(cb).length) then
         SignalCapException(capExcLength,cb)
-    else if SignExtend(offset) + GPR(rt) < 0 then
+    else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<4:0> <> 0 then
         SignalException(AdES)
@@ -603,7 +606,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
             case Some (false) => GPR(rs) <- 0
             case Some (true) =>
             {
-                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD, cb);
+                StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
                 LLbit <- None;
                 GPR(rs) <- 1
             }
@@ -622,9 +625,9 @@ define COP2 > CHERICOP2 > CJR (cb::reg) =
         SignalCapException(capExcTag,cb)
     else if CAPR(cb).sealed then
         SignalCapException(capExcSeal,cb)
-    else if Perms(CAPR(cb).perms).Permit_Execute then
+    else if not Perms(CAPR(cb).perms).Permit_Execute then
         SignalCapException(capExcPermExe,cb)
-    else if Perms(CAPR(cb).perms).Global then
+    else if not Perms(CAPR(cb).perms).Global then
         SignalCapException(capExcGlobal,cb)
     else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
         SignalCapException(capExcLength,cb)
@@ -651,9 +654,9 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
         SignalCapException(capExcTag,cb)
     else if CAPR(cb).sealed then
         SignalCapException(capExcSeal,cb)
-    else if Perms(CAPR(cb).perms).Permit_Execute then
+    else if not Perms(CAPR(cb).perms).Permit_Execute then
         SignalCapException(capExcPermExe,cb)
-    else if Perms(CAPR(cb).perms).Global then
+    else if not Perms(CAPR(cb).perms).Global then
         SignalCapException(capExcGlobal,cb)
     else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
         SignalCapException(capExcLength,cb)
@@ -713,7 +716,7 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcTag,cs)
     else if not CAPR(ct).tag then
         SignalCapException(capExcTag,ct)
-    else if CAPR(cs).sealed then
+    else if not CAPR(cs).sealed then
         SignalCapException(capExcSeal,cs)
     else if CAPR(ct).sealed then
         SignalCapException(capExcSeal,ct)

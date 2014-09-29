@@ -10,12 +10,52 @@ declare TAG:: bits(35) -> bool
 -----------------
 
 dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType, cap::reg) =
+                            IorD::IorD, AccessType::AccessType) =
 {
-    final_vAddr = vAddr + CAPR(cap).base + CAPR(cap).offset;
-    if (final_vAddr <+ CAPR(cap).base) then {SignalCapException(capExcLength,cap); UNKNOWN}
-    else if (final_vAddr >+ CAPR(cap).base + CAPR(cap).length) then {SignalCapException(capExcLength,cap); UNKNOWN}
-    else if not Perms(CAPR(cap).perms).Permit_Load then {SignalCapException(capExcPermLoad, cap); UNKNOWN}
+    var pAddr;
+    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    pAddr <- tmp;
+    pAddr<2:0> <- match MemType
+    {
+        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
+        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case 7 =>  pAddr<2:0>
+        case _ => #UNPREDICTABLE ("bad access length")
+    };
+    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    if not exceptionSignalled then
+    {
+        a = pAddr<39:3>;
+        var ret;
+
+        var found = false;
+        if a == JTAG_UART.base_address then
+        {
+            found <- true;
+            ret <- flip_endian_word (JTAG_UART.&data)
+                : flip_endian_word (JTAG_UART.&control);
+            when pAddr<2:0> == 0 do JTAG_UART_load
+        }
+        else for core in 0 .. (totalCore - 1) do
+            when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
+                {found <- true; ret <- PIC_load([core], a)};
+
+        when found == false do
+            ret <- MEM (a);
+
+        return (ret, pAddr)
+    }
+    else return UNKNOWN
+}
+
+dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+                            IorD::IorD, AccessType::AccessType) =
+{
+    final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
+    if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if not Perms(CAPR(0).perms).Permit_Load then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
     else
     {
         var pAddr;
@@ -44,7 +84,7 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
                 when pAddr<2:0> == 0 do JTAG_UART_load
             }
             else for core in 0 .. (totalCore - 1) do
-                when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+                when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
                     {found <- true; ret <- PIC_load([core], a)};
 
             when found == false do
@@ -55,10 +95,6 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
         else return UNKNOWN
     }
 }
-
-dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType) =
-    LoadMemoryCap(MemType, vAddr, IorD, AccessType, 0)
 
 Capability LoadCap (vAddr::vAddr) =
 {
@@ -71,8 +107,8 @@ Capability LoadCap (vAddr::vAddr) =
             #UNPREDICTABLE ("Capability load attempted on UART")
         else
             for core in 0 .. (totalCore - 1) do
-                when a >= PIC_base_address([core])<36:2>
-                     and a < (PIC_base_address([core])+1072)<36:2> do
+                when a >=+ PIC_base_address([core])<36:2>
+                     and a <+ (PIC_base_address([core])+1072)<36:2> do
                     #UNPREDICTABLE ("Capability load attempted on PIC");
 
         var Capability::Capability;
@@ -94,13 +130,58 @@ word loadWord32 (a::pAddr) =
     if a<2> then d<31:0> else d<63:32>
 }
 
-pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cap::reg) =
+unit StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
-    final_vAddr = vAddr + CAPR(cap).base + CAPR(cap).offset;
-    if (final_vAddr <+ CAPR(cap).base) then {SignalCapException(capExcLength,cap); UNKNOWN}
-    else if (final_vAddr >+ CAPR(cap).base + CAPR(cap).length) then {SignalCapException(capExcLength,cap); UNKNOWN}
-    else if not Perms(CAPR(cap).perms).Permit_Store then {SignalCapException(capExcPermStore, cap); UNKNOWN}
+    var pAddr;
+    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    pAddr <- tmp;
+    pAddr<2:0> <- match MemType
+    {
+        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
+        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
+        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
+        case 7 =>  pAddr<2:0>
+        case _ => #UNPREDICTABLE ("bad access length")
+    };
+    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    if not exceptionSignalled then
+    {
+        a = pAddr<39:3>;
+        l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
+        mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
+        mark (w_mem (pAddr, mask, AccessLength, MemElem));
+
+        var found = false;
+        if a == JTAG_UART.base_address then
+            {found <- true; JTAG_UART_store (mask, MemElem)}
+        else
+            for core in 0 .. (totalCore - 1) do
+                when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
+                    {found <- true; PIC_store([core], a, mask, MemElem)};
+
+        when found == false do
+        {
+            for core in 0 .. (totalCore - 1) do
+                when core <> [procID] and
+                    c_LLbit([core]) == Some (true) and
+                    c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
+                        c_LLbit([core]) <- Some (false);
+            MEM(a) <- MEM(a) && ~mask || MemElem && mask;
+            TAG(a<36:2>) <- false
+        }
+    }
+    else
+        nothing
+}
+
+pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+{
+    final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
+    if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if not Perms(CAPR(0).perms).Permit_Store then {SignalCapException(capExcPermStore, 0); UNKNOWN}
     else
     {
         var pAddr;
@@ -127,7 +208,7 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                 {found <- true; JTAG_UART_store (mask, MemElem)}
             else
                 for core in 0 .. (totalCore - 1) do
-                    when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+                    when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
                         {found <- true; PIC_store([core], a, mask, MemElem)};
 
             when found == false do
@@ -145,9 +226,6 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         else return UNKNOWN
     }
 }
-pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
-    StoreMemoryCap (MemType, AccessLength, MemElem, vAddr, IorD, AccessType, 0)
 
 unit StoreCap (vAddr::vAddr, Capability::Capability) =
 {
@@ -160,8 +238,8 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
             #UNPREDICTABLE ("Capability store attempted on UART")
         else
             for core in 0 .. (totalCore - 1) do
-                when a >= PIC_base_address([core])<36:2>
-                     and a < (PIC_base_address([core])+1072)<36:2> do
+                when a >=+ PIC_base_address([core])<36:2>
+                     and a <+ (PIC_base_address([core])+1072)<36:2> do
                     #UNPREDICTABLE ("Capability store attempted on PIC");
 
         for core in 0 .. (totalCore - 1) do

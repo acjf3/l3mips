@@ -23,7 +23,7 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config1.DS <- 3;         -- Dcache sets per way
    CP0.Config1.DL <- 4;         -- Dcache line size
    CP0.Config1.DA <- 0;         -- Dcache associativity
-   CP0.Config1.C2 <- false;     -- Coprocessor 2 available?
+   CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
    CP0.Config1.PCR <- false;    -- Performance counter registers implemented?
    CP0.Config1.WR <- false;     -- Watch registers implemented? (true on BERI)

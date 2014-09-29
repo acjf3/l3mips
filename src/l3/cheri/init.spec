@@ -3,6 +3,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+bool hasCP2 = true
+
 unit COP2Init () =
 {
     TAG <- InitMap (false);

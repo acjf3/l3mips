@@ -34,7 +34,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
             when pAddr<2:0> == 0 do JTAG_UART_load
         }
         else for core in 0 .. (totalCore - 1) do
-            when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+            when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
                 {found <- true; ret <- PIC_load([core], a)};
 
         when found == false do
@@ -79,7 +79,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         if a == JTAG_UART.base_address then
             {found <- true; JTAG_UART_store (mask, MemElem)}
         else for core in 0 .. (totalCore - 1) do
-        when a >= PIC_base_address([core]) and a < (PIC_base_address([core])+1072) do
+        when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
             {found <- true; PIC_store([core], a, mask, MemElem)};
 
         when found == false do

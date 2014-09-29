@@ -15,6 +15,7 @@ construct event
    w_hi :: dword
    w_lo :: dword
    w_c0 :: reg * dword
+   dump_c2 :: unit
    w_mem :: pAddr * vAddr * bits(3) * dword
 }
 

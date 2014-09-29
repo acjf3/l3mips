@@ -11,6 +11,33 @@ construct ExceptionType
 { Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
   CTLBL, CTLBS, C2E, XTLBRefillL, XTLBRefillS }
 
+construct CapException
+{
+    capExcNone,              -- None
+    capExcLength,            -- Length Violation
+    capExcTag,               -- Tag Violation
+    capExcSeal,              -- Seal Violation
+    capExcType,              -- Type Violation
+    capExcCall,              -- Call Trap
+    capExcRet,               -- Return Trap
+    capExcUnderflowTSS,      -- Underflow of trusted system stack
+    capExcUser,              -- User-defined Permision Violation
+    capExcGlobal,            -- Global Violation
+    capExcPermExe,           -- Permit_Execute Violation
+    capExcPermLoad,          -- Permit_Load Violation
+    capExcPermStore,         -- Permit_Store Violation
+    capExcPermLoadCap,       -- Permit_Load_Capability Violation
+    capExcPermStoreCap,      -- Permit_Store_Capability Violation
+    capExcPermStoreLocalCap, -- Permit_Store_Local_Capability Violation
+    capExcPermSeal,          -- Permit_Seal Violation
+    capExcPermSetType,       -- Permit_Set_Type Violation
+    capExcAccEPCC,           -- Access_EPCC
+    capExcAccKDC,            -- Access_KDC
+    capExcAccKCC,            -- Access_KCC
+    capExcAccKR1C,           -- Access_KR1C
+    capExcAccKR2C            -- Access_KR2C
+}
+
 unit ExceptionCode (ExceptionType::ExceptionType) =
     CP0.Cause.ExcCode <- match ExceptionType
     {
@@ -49,18 +76,21 @@ unit SignalException (ExceptionType::ExceptionType) =
         }
     };
     vectorOffset =
-       if (ExceptionType == XTLBRefillL or ExceptionType == XTLBRefillS)
-          and not CP0.Status.EXL then
-          0x080`30
-       else
-           0x180;
+        if (ExceptionType == XTLBRefillL or ExceptionType == XTLBRefillS)
+            and not CP0.Status.EXL then
+            0x080`30
+        else if (ExceptionType == C2E and
+            (capcause.ExcCode == 0x5 {-capExcCall-} or capcause.ExcCode == 0x6 {-capExcRet-})) then
+            0x280
+        else
+            0x180;
     ExceptionCode (ExceptionType);
     CP0.Status.EXL <- true;
     vectorBase =
-       if CP0.Status.BEV then
-          0xFFFF_FFFF_BFC0_0200`64
-       else
-          0xFFFF_FFFF_8000_0000;
+        if CP0.Status.BEV then
+            0xFFFF_FFFF_BFC0_0200`64
+        else
+            0xFFFF_FFFF_8000_0000;
     BranchDelay <- None;
     BranchTo <- None;
     PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
@@ -68,35 +98,9 @@ unit SignalException (ExceptionType::ExceptionType) =
 
     -- move PCC to EPCC
        EPCC <- PCC;
+       EPCC.offset <- PC;
     -- move KCC to PCC
        PCC <- KCC
-}
-
-construct CapException
-{
-    capExcNone,              -- None
-    capExcLength,            -- Length Violation
-    capExcTag,               -- Tag Violation
-    capExcSeal,              -- Seal Violation
-    capExcType,              -- Type Violation
-    capExcCall,              -- Call Trap
-    capExcRet,               -- Return Trap
-    capExcUnderflowTSS,      -- Underflow of trusted system stack
-    capExcUser,              -- User-defined Permision Violation
-    capExcGlobal,            -- Global Violation
-    capExcPermExe,           -- Permit_Execute Violation
-    capExcPermLoad,          -- Permit_Load Violation
-    capExcPermStore,         -- Permit_Store Violation
-    capExcPermLoadCap,       -- Permit_Load_Capability Violation
-    capExcPermStoreCap,      -- Permit_Store_Capability Violation
-    capExcPermStoreLocalCap, -- Permit_Store_Local_Capability Violation
-    capExcPermSeal,          -- Permit_Seal Violation
-    capExcPermSetType,       -- Permit_Set_Type Violation
-    capExcAccEPCC,           -- Access_EPCC
-    capExcAccKDC,            -- Access_KDC
-    capExcAccKCC,            -- Access_KCC
-    capExcAccKR1C,           -- Access_KR1C
-    capExcAccKR2C            -- Access_KR2C
 }
 
 unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
