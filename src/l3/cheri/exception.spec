@@ -93,14 +93,15 @@ unit SignalException (ExceptionType::ExceptionType) =
             0xFFFF_FFFF_8000_0000;
     BranchDelay <- None;
     BranchTo <- None;
-    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
     exceptionSignalled <- true;
 
     -- move PCC to EPCC
-       EPCC <- PCC;
-       EPCC.offset <- PC;
+    EPCC <- PCC;
+    EPCC.offset <- PC;
     -- move KCC to PCC
-       PCC <- KCC
+    PCC <- KCC;
+
+    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)
 }
 
 unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
