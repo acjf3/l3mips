@@ -665,7 +665,7 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
     else
     {
         CAPR(cd) <- PCC;
-        CAPR(cd).offset <- PC;
+        CAPR(cd).offset <- PC + 8;
         PCC <- CAPR(cb);
         BranchTo <- Some (CAPR(cb).offset)
     }
