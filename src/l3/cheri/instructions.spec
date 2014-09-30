@@ -635,8 +635,7 @@ define COP2 > CHERICOP2 > CJR (cb::reg) =
         SignalException(AdEL)
     else
     {
-        PCC <- CAPR(cb);
-        BranchTo <- Some (CAPR(cb).offset)
+        BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
     }
 }
 
@@ -666,8 +665,7 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
     {
         CAPR(cd) <- PCC;
         CAPR(cd).offset <- PC + 8;
-        PCC <- CAPR(cb);
-        BranchTo <- Some (CAPR(cb).offset)
+        BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
     }
 }
 

@@ -48,6 +48,23 @@ register CapCause :: bits (16)
 --------------------------------
 -- Capability coprocessor state
 --------------------------------
+declare
+{
+    c_BranchDelayPCC    :: id -> (bits(64) * Capability) option
+    c_BranchToPCC       :: id -> (bits(64) * Capability) option
+}
+
+component BranchDelayPCC :: (bits(64) * Capability) option
+{
+   value = c_BranchDelayPCC(procID)
+   assign value = c_BranchDelayPCC(procID) <- value
+}
+
+component BranchToPCC :: (bits(64) * Capability) option
+{
+   value = c_BranchToPCC(procID)
+   assign value = c_BranchToPCC(procID) <- value
+}
 
 type CapRegFile = reg -> Capability
 
