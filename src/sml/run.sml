@@ -200,7 +200,7 @@ in
      in
         print "======   Capability Registers   ======\n"
       ; print ("DEBUG CAP COREID " ^ Int.toString(core) ^ "\n")
-      ; print ("DEBUG CAP PCC " ^ displayCap(mips.PCC()) ^ "\n")
+      ; print ("DEBUG CAP PCC" ^ displayCap(mips.PCC()) ^ "\n")
       ; L3.for
           (0, 31,
            fn i =>
