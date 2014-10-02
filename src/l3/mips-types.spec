@@ -22,6 +22,7 @@ type half   = bits(16)
 type word   = bits(32)
 type dword  = bits(64)
 type vAddr  = bits(64)
+type pAddr  = bits(40)
 
 exception UNPREDICTABLE :: string
 

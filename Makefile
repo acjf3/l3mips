@@ -14,6 +14,7 @@ ifdef CAP
 L3SRCBASE+=cheri/tlb-types.spec
 L3SRCBASE+=mips-types.spec
 L3SRCBASE+=mips-base.spec
+L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 L3SRCBASE+=cheri/state.spec
@@ -34,6 +35,7 @@ else
 L3SRCBASE+=mips-tlb-types.spec
 L3SRCBASE+=mips-types.spec
 L3SRCBASE+=mips-base.spec
+L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 L3SRCBASE+=mips-exception.spec

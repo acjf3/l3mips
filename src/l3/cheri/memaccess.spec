@@ -13,7 +13,7 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
                             IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
-    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    tmp, CCA = AddressTranslation (vAddr, DATA, LOAD);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
     {
@@ -59,7 +59,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
     else
     {
         var pAddr;
-        tmp, CCA = AddressTranslation (final_vAddr, IorD, AccessType);
+        tmp, CCA = AddressTranslation (final_vAddr, DATA, LOAD);
         pAddr <- tmp;
         pAddr<2:0> <- match MemType
         {
@@ -98,7 +98,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 
 Capability LoadCap (vAddr::vAddr) =
 {
-    pAddr, CCA = AddressTranslation (vAddr, DATA, LOAD);
+    pAddr, CCA = AddressTranslation (vAddr, DATA, CLOAD);
     if not exceptionSignalled then
     {
         a = pAddr<39:5>;
@@ -134,7 +134,7 @@ unit StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
-    tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
+    tmp, CCA = AddressTranslation (vAddr, DATA, STORE);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
     {
@@ -150,7 +150,7 @@ unit StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         a = pAddr<39:3>;
         l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
         mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-        mark (w_mem (pAddr, mask, AccessLength, MemElem));
+        mark (2, w_mem (pAddr, mask, AccessLength, MemElem));
 
         var found = false;
         if a == JTAG_UART.base_address then
@@ -185,7 +185,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
     else
     {
         var pAddr;
-        tmp, CCA = AddressTranslation (final_vAddr, IorD, AccessType);
+        tmp, CCA = AddressTranslation (final_vAddr, DATA, STORE);
         pAddr <- tmp;
         pAddr<2:0> <- match MemType
         {
@@ -201,7 +201,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             a = pAddr<39:3>;
             l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
             mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-            mark (w_mem (pAddr, mask, AccessLength, MemElem));
+            mark (2, w_mem (pAddr, mask, AccessLength, MemElem));
 
             var found = false;
             if a == JTAG_UART.base_address then
@@ -229,7 +229,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 
 unit StoreCap (vAddr::vAddr, Capability::Capability) =
 {
-    pAddr, CCA = AddressTranslation (vAddr, DATA, STORE);
+    pAddr, CCA = AddressTranslation (vAddr, DATA, CSTORE);
     if not exceptionSignalled then
     {
         a = pAddr<39:5>;
@@ -248,6 +248,8 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
                 c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                     c_LLbit([core]) <- Some (false);
 
+        mark (2, store_cap (pAddr, Capability));
+
         MEM(a:'11') <- &Capability<255:192>;
         MEM(a:'10') <- &Capability<191:128>;
         MEM(a:'01') <- &Capability<127:64>;
@@ -264,7 +266,8 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
 word option Fetch =
 {
-    log <- Nil;
+   log(0) <- Nil;
+   log(2) <- Nil;
     CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired
                             then [TLBEntries - 1]
                             else CP0.Random.Random - 1;
@@ -278,7 +281,7 @@ word option Fetch =
     {
         -- If any interrupts pending, raise an exception
         when (CP0.Status.IM<7:2> && CP0.Cause.IP<7:2>) <> 0 do
-        SignalException (Int)
+            SignalException (Int)
     };
 
     if exceptionSignalled then None

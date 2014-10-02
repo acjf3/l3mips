@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
--- CHERI related state elements
+-- CHERI related basic types and components
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
@@ -45,6 +45,27 @@ register CapCause :: bits (16)
      7-0 : RegNum   -- 8 bits register number
 }
 
+string hex40(x :: bits(40)) =
+  pad(10, [x]):(if x == 0 then "" else [x])
+
+string hex31(x :: bits(31)) =
+  pad(8, [x]):(if x == 0 then "" else [x])
+
+string hex24(x :: bits(24)) =
+  pad(6, [x]):(if x == 0 then "" else [x])
+
+string cap_write (cap::Capability) = 
+    "u:":(if cap.sealed then "1" else "0"):
+    " perms:0x":hex31(cap.perms):
+    " type:0x":hex24(cap.otype):
+    " offset:0x":hex64(cap.offset):
+    " base:0x":hex64(cap.base):
+    " length:0x":hex64(cap.length)
+
+string cpp_write (cap::Capability) = "PCC <- ":cap_write(cap)
+string creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":cap_write(cap)
+string store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":cap_write(cap)
+
 --------------------------------
 -- Capability coprocessor state
 --------------------------------
@@ -84,7 +105,9 @@ component capcause :: CapCause
 component PCC :: Capability
 {
    value = c_pcc(procID)
-   assign value = c_pcc(procID) <- value
+   assign value = { c_pcc(procID) <- value
+                    ; mark (2, cpp_write (value))}
+
 }
 
 component CAPR (n::reg) :: Capability
@@ -92,7 +115,8 @@ component CAPR (n::reg) :: Capability
    value = { m = c_capr(procID); m(n) }
    assign value = { var m = c_capr(procID)
                   ; m(n) <- value
-                  ; c_capr(procID) <- m }
+                  ; c_capr(procID) <- m
+                  ; mark (2, creg_write (n, value))}
 }
 
 component RCC :: Capability
@@ -135,4 +159,13 @@ component EPCC :: Capability
 {
    value = CAPR(31)
    assign value = CAPR(31) <- value
+}
+
+unit dumpCRegs () = 
+{
+    mark(0, "======   Registers   ======")
+  ; mark(0, "Core = ":[[procID]::nat])
+  ; mark(0, "DEBUG CAP PCC ":cap_write(PCC))
+  ; for i in 0 .. 31 do
+      mark(0, "DEBUG CAP REG          ":(if i<10 then " " else ""):[[i]::nat]:" ":cap_write(CAPR([i])))
 }

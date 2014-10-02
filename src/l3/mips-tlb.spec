@@ -3,8 +3,6 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
-type pAddr = bits(40)
-
 nat TLBEntries = 16
 
 -- Each core has its own TLB, with both associative and direct-mapped

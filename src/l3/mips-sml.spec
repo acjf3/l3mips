@@ -10,32 +10,6 @@ nat PSIZE = 40         -- 40-bit physical memory
 declare done :: bool   -- Flag to request termination
 
 --------------------------------------------------
--- Logging
---------------------------------------------------
-
-string w_gpr (r::reg, data::dword) = "Reg ":[[r]::nat]:" <- 0x":[data]
-string w_hi (data::dword) = "HI <- 0x":[data]
-string w_lo (data::dword) = "LO <- 0x":[data]
-string w_c0 (r::reg, data::dword) = cpr(r):" <- 0x":[data]
-string w_mem (pAddr::pAddr, mask::bits(64), sz::bits(3), data::dword) =
-    "Address 0x":[pAddr]:" <- 0x":[data]:" [":[[sz]::nat]:" bytes], mask 0x":[mask]
-
-declare log :: nat -> string list   -- One log per "trace level"
-
-unit mark (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
-unit unmark (lvl::nat) = log(lvl) <- Tail (log(lvl))
-
-string pad(width :: nat, n :: nat) =
-  if width > 0
-  then
-    (if n > 0 then "" else "0"):pad(width-1, n div 16)
-  else
-    ""
-
-string hex64(x :: bits(64)) =
-  pad(16, [x]):(if x == 0 then "" else [x])
-
---------------------------------------------------
 -- Gereral purpose register access
 --------------------------------------------------
 

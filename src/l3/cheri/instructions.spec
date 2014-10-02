@@ -16,7 +16,7 @@ bool register_inaccessible(cb::reg) =
 -----------------------------------
 -- dump capability registers
 -----------------------------------
-define COP2 > CHERICOP2 > DumpCapReg = mark(dump_c2())
+define COP2 > CHERICOP2 > DumpCapReg = dumpCRegs()
 
 -----------------------------------
 -- CGetBase rd, cb
