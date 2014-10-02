@@ -57,12 +57,4 @@ declare log :: nat -> string list   -- One log per "trace level"
 unit mark (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
 unit unmark (lvl::nat) = log(lvl) <- Tail (log(lvl))
 
-string pad(width :: nat, n :: nat) =
-  if width > 0
-  then
-    (if n > 0 then "" else "0"):pad(width-1, n div 16)
-  else
-    ""
-
-string hex64(x :: bits(64)) =
-  pad(16, [x]):(if x == 0 then "" else [x])
+string hex64 (x::dword) = PadLeft (#"0", 16, [x])

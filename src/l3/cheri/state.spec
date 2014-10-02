@@ -45,14 +45,9 @@ register CapCause :: bits (16)
      7-0 : RegNum   -- 8 bits register number
 }
 
-string hex40(x :: bits(40)) =
-  pad(10, [x]):(if x == 0 then "" else [x])
-
-string hex31(x :: bits(31)) =
-  pad(8, [x]):(if x == 0 then "" else [x])
-
-string hex24(x :: bits(24)) =
-  pad(6, [x]):(if x == 0 then "" else [x])
+string hex24 (x::bits(24)) = PadLeft (#"0", 6, [x])
+string hex31 (x::bits(31)) = PadLeft (#"0", 8, [x])
+string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
 
 string cap_write (cap::Capability) = 
     "u:":(if cap.sealed then "1" else "0"):
