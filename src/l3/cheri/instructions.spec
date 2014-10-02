@@ -13,6 +13,14 @@ bool register_inaccessible(cb::reg) =
          or cb == 27 and not perms.Access_KR1C)
 }
 
+-- only works for non empty lists
+bool list SignExtendBitString(w::nat, x::bool list) =
+{
+    n = Length(x);
+    msb = list { Head(x) };
+    return (msb ^ (w-n)) : x
+}
+
 -----------------------------------
 -- dump capability registers
 -----------------------------------
@@ -480,13 +488,13 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         var size;
         var aligned;
         cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
-        addr = cursor + GPR(rt) + SignExtend(offset);
+        var addr = cursor + GPR(rt) + SignExtend(offset);
         match t
         {
-           case 0 => { size <- 1; access <- BYTE; aligned <- addr<0> == false}
-           case 1 => { size <- 2; access <- HALFWORD; aligned <- addr<1:0> == 0}
-           case 2 => { size <- 4; access <- WORD; aligned <- addr<2:0> == 0}
-           case 3 => { size <- 8; access <- DOUBLEWORD; aligned <- addr<3:0> == 0}
+           case 0 => { size <- 1; access <- BYTE; addr<2:0> <- addr<2:0> ?? BigEndianCPU^3; aligned <- true}
+           case 1 => { size <- 2; access <- HALFWORD; addr<2:0> <- addr<2:0> ?? (BigEndianCPU^2 : '0'); aligned <- addr<0> == false}
+           case 2 => { size <- 4; access <- WORD; addr<2:0> <- addr<2:0> ?? (BigEndianCPU : '00'); aligned <- addr<1:0> == 0}
+           case 3 => { size <- 8; access <- DOUBLEWORD; aligned <- addr<2:0> == 0}
         };
         if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
@@ -494,17 +502,16 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
             SignalCapException(capExcLength,cb)
         else if not aligned then
             SignalException(AdEL)
-        else if s == 0 then
+        else 
         {
+            LLbit <- None;
             data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
-            GPR(rd) <- ZeroExtend(data);
-            LLbit <- None
-        }
-        else
-        {
-            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
-            GPR(rd) <- SignExtend(data);
-            LLbit <- None
+            data_list = [data]::bool list;
+            bottom = ([addr<2:0>]::nat)*8;
+            top = ([addr<2:0>]::nat)*8 + ([size]::nat)*8 - 1;
+            final_data = data_list<top:bottom>;
+            if s == 0 then GPR(rd) <- [final_data]
+            else GPR(rd) <- [SignExtendBitString(64, final_data)]
         }
     }
 
@@ -557,13 +564,13 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         var data;
         var aligned;
         cursor = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64 ?
-        addr = cursor + GPR(rt) + SignExtend(offset);
+        var addr = cursor + GPR(rt) + SignExtend(offset);
         match t
         {
-           case 0 => { size <- 1; access <- BYTE; data <- ZeroExtend(GPR(rs)<7:0>); aligned <- addr<0> == false}
-           case 1 => { size <- 2; access <- HALFWORD; data <- ZeroExtend(GPR(rs)<15:0>); aligned <- addr<1:0> == 0}
-           case 2 => { size <- 4; access <- WORD; data <- ZeroExtend(GPR(rs)<31:0>); aligned <- addr<2:0> == 0}
-           case 3 => { size <- 8; access <- DOUBLEWORD; data <- GPR(rs); aligned <- addr<3:0> == 0}
+           case 0 => { size <- 1; access <- BYTE; data <- ZeroExtend(GPR(rs)<7:0>); addr<2:0> <- addr<2:0> ?? BigEndianCPU^3; aligned <- true}
+           case 1 => { size <- 2; access <- HALFWORD; data <- ZeroExtend(GPR(rs)<15:0>); addr<2:0> <- addr<2:0> ?? (BigEndianCPU^2:'0'); aligned <- addr<0> == false}
+           case 2 => { size <- 4; access <- WORD; data <- ZeroExtend(GPR(rs)<31:0>); addr<2:0> <- addr<2:0> ?? (BigEndianCPU:'00'); aligned <- addr<1:0> == 0}
+           case 3 => { size <- 8; access <- DOUBLEWORD; data <- GPR(rs); aligned <- addr<2:0> == 0}
         };
         if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':CAPR(cb).length) then
             SignalCapException(capExcLength,cb)
