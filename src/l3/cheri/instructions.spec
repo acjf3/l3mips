@@ -14,12 +14,7 @@ bool register_inaccessible(cb::reg) =
 }
 
 -- only works for non empty lists
-bool list SignExtendBitString(w::nat, x::bool list) =
-{
-    n = Length(x);
-    msb = list { Head(x) };
-    return (msb ^ (w-n)) : x
-}
+bool list SignExtendBitString(w::nat, x::bool list) = PadLeft (Head(x), w, x)
 
 -----------------------------------
 -- dump capability registers
