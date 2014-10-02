@@ -54,6 +54,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 {
     final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
     if not CAPR(0).tag then {SignalCapException(capExcTag,0); UNKNOWN}
+    else if CAPR(0).sealed then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not Perms(CAPR(0).perms).Permit_Load then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
@@ -181,6 +182,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 {
     final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
     if not CAPR(0).tag then {SignalCapException(capExcTag,0); UNKNOWN}
+    else if CAPR(0).sealed then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not Perms(CAPR(0).perms).Permit_Store then {SignalCapException(capExcPermStore, 0); UNKNOWN}
@@ -291,6 +293,7 @@ word option Fetch =
     {
         vAddr = PC + PCC.base;
         if not PCC.tag then {SignalCapException_noReg(capExcTag); None}
+        else if PCC.sealed then {SignalCapException_noReg(capExcSeal); None}
         else if (vAddr >+ PCC.base + PCC.length) then {SignalCapException_noReg(capExcLength); None}
         else if (vAddr <+ PCC.base) then {SignalCapException_noReg(capExcLength); None}
         else if not Perms(PCC.perms).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
