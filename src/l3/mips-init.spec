@@ -83,6 +83,7 @@ unit initMips (pc::nat, uart::nat) =
    lo <- None;
    PC <- [pc];
    COP2Init();
+   done <- false;
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;
    PIC_initialise (0x7f804000 + [procID] * 0x4000);
    when procID == 0 do
@@ -91,10 +92,3 @@ unit initMips (pc::nat, uart::nat) =
       MEM <- InitMap (0x0)
    }
 }
-
-bool done =
-   match log
-   {
-      case list {w_c0 (23, _)} => true
-      case _ => false
-   }

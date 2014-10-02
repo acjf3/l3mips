@@ -179,40 +179,8 @@ fun readRaw filename =
     vec
   end
 
-(* ------------------------------------------------------------------------
-   Dump final state of registers
-   ------------------------------------------------------------------------ *)
-
-local
-   fun displayCap cap =
-   " u:" ^ (if ((#sealed) cap) then "1" else "0") ^
-   " perms:0x" ^ hex32 ((#perms) cap) ^
-   " type:0x" ^ phex 24 ((#otype) cap) ^
-   " offset:0x" ^ hex64 ((#offset) cap) ^
-   " base:0x" ^ hex64 ((#base) cap) ^
-   " length:0x" ^ hex64 ((#length) cap)
-in
-   fun dumpCapRegisters (core) =
-     let
-       val savedProcID = !mips.procID
-       val pc = mips.Map.lookup(!mips.c_PC, 0)
-       val () = mips.procID := BitsN.B(core, BitsN.size (!mips.procID))
-     in
-        print "======   Capability Registers   ======\n"
-      ; print ("DEBUG CAP COREID " ^ Int.toString(core) ^ "\n")
-      ; print ("DEBUG CAP PCC" ^ displayCap(mips.PCC()) ^ "\n")
-      ; L3.for
-          (0, 31,
-           fn i =>
-              print ("DEBUG CAP REG " ^ (if i < 10 then " " else "") ^
-                     Int.toString i ^ displayCap(mips.CAPR(BitsN.fromNat (i, 5))) ^ "\n"))
-      ; mips.procID := savedProcID
-    end
-   fun dumpCapRegistersOnCP2_0_6 () =
-      case !mips.log of
-         [mips.dump_c2()] => dumpCapRegisters(BitsN.toInt(!mips.procID))
-       | _ => ()
-end
+fun printLog (n) = List.app (fn e => print(e ^ "\n"))
+                            (List.rev(mips.Map.lookup(!mips.log, n)))
 
 local
    fun readReg i = hex64 (mips.GPR (BitsN.fromNat (i, 5)))
@@ -233,30 +201,6 @@ in
                      Int.toString i ^ " " ^ readReg i ^ "\n"))
       ; mips.procID := savedProcID
     end
-   fun dumpRegistersOnCP0_26 () =
-      case !mips.log of
-         [mips.w_c0 (BitsN.B (26, 5), _)] => dumpRegisters(BitsN.toInt(!mips.procID))
-       | _ => ()
-end
-
-local
-   val sizeString =
-      fn BitsN.B (0, 3) => "byte"
-       | BitsN.B (1, 3) => "halfword"
-       | BitsN.B (3, 3) => "word"
-       | BitsN.B (7, 3) => "dword"
-       | BitsN.B (n, _) => Int.toString (n + 1) ^ " bytes"
-   val logString =
-      fn mips.w_gpr (n, v) => "Reg " ^ BitsN.toString n ^ " <- 0x" ^ hex64 v
-       | mips.w_hi v => "HI <- 0x" ^ hex64 v
-       | mips.w_lo v => "LO <- 0x" ^ hex64 v
-       | mips.w_c0 (n, v) => mips.cpr n ^ " <- 0x" ^ hex64 v
-       | mips.dump_c2 () => "dumping capability registers"
-       | mips.w_mem (a, (mask, (sz, v))) =>
-          "Address 0x" ^ hex64 a ^ " <- 0x" ^ hex64 v ^
-          " [" ^ sizeString sz ^ "], mask " ^ hex64 mask
-in
-   fun printLog () = List.app (fn e => print (logString e ^ "\n\n")) (!mips.log)
 end
 
 (* ------------------------------------------------------------------------
@@ -364,10 +308,9 @@ fun loop mx i =
              hex64 pc ^ " : " ^ h ^ "   " ^ a ^ "\n")
     ; uart ()
     ; mips.Next ()
-    ; if 2 <= !trace_level then printLog () else ()
-    ; dumpRegistersOnCP0_26 ()
-    ; dumpCapRegistersOnCP2_0_6 ()
-    ; if mips.done () orelse i = mx
+    ; if 2 <= !trace_level then printLog(2) else ()
+    ; printLog(0)
+    ; if !mips.done orelse i = mx
          then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
       else 
         let val exl1 = #EXL (#Status (
@@ -386,9 +329,8 @@ fun pureLoop mx =
                             BitsN.size(!mips.procID))
    ; uart ()
    ; mips.Next ()
-   ; dumpRegistersOnCP0_26 ()
-   ; dumpCapRegistersOnCP2_0_6 ()
-   ; if mips.done () orelse (mx = 1) then (print "done\n")
+   ; printLog(0)
+   ; if !mips.done orelse (mx = 1) then (print "done\n")
      else pureLoop (decr mx)
    )
 

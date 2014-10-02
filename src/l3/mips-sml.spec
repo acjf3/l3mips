@@ -5,37 +5,35 @@
 
 type mAddr = bits(37)
 
-nat PSIZE = 40 -- 40-bit physical memory
+nat PSIZE = 40         -- 40-bit physical memory
 
--- Code used for SML emulation of MIPS
+declare done :: bool   -- Flag to request termination
 
-construct event
-{
-   w_gpr :: reg * dword
-   w_hi :: dword
-   w_lo :: dword
-   w_c0 :: reg * dword
-   dump_c2 :: unit
-   w_mem :: pAddr * vAddr * bits(3) * dword
-}
+--------------------------------------------------
+-- Logging
+--------------------------------------------------
 
-declare log :: event list
+string w_gpr (r::reg, data::dword) = "Reg ":[[r]::nat]:" <- 0x":[data]
+string w_hi (data::dword) = "HI <- 0x":[data]
+string w_lo (data::dword) = "LO <- 0x":[data]
+string w_c0 (r::reg, data::dword) = cpr(r):" <- 0x":[data]
+string w_mem (pAddr::pAddr, mask::bits(64), sz::bits(3), data::dword) =
+    "Address 0x":[pAddr]:" <- 0x":[data]:" [":[[sz]::nat]:" bytes], mask 0x":[mask]
 
-unit mark (e::event) = log <- e @ log
-unit unmark = log <- Tail (log)
+declare log :: nat -> string list   -- One log per "trace level"
 
+unit mark (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
+unit unmark (lvl::nat) = log(lvl) <- Tail (log(lvl))
 
-word flip_endian_word (w::word) =
-  match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+string pad(width :: nat, n :: nat) =
+  if width > 0
+  then
+    (if n > 0 then "" else "0"):pad(width-1, n div 16)
+  else
+    ""
 
-dword flip_endian_dword (dw::dword) =
-  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
-                  h : g : f : e : d : c : b : a }
-
-declare
-{
-   MEM :: mAddr -> dword                -- physical memory, doubleword access
-}
+string hex64(x :: bits(64)) =
+  pad(16, [x]):(if x == 0 then "" else [x])
 
 --------------------------------------------------
 -- Gereral purpose register access
@@ -44,8 +42,21 @@ declare
 component GPR (n::reg) :: dword
 {
    value = if n == 0 then 0 else gpr(n)
-   assign value = when n <> 0 do { gpr(n) <- value; mark (w_gpr (n, value)) }
+   assign value = when n <> 0 do { gpr(n) <- value; mark (2, w_gpr (n, value)) }
 }
+
+unit dumpRegs () = 
+{
+    mark(0, "======   Registers   ======")
+  ; mark(0, "Core = ":[[procID]::nat])
+  ; mark(0, "PC     ":hex64(PC))
+  ; for i in 0 .. 31 do
+      mark(0, "Reg " : (if i < 10 then " " else "") :
+                 [i] : " " : hex64(GPR([i])))
+}
+--------------------------------------------------
+-- HI/LO registers
+--------------------------------------------------
 
 declare {
   UNPREDICTABLE_LO :: unit -> unit
@@ -57,7 +68,7 @@ component HI :: dword
    value = match hi { case Some (v) => v
                       case None => { UNPREDICTABLE_HI (); UNKNOWN }
                     }
-   assign value = { hi <- Some (value); mark (w_hi (value)) }
+   assign value = { hi <- Some (value); mark (2, w_hi (value)) }
 }
 
 component LO :: dword
@@ -65,7 +76,24 @@ component LO :: dword
    value = match lo { case Some (v) => v
                       case None => { UNPREDICTABLE_LO (); UNKNOWN }
                     }
-   assign value = { lo <- Some (value); mark (w_lo (value)) }
+   assign value = { lo <- Some (value); mark (2, w_lo (value)) }
+}
+
+
+--------------------------------------------------
+-- Main memory 
+--------------------------------------------------
+
+word flip_endian_word (w::word) =
+  match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+
+dword flip_endian_dword (dw::dword) =
+  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
+                  h : g : f : e : d : c : b : a }
+
+declare
+{
+   MEM :: mAddr -> dword                -- physical memory, doubleword access
 }
 
 --------------------------------------------------
@@ -114,7 +142,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       }
    assign value =
    {
-      mark (w_c0 (reg, value));
+      mark (2, w_c0 (reg, value));
       match n, reg, sel
       {
          case 0,  0, 0 => CP0.Index.Index <- value<7:0>
@@ -147,10 +175,10 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 16, 2 => CP0.Config2.SU <- value<15:12>
          case 0, 16, 6 => CP0.Config6.LTLB <- value<2>
          case 0, 20, 0 => CP0.XContext.PTEBase <- value<63:33>
-         case 0, 23, 0 => CP0.Debug <- value<31:0>
-         case 0, 26, 0 => CP0.ErrCtl <- value<31:0>
+         case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
+         case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
-         case _ => unmark
+         case _ => unmark(2)
       }
    }
 }
