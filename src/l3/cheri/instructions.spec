@@ -375,7 +375,7 @@ define COP2 > CHERICOP2 > CBTU (cb::reg, offset::bits(16)) =
         if PC + SignExtend(offset) + 4 >+ PCC.length then
             SignalCapException_noReg(capExcLength)
         else
-            BranchTo <- Some (PC + SignExtend(offset) << 2)
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
     else
         nothing
 }
@@ -392,7 +392,7 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
         if PC + SignExtend(offset) + 4 >+ PCC.length then
             SignalCapException_noReg(capExcLength)
         else
-            BranchTo <- Some (PC + SignExtend(offset) << 2)
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
     else
         nothing
 }
