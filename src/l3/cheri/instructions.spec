@@ -286,9 +286,9 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     }
     else if not CAPR(cb).tag then
         SignalCapException(capExcTag,cb)
-    else if not CAPR(cb).sealed then
+    else if CAPR(cb).sealed then
         SignalCapException(capExcSeal,cb)
-    else if GPR(rt) > CAPR(cb).length then
+    else if GPR(rt) >+ CAPR(cb).length then
         SignalCapException(capExcLength,cb)
     else
     {
