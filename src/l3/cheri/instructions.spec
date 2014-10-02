@@ -77,8 +77,8 @@ define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
         SignalCapException_v(cb)
     else
     {
-        GPR(rd)<14:0> <- CAPR(cb).perms<14:0>;
-        GPR(rd)<63:15> <- 0
+        GPR(rd)<30:0> <- CAPR(cb).perms;
+        GPR(rd)<63:31> <- 0
     }
 
 -----------------------------------
