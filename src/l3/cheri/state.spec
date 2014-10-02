@@ -45,22 +45,6 @@ register CapCause :: bits (16)
      7-0 : RegNum   -- 8 bits register number
 }
 
-string hex24 (x::bits(24)) = PadLeft (#"0", 6, [x])
-string hex31 (x::bits(31)) = PadLeft (#"0", 8, [x])
-string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
-
-string cap_write (cap::Capability) = 
-    "u:":(if cap.sealed then "1" else "0"):
-    " perms:0x":hex31(cap.perms):
-    " type:0x":hex24(cap.otype):
-    " offset:0x":hex64(cap.offset):
-    " base:0x":hex64(cap.base):
-    " length:0x":hex64(cap.length)
-
-string cpp_write (cap::Capability) = "PCC <- ":cap_write(cap)
-string creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":cap_write(cap)
-string store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":cap_write(cap)
-
 --------------------------------
 -- Capability coprocessor state
 --------------------------------
@@ -89,6 +73,37 @@ declare
     c_capcause:: id -> CapCause      -- capability exception cause register
     c_pcc     :: id -> Capability    -- program counter capability
     c_capr    :: id -> CapRegFile    -- capability register file
+}
+
+string hex24 (x::bits(24)) = PadLeft (#"0", 6, [x])
+string hex31 (x::bits(31)) = PadLeft (#"0", 8, [x])
+string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
+
+string cap_write (cap::Capability) = 
+    "u:":(if cap.sealed then "1" else "0"):
+    " perms:0x":hex31(cap.perms):
+    " type:0x":hex24(cap.otype):
+    " offset:0x":hex64(cap.offset):
+    " base:0x":hex64(cap.base):
+    " length:0x":hex64(cap.length)
+
+string cpp_write (cap::Capability) = "PCC <- ":cap_write(cap)
+string creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":cap_write(cap)
+string store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":cap_write(cap)
+string cap_exce (e::bits(8), cr::bits(8)) =
+{
+    m = c_capr(procID);
+    return "CapException : 0x":[e]:" CReg ":[[cr]::nat]:(if cr < 32 then " : ":cap_write(m([cr])) else "")
+}
+
+unit dumpCRegs () = 
+{
+    mark(0, "======   Registers   ======")
+  ; mark(0, "Core = ":[[procID]::nat])
+  ; mark(0, "DEBUG CAP PCC ":cap_write(c_pcc(procID)))
+  ; m = c_capr(procID)
+  ; for i in 0 .. 31 do
+      mark(0, "DEBUG CAP REG          ":(if i<10 then " " else ""):[[i]::nat]:" ":cap_write(m([i])))
 }
 
 component capcause :: CapCause
@@ -154,13 +169,4 @@ component EPCC :: Capability
 {
    value = CAPR(31)
    assign value = CAPR(31) <- value
-}
-
-unit dumpCRegs () = 
-{
-    mark(0, "======   Registers   ======")
-  ; mark(0, "Core = ":[[procID]::nat])
-  ; mark(0, "DEBUG CAP PCC ":cap_write(PCC))
-  ; for i in 0 .. 31 do
-      mark(0, "DEBUG CAP REG          ":(if i<10 then " " else ""):[[i]::nat]:" ":cap_write(CAPR([i])))
 }
