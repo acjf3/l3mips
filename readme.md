@@ -11,6 +11,7 @@ project hierarchy
     + l3
         + cheri
         + cp2-null
+        + tlb
     + sml
         + lib
 
@@ -53,9 +54,9 @@ executable simulator are found under the **sml** directory.
 
 The **l3** directory contains the sources for the MIPS ISA specification. To
 generate a simulator, the list of files that is required is specified in the
-Makefile. The is a conditional inclusion of specific files for a build with the
-*CAP* environment variable set (which targets a build with the CHERI capability
-coprocessor). Each *.spec* file specify a part of the ISA :
+Makefile. There is a conditional inclusion of specific files for a build with
+the *CAP* environment variable set (which targets a build with the CHERI
+capability coprocessor). Each *.spec* file specify a part of the ISA :
 
 * **mips-base.spec**
 Declares the state variables of the processor as well as a few utility functions
@@ -85,3 +86,9 @@ Declares some TLB state variables, and defines TLB internal functions and TLB in
 Defines TLB entry types
 * **mips-uart.spec**
 Models a UART controller
+* tlb directory
+    * **base.spec**
+    * **instructions.spec**
+    * **translate.spec**
+    * **types.spec**
+
