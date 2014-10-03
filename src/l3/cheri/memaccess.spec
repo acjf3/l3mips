@@ -77,10 +77,10 @@ Capability LoadCap (vAddr::vAddr) =
                     #UNPREDICTABLE ("Capability load attempted on PIC");
 
         var Capability::Capability;
-        &Capability<255:192> <- MEM(a:'11');
-        &Capability<191:128> <- MEM(a:'10');
-        &Capability<127:64>  <- MEM(a:'01');
-        &Capability<63:0>    <- MEM(a:'00');
+        &Capability<255:192> <- MEM(a:'00');
+        &Capability<191:128> <- MEM(a:'01');
+        &Capability<127:64>  <- MEM(a:'10');
+        &Capability<63:0>    <- MEM(a:'11');
 
         Capability.tag <- TAG(a);
 
@@ -175,10 +175,10 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
         mark (2, store_cap (pAddr, Capability));
 
-        MEM(a:'11') <- &Capability<255:192>;
-        MEM(a:'10') <- &Capability<191:128>;
-        MEM(a:'01') <- &Capability<127:64>;
-        MEM(a:'00') <- &Capability<63:0>;
+        MEM(a:'00') <- &Capability<255:192>;
+        MEM(a:'01') <- &Capability<191:128>;
+        MEM(a:'10') <- &Capability<127:64>;
+        MEM(a:'11') <- &Capability<63:0>;
 
         TAG(a) <- Capability.tag
     }
