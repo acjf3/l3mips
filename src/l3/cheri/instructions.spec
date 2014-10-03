@@ -575,7 +575,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             SignalException(AdES)
         else
         {
-            StoreMemoryCap(access, access, data, addr, DATA, STORE);
+            pAddr = StoreMemoryCap(access, access, data, addr, DATA, STORE);
             LLbit <-None
         }
     }
@@ -608,7 +608,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
             case Some (false) => GPR(rs) <- 0
             case Some (true) =>
             {
-                StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
+                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
                 LLbit <- None;
                 GPR(rs) <- 1
             }
