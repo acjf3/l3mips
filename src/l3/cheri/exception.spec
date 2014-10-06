@@ -104,6 +104,8 @@ unit SignalException (ExceptionType::ExceptionType) =
     PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)
 }
 
+unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
+
 unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
 {
     capcause.ExcCode <- match capException

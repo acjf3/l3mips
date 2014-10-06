@@ -64,6 +64,8 @@ unit SignalException (ExceptionType::ExceptionType) =
    exceptionSignalled <- true
 }
 
+unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------

@@ -60,6 +60,9 @@ register EntryHi :: dword
 
 register StatusRegister :: word
 {
+   31 : CU3       -- Allow access to CP3
+   30 : CU2       -- Allow access to CP2
+   29 : CU1       -- Allow access to CP1
    28 : CU0       -- Allow access to CP0
    26 : FR        -- Floating-point data
    25 : RE        -- Reverse endianness
@@ -138,10 +141,11 @@ register ConfigRegister6 :: word
 
 register CauseRegister :: word
 {
-    31 : BD       -- In branch delay slot
-    30 : TI       -- Timer interrupt is pending
-  15-8 : IP       -- Pending hardware/software interrupts
-   6-2 : ExcCode  -- Exception code
+     31 : BD       -- In branch delay slot
+     30 : TI       -- Timer interrupt is pending
+  29-28 : CE       -- Coprocessor unit number on CpU exception
+   15-8 : IP       -- Pending hardware/software interrupts
+    6-2 : ExcCode  -- Exception code
 }
 
 register Context :: dword
