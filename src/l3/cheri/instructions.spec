@@ -506,7 +506,8 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
             SignalException(AdEL)
         else
         {
-            CAPR(cd) <- LoadCap(addr);
+            tmp = LoadCap(addr);
+            when not exceptionSignalled do CAPR(cd) <- tmp;
             LLbit <- None
         }
     }
@@ -571,12 +572,15 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         {
             LLbit <- None;
             data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
-            data_list = [data]::bool list;
-            bottom = ([bytesel]::nat)*8;
-            top = ([bytesel]::nat)*8 + ([size]::nat)*8 - 1;
-            final_data = data_list<top:bottom>;
-            if s == 0 then GPR(rd) <- [final_data]
-            else GPR(rd) <- [SignExtendBitString(64, final_data)]
+            when not exceptionSignalled do
+            {
+                data_list = [data]::bool list;
+                bottom = ([bytesel]::nat)*8;
+                top = ([bytesel]::nat)*8 + ([size]::nat)*8 - 1;
+                final_data = data_list<top:bottom>;
+                if s == 0 then GPR(rd) <- [final_data]
+                else GPR(rd) <- [SignExtendBitString(64, final_data)]
+            }
         }
     }
 
@@ -604,9 +608,12 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
     else
     {
         data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD);
-        GPR(rd) <- data;
-        LLbit <- Some (true);
-        CP0.LLAddr <- [pAddr]
+        when not exceptionSignalled do
+        {
+            GPR(rd) <- data;
+            LLbit <- Some (true);
+            CP0.LLAddr <- [pAddr]
+        }
     }
 }
 

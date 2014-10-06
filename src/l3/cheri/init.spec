@@ -20,7 +20,7 @@ unit COP2Init () =
     defaultCap.length <- ~0;
     defaultCap.otype <- 0;
     defaultCap.perms <- ~0;
-    defaultCap.reserved <- ~0;
+    defaultCap.reserved <- 0;
     PCC <- defaultCap;
     for i in 0 .. 31 do CAPR([i]) <- defaultCap
 }

@@ -45,6 +45,7 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
+string sig_exception (ExceptionCode::bits(5)) = "Exception 0x":[ExceptionCode]
 string w_gpr (r::reg, data::dword) = "Reg ":[[r]::nat]:" <- 0x":[data]
 string w_hi (data::dword) = "HI <- 0x":[data]
 string w_lo (data::dword) = "LO <- 0x":[data]

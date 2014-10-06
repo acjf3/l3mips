@@ -11,8 +11,8 @@ construct ExceptionType
 { Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr, C2E,
   XTLBRefillL, XTLBRefillS }
 
-unit ExceptionCode (ExceptionType::ExceptionType) =
-    CP0.Cause.ExcCode <- match ExceptionType
+bits(5) ExceptionCode (ExceptionType::ExceptionType) =
+    match ExceptionType
     {
         case Int         => 0x00 -- Interrupt
         case Mod         => 0x01 -- TLB modification exception
@@ -52,7 +52,7 @@ unit SignalException (ExceptionType::ExceptionType) =
                      0x080`30
                   else
                      0x180;
-   ExceptionCode (ExceptionType);
+   CP0.Cause.ExcCode <- ExceptionCode (ExceptionType);
    CP0.Status.EXL <- true;
    vectorBase = if CP0.Status.BEV then
                    0xFFFF_FFFF_BFC0_0200`64
@@ -61,7 +61,8 @@ unit SignalException (ExceptionType::ExceptionType) =
    BranchDelay <- None;
    BranchTo <- None;
    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
-   exceptionSignalled <- true
+   exceptionSignalled <- true;
+   mark(2, sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}

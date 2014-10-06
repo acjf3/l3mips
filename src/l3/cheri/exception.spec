@@ -38,8 +38,8 @@ construct CapException
     capExcAccKR2C            -- Access_KR2C
 }
 
-unit ExceptionCode (ExceptionType::ExceptionType) =
-    CP0.Cause.ExcCode <- match ExceptionType
+bits(5) ExceptionCode (ExceptionType::ExceptionType) =
+    match ExceptionType
     {
         case Int         => 0x00 -- Interrupt
         case Mod         => 0x01 -- TLB modification exception
@@ -84,7 +84,7 @@ unit SignalException (ExceptionType::ExceptionType) =
             0x280
         else
             0x180;
-    ExceptionCode (ExceptionType);
+    CP0.Cause.ExcCode <- ExceptionCode (ExceptionType);
     CP0.Status.EXL <- true;
     vectorBase =
         if CP0.Status.BEV then
@@ -101,7 +101,8 @@ unit SignalException (ExceptionType::ExceptionType) =
     -- move KCC to PCC
     PCC <- KCC;
 
-    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)
+    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
+    mark(2, sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
