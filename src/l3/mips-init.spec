@@ -89,6 +89,6 @@ unit initMips (pc::nat, uart::nat) =
    when procID == 0 do
    {
       JTAG_UART_initialise (uart);
-      MEM <- InitMap (0x0)
+      InitMEM
    }
 }

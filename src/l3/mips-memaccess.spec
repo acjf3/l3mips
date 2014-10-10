@@ -43,12 +43,6 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
     else return UNKNOWN
 }
 
-word loadWord32 (a::pAddr) =
-{
-   d = MEM (a<39:3>);
-   if a<2> then d<31:0> else d<63:32>
-}
-
 -- Pimitive memory store. Big-endian.
 
 pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
@@ -88,7 +82,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                      c_LLbit([core]) == Some (true) and
                      c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
                         c_LLbit([core]) <- Some (false);
-            MEM(a) <- MEM(a) && ~mask || MemElem && mask
+            WriteData(a, MemElem, mask)
         };
         return pAddr
     }
@@ -124,7 +118,7 @@ word option Fetch =
    else if PC<1:0> == 0 then
    {
       pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
-      if exceptionSignalled then None else Some (loadWord32 (pc))
+      if exceptionSignalled then None else Some (ReadInst (pc))
    }
    else
    {

@@ -42,7 +42,7 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
                 {found <- true; ret <- PIC_load([core], a)};
 
         when found == false do
-            ret <- MEM (a);
+            ret <- ReadData (a);
 
         return (ret, pAddr)
     }
@@ -77,22 +77,16 @@ Capability LoadCap (vAddr::vAddr) =
                     #UNPREDICTABLE ("Capability load attempted on PIC");
 
         var Capability::Capability;
-        &Capability<255:192> <- MEM(a:'00');
-        &Capability<191:128> <- MEM(a:'01');
-        &Capability<127:64>  <- MEM(a:'10');
-        &Capability<63:0>    <- MEM(a:'11');
+        &Capability<255:192> <- ReadData(a:'00');
+        &Capability<191:128> <- ReadData(a:'01');
+        &Capability<127:64>  <- ReadData(a:'10');
+        &Capability<63:0>    <- ReadData(a:'11');
 
         Capability.tag <- TAG(a);
 
         return Capability
     }
     else return UNKNOWN
-}
-
-word loadWord32 (a::pAddr) =
-{
-    d = MEM (a<39:3>);
-    if a<2> then d<31:0> else d<63:32>
 }
 
 pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
@@ -132,7 +126,7 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                     c_LLbit([core]) == Some (true) and
                     c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
                         c_LLbit([core]) <- Some (false);
-            MEM(a) <- MEM(a) && ~mask || MemElem && mask;
+            WriteData(a, MemElem, mask);
             TAG(a<36:2>) <- false
         };
         return pAddr
@@ -175,10 +169,10 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
         mark_log (2, log_store_cap (pAddr, Capability));
 
-        MEM(a:'00') <- &Capability<255:192>;
-        MEM(a:'01') <- &Capability<191:128>;
-        MEM(a:'10') <- &Capability<127:64>;
-        MEM(a:'11') <- &Capability<63:0>;
+        WriteData(a:'00', &Capability<255:192>, ~0);
+        WriteData(a:'01', &Capability<191:128>, ~0);
+        WriteData(a:'10', &Capability<127:64>, ~0);
+        WriteData(a:'11', &Capability<63:0>, ~0);
 
         TAG(a) <- Capability.tag
     }
@@ -218,7 +212,7 @@ word option Fetch =
         else if not Perms(PCC.perms).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
         else {
             pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
-            if exceptionSignalled then None else Some (loadWord32 (pc))
+            if exceptionSignalled then None else Some (ReadInst (pc))
         }
     }
     else
