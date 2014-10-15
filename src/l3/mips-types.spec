@@ -3,16 +3,6 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
-{-
-
-val () = Runtime.LoadF "mips-base.spec, mips-pic.spec, mips-uart.spec,\
-                       \mips-sml.spec, mips.spec, mips-encode.spec"
-
-val () = SMLExport.spec ("mips-base.spec, mips-pic.spec, mips-uart.spec,\
-                     \mips-sml.spec, mips.spec, mips-encode.spec", "sml/mips")
-
--}
-
 type id     = bits(8)          -- max 256 cores
 type reg    = bits(5)
 type id_reg = bits(6)          -- width(id_reg) = width(id) + width(reg)
@@ -48,33 +38,33 @@ register Wired :: word
 
 register PageMask :: word
 {
- 24-13 : Mask
+  24-13 : Mask
 }
 
 register EntryHi :: dword
 {
- 63-62 : R        -- Region (00 user, 01 supervisor, 11 kernel)
- 39-13 : VPN2     -- Virtual page number divided by two (maps to two pages)
-   7-0 : ASID     -- Address space identifier
+  63-62 : R        -- Region (00 user, 01 supervisor, 11 kernel)
+  39-13 : VPN2     -- Virtual page number divided by two (maps to two pages)
+    7-0 : ASID     -- Address space identifier
 }
 
 register StatusRegister :: word
 {
-   31 : CU3       -- Allow access to CP3
-   30 : CU2       -- Allow access to CP2
-   29 : CU1       -- Allow access to CP1
-   28 : CU0       -- Allow access to CP0
-   26 : FR        -- Floating-point data
-   25 : RE        -- Reverse endianness
-   22 : BEV       -- Controls location of exception vectors
- 15-8 : IM        -- Interrupt mask
-    7 : KX
-    6 : SX
-    5 : UX
-  4-3 : KSU       -- Operating mode
-    2 : ERL       -- Error level
-    1 : EXL       -- Exception level
-    0 : IE        -- Interrupt enable
+    31 : CU3       -- Allow access to CP3
+    30 : CU2       -- Allow access to CP2
+    29 : CU1       -- Allow access to CP1
+    28 : CU0       -- Allow access to CP0
+    26 : FR        -- Floating-point data
+    25 : RE        -- Reverse endianness
+    22 : BEV       -- Controls location of exception vectors
+  15-8 : IM        -- Interrupt mask
+     7 : KX
+     6 : SX
+     5 : UX
+   4-3 : KSU       -- Operating mode
+     2 : ERL       -- Error level
+     1 : EXL       -- Exception level
+     0 : IE        -- Interrupt enable
 }
 
 register ConfigRegister :: word
@@ -212,7 +202,7 @@ record CP0
 
 -- Memory types
 
-bits(3) BYTE       = 0`3
-bits(3) HALFWORD   = 1`3
-bits(3) WORD       = 3`3
-bits(3) DOUBLEWORD = 7`3
+bits(3) BYTE       = 0
+bits(3) HALFWORD   = 1
+bits(3) WORD       = 3
+bits(3) DOUBLEWORD = 7

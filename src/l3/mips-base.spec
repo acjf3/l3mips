@@ -112,4 +112,4 @@ bool NotWordValue(value::dword) =
 }
 
 unit CheckBranch =
-    when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
+   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")

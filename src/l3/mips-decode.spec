@@ -8,7 +8,6 @@
 --================================================
 
 instruction Decode (w::word) =
-{
    match w
    {
       case '000 000 00000 rt rd imm5 000 000' => Shift (SLL (rt, rd, imm5))
@@ -140,13 +139,12 @@ instruction Decode (w::word) =
       case '101 111 base opn immediate' => CACHE (base, opn, immediate)
       case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
       case '010 000 1000 0000 0000 0000 0000 100000' => WAIT
-      -- CP2 instructions
-      case '010 010 v' => COP2Decode (v) -- coprocessor 2 instructions (0x12)
-      case '110 010 v' => LWC2Decode (v) -- coprocessor 2 load word instructions (0x32)
-      case '110 110 v' => LDC2Decode (v) -- coprocessor 2 load double instructions (0x36)
-      case '111 010 v' => SWC2Decode (v) -- coprocessor 2 store word instructions (0x3a)
-      case '111 110 v' => SDC2Decode (v) -- coprocessor 2 store double instructions (0x3e)
+      -- Coprocessor 2 instructions
+      case '010 010 v' => COP2Decode (v) -- CP2 instructions (0x12)
+      case '110 010 v' => LWC2Decode (v) -- CP2 load word instructions (0x32)
+      case '110 110 v' => LDC2Decode (v) -- CP2 load double instructions (0x36)
+      case '111 010 v' => SWC2Decode (v) -- CP2 store word instructions (0x3a)
+      case '111 110 v' => SDC2Decode (v) -- CP2 store double instructions (0x3e)
       -- reserved instructions
       case _ => ReservedInstruction
    }
-}

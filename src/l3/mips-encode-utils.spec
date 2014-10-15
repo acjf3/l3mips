@@ -9,7 +9,8 @@ string op1ri (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : i(n)
 string op2r (s::string, r1::reg, r2::reg) = op1r(s,r1) : c(r2)
 string op2ri (s::string, r1::reg, r2::reg, n::bits(N)) = op2r(s,r1,r2) : i(n)
 string op3r (s::string, r1::reg, r2::reg, r3::reg) = op2r(s,r1,r2) : c(r3)
-string op3ri (s::string, r1::reg, r2::reg, r3::reg, n::bits(N)) = op3r(s,r1,r2,r3) : i(n)
+string op3ri (s::string, r1::reg, r2::reg, r3::reg, n::bits(N)) =
+   op3r(s,r1,r2,r3) : i(n)
 string op2roi (s::string, r1::reg, r2::reg, n::bits(N)) =
    op1r(s,r1) : ", " : cpr (r2) : oi(n)
 

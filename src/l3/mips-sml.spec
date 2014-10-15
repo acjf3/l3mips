@@ -19,22 +19,24 @@ component GPR (n::reg) :: dword
    assign value = when n <> 0 do { gpr(n) <- value; mark (2, w_gpr (n, value)) }
 }
 
-unit dumpRegs () = 
+unit dumpRegs () =
 {
     mark(0, "======   Registers   ======")
-  ; mark(0, "Core = ":[[procID]::nat])
-  ; mark(0, "PC     ":hex64(PC))
+  ; mark(0, "Core = " : [[procID]::nat])
+  ; mark(0, "PC     " : hex64(PC))
   ; for i in 0 .. 31 do
-      mark(0, "Reg " : (if i < 10 then " " else "") :
-                 [i] : " " : hex64(GPR([i])))
+      mark(0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
+              hex64(GPR([i])))
 }
+
 --------------------------------------------------
 -- HI/LO registers
 --------------------------------------------------
 
-declare {
-  UNPREDICTABLE_LO :: unit -> unit
-  UNPREDICTABLE_HI :: unit -> unit
+declare
+{
+   UNPREDICTABLE_LO :: unit -> unit
+   UNPREDICTABLE_HI :: unit -> unit
 }
 
 component HI :: dword
@@ -55,20 +57,13 @@ component LO :: dword
 
 
 --------------------------------------------------
--- Main memory 
+-- Main memory
 --------------------------------------------------
 
 word flip_endian_word (w::word) =
-  match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
 
-dword flip_endian_dword (dw::dword) =
-  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
-                  h : g : f : e : d : c : b : a }
-
-declare
-{
-   MEM :: mAddr -> dword                -- physical memory, doubleword access
-}
+declare MEM :: mAddr -> dword      -- physical memory, doubleword access
 
 --------------------------------------------------
 -- CP0 register access
@@ -162,12 +157,12 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
 -------------------------
 define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
    if !CP0.Status.CU0 and !KernelMode then
-     SignalException(CpU)
+      SignalException(CpU)
    else
    {
-     vAddr = GPR(base) + SignExtend(offset);
-     pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
-     nothing
+      vAddr = GPR(base) + SignExtend(offset);
+      pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
+      nothing
    }
 
 ---------------
@@ -176,7 +171,6 @@ define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
 
 define RDHWR (rt::reg, rd::reg) =
    if CP0.Status.CU0 or KernelMode or CP0.&HWREna<[rd]::nat> then
-   {
       match rd
       {
          case  0 => GPR(rt) <- [totalCore - 1]
@@ -185,6 +179,5 @@ define RDHWR (rt::reg, rd::reg) =
          case 29 => GPR(rt) <- CP0.UsrLocal
          case _  => SignalException(ResI)
       }
-   }
    else
-     SignalException(ResI)
+      SignalException(ResI)

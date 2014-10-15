@@ -6,7 +6,7 @@
 -- Pimitive memory load (with memory-mapped devices)
 
 dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType) =
+                          IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
@@ -23,24 +23,22 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
     if not exceptionSignalled then
     {
         a = pAddr<39:3>;
-        var ret;
+        var ret = None;
 
-        var found = false;
         if a == JTAG_UART.base_address then
         {
-            found <- true;
-            ret <- flip_endian_word (JTAG_UART.&data)
-                : flip_endian_word (JTAG_UART.&control);
+            ret <- Some (flip_endian_word (JTAG_UART.&data) :
+                         flip_endian_word (JTAG_UART.&control));
             when pAddr<2:0> == 0 do JTAG_UART_load
         }
-        else for core in 0 .. (totalCore - 1) do
-            when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
-                {found <- true; ret <- PIC_load([core], a)};
+        else for core in 0 .. totalCore - 1 do
+            when a >=+ PIC_base_address([core]) and
+                  a <+ PIC_base_address([core]) + 1072 do
+                ret <- Some (PIC_load([core], a));
 
-        when found == false do
-            ret <- MEM (a);
-
-        return (ret, pAddr)
+        return (match ret { case Some (d) => d
+                            case None => MEM (a)
+                          }, pAddr)
     }
     else return UNKNOWN
 }
@@ -78,16 +76,17 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         var found = false;
         if a == JTAG_UART.base_address then
             {found <- true; JTAG_UART_store (mask, MemElem)}
-        else for core in 0 .. (totalCore - 1) do
-        when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
-            {found <- true; PIC_store([core], a, mask, MemElem)};
+        else for core in 0 .. totalCore - 1 do
+           when a >=+ PIC_base_address([core]) and
+                 a <+ PIC_base_address([core]) + 1072 do
+               {found <- true; PIC_store([core], a, mask, MemElem)};
 
-        when found == false do
+        when not found do
         {
-            for core in 0 .. (totalCore - 1) do
+            for core in 0 .. totalCore - 1 do
                 when core <> [procID] and
-                    c_LLbit([core]) == Some (true) and
-                    c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
+                     c_LLbit([core]) == Some (true) and
+                     c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
                         c_LLbit([core]) <- Some (false);
             MEM(a) <- MEM(a) && ~mask || MemElem && mask
         };

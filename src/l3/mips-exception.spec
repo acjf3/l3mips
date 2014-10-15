@@ -8,28 +8,30 @@
 --------------------------------------------------
 
 construct ExceptionType
-{ Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr, C2E,
-  XTLBRefillL, XTLBRefillS }
+{
+   Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr, C2E,
+   XTLBRefillL, XTLBRefillS
+}
 
 bits(5) ExceptionCode (ExceptionType::ExceptionType) =
-    match ExceptionType
-    {
-        case Int         => 0x00 -- Interrupt
-        case Mod         => 0x01 -- TLB modification exception
-        case TLBL        => 0x02 -- TLB exception (load or fetch)
-        case TLBS        => 0x03 -- TLB exception (store)
-        case AdEL        => 0x04 -- Address error (load or fetch)
-        case AdES        => 0x05 -- Address error (store)
-        case Sys         => 0x08 -- Syscall
-        case Bp          => 0x09 -- Breakpoint
-        case ResI        => 0x0a -- Reserved instruction
-        case CpU         => 0x0b -- Coprocessor Unusable
-        case Ov          => 0x0c -- Arithmetic overflow
-        case Tr          => 0x0d -- Trap
-        case C2E         => 0x12 -- C2E coprocessor 2 exception
-        case XTLBRefillL => 0x02
-        case XTLBRefillS => 0x03
-    }
+   match ExceptionType
+   {
+      case Int         => 0x00 -- Interrupt
+      case Mod         => 0x01 -- TLB modification exception
+      case TLBL        => 0x02 -- TLB exception (load or fetch)
+      case TLBS        => 0x03 -- TLB exception (store)
+      case AdEL        => 0x04 -- Address error (load or fetch)
+      case AdES        => 0x05 -- Address error (store)
+      case Sys         => 0x08 -- Syscall
+      case Bp          => 0x09 -- Breakpoint
+      case ResI        => 0x0a -- Reserved instruction
+      case CpU         => 0x0b -- Coprocessor Unusable
+      case Ov          => 0x0c -- Arithmetic overflow
+      case Tr          => 0x0d -- Trap
+      case C2E         => 0x12 -- C2E coprocessor 2 exception
+      case XTLBRefillL => 0x02
+      case XTLBRefillS => 0x03
+   }
 
 unit SignalException (ExceptionType::ExceptionType) =
 {

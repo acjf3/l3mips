@@ -79,7 +79,7 @@ string hex24 (x::bits(24)) = PadLeft (#"0", 6, [x])
 string hex31 (x::bits(31)) = PadLeft (#"0", 8, [x])
 string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
 
-string cap_write (cap::Capability) = 
+string cap_write (cap::Capability) =
     "u:":(if cap.sealed then "1" else "0"):
     " perms:0x":hex31(cap.perms):
     " type:0x":hex24(cap.otype):
@@ -96,7 +96,7 @@ string cap_exce (e::bits(8), cr::bits(8)) =
     return "CapException : 0x":[e]:" CReg ":[[cr]::nat]:(if cr < 32 then " : ":cap_write(m([cr])) else "")
 }
 
-unit dumpCRegs () = 
+unit dumpCRegs () =
 {
     mark(0, "======   Registers   ======")
   ; mark(0, "Core = ":[[procID]::nat])

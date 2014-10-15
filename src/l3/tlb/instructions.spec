@@ -28,36 +28,30 @@ define TLBP =
 
 define TLBWI =
    if !CP0.Status.CU0 and !KernelMode then
-     SignalException(CpU)
+      SignalException(CpU)
+   else if [CP0.Index.Index] >= TLBEntries then
+   {
+      j = CP0.EntryHi.VPN2<6:0>;
+      TLB_direct (j) <- ModifyTLB (TLB_direct (j))
+   }
    else
    {
-     if [CP0.Index.Index] >= TLBEntries then
-     {
-        j = CP0.EntryHi.VPN2<6:0>;
-        TLB_direct (j) <- ModifyTLB (TLB_direct (j))
-     }
-     else
-     {
-        i`4 = [CP0.Index.Index];
-        TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
-     }
+      i`4 = [CP0.Index.Index];
+      TLB_assoc (i) <- ModifyTLB (TLB_assoc (i))
    }
 
 define TLBWR =
    if !CP0.Status.CU0 and !KernelMode then
-     SignalException(CpU)
+      SignalException(CpU)
+   else if CP0.Config6.LTLB then
+   {
+      j = CP0.EntryHi.VPN2<6:0>;
+      old = TLB_direct (j);
+      TLB_direct (j) <- ModifyTLB (old);
+      when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
+   }
    else
    {
-     if CP0.Config6.LTLB then
-     {
-       j = CP0.EntryHi.VPN2<6:0>;
-       old = TLB_direct (j);
-       TLB_direct (j) <- ModifyTLB (old);
-       when old.V0 and old.V1 do TLB_assoc ([CP0.Random.Random]) <- old
-     }
-     else
-     {
-       j = CP0.Random.Random;
-       TLB_assoc ([j]) <- ModifyTLB (TLB_assoc ([j]))
-     }
+      j = CP0.Random.Random;
+      TLB_assoc ([j]) <- ModifyTLB (TLB_assoc ([j]))
    }
