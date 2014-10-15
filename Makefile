@@ -46,6 +46,7 @@ L3SRCBASE+=tlb/translate.spec
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
 L3SRCBASE+=mips-memory.spec
+L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=mips-memaccess.spec
 L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cp2-null/instructions.spec

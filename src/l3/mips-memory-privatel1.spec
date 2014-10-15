@@ -1,7 +1,11 @@
 ---------------------------------------------------------------------------
--- MIPS default memory
+-- MIPS memory with private L1 DCache
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+-- types and declarations
+-------------------------------------------------------------------------------
 
 type CacheLine = dword list
 type Tag = bits(26)
@@ -19,12 +23,53 @@ component DL1 (idx::CacheSetIndex) :: CacheEntry
 }
 declare MEM  :: mAddr -> dword -- physical memory (37 bits), doubleword access
 
+-------------------------------------------------------------------------------
+-- Log utils
+-------------------------------------------------------------------------------
+
+string log_cache_entry(entry::CacheEntry) = "[":[entry.valid]:"|0x":PadLeft (#"0", 7, [entry.tag]):"]"--:"|":[entry.data]
+
+string log_dcache_evict (idx::CacheSetIndex, old::CacheEntry, new::CacheEntry) =
+    "[Core:":[procID]:"] DCache evict @idx 0x":PadLeft (#"0", 3, [idx]):
+    " - old: ":log_cache_entry(old):
+    " - new: ":log_cache_entry(new)
+
+string log_dcache_read_hit (addr::mAddr, idx::CacheSetIndex) =
+    "[Core:":[procID]:"] DCache read hit, addr:0x":PadLeft (#"0", 10, [addr]):" @idx 0x":PadLeft (#"0", 3, [idx])
+
+-------------------------------------------------------------------------------
+-- Internal functions
+-------------------------------------------------------------------------------
+
 dword idx(line::CacheLine, i::bits(2)) =
   if i == 0 then Head(line) else idx(Tail(line), i-1)
 
 CacheLine upd(line::CacheLine, i::bits(2), dword::dword) =
   if i == 0 then Cons(dword, Tail(line))
             else Cons(Head(line),upd(Tail(line), i-1, dword))
+
+CacheSetIndex hash_default(addr::mAddr) = addr<10:2>
+Tag tag_default(addr::mAddr) = addr<36:11>
+
+{- experiments
+CacheSetIndex hash_test1(addr::mAddr) = [addr<9:2>]:[addr<12>]
+Tag tag_test1(addr::mAddr) = addr<36:13> : addr<11:10>
+
+CacheSetIndex hash_test2(addr::mAddr) = [addr<12>]:[addr<9:2>]
+Tag tag_test2(addr::mAddr) = addr<36:13> : addr<11:10>
+-}
+
+CacheSetIndex getIdx(addr::mAddr) = hash_default(addr)
+Tag getTag(addr::mAddr) = tag_default(addr)
+
+CacheEntry option hit (addr::mAddr) =
+{
+    cacheEntry = DL1(getIdx(addr));
+    if (cacheEntry.valid and cacheEntry.tag == getTag(addr)) then
+        Some (cacheEntry)
+    else
+        None
+}
 
 CacheEntry mkCacheEntry(valid::bool, tag::Tag, data::CacheLine) =
 {
@@ -37,13 +82,16 @@ CacheEntry mkCacheEntry(valid::bool, tag::Tag, data::CacheLine) =
 
 unit updateDCache (pAddr::mAddr, data::dword, mask::dword) =
 {
-    cacheEntry = DL1(pAddr<10:2>);
-    when (cacheEntry.valid and cacheEntry.tag == pAddr<36:11>) do
+    match hit (pAddr)
     {
-        cacheLine = cacheEntry.data;
-        masked_data = idx(cacheLine, pAddr<1:0>) && ~mask || data && mask;
-        cacheLine = upd(cacheLine, pAddr<1:0>, masked_data);
-        DL1(pAddr<10:2>) <- mkCacheEntry(true, pAddr<36:11>, cacheLine)
+        case Some (cacheEntry) =>
+        {
+            cacheLine = cacheEntry.data;
+            masked_data = idx(cacheLine, pAddr<1:0>) && ~mask || data && mask;
+            cacheLine = upd(cacheLine, pAddr<1:0>, masked_data);
+            DL1(getIdx(pAddr)) <- mkCacheEntry(true, getTag(pAddr), cacheLine)
+        }
+        case None => nothing
     }
 }
 
@@ -51,7 +99,10 @@ CacheLine serveDCacheMiss (pAddr::mAddr) =
 {
     var cacheLine = Nil;
     for i in 0 .. 3 do cacheLine <- cacheLine : list { MEM(pAddr<36:2> :[i]) };
-    DL1(pAddr<10:2>) <- mkCacheEntry(true, pAddr<36:11>, cacheLine);
+    new_entry = mkCacheEntry(true, getTag(pAddr), cacheLine);
+    old_entry = DL1(getIdx(pAddr));
+    when old_entry.valid do mark_log (3, log_dcache_evict(getIdx(pAddr), old_entry, new_entry));
+    DL1(getIdx(pAddr)) <- new_entry;
     cacheLine
 }
 
@@ -68,8 +119,9 @@ unit serveDCacheWrite (pAddr::mAddr, data::dword, mask::dword) =
         }
 }
 
-
--- memory API
+-------------------------------------------------------------------------------
+-- Memory API
+-------------------------------------------------------------------------------
 
 unit InitMEM =
 {
@@ -79,11 +131,16 @@ unit InitMEM =
 
 dword ReadData (pAddr::mAddr) =
 {
-    cacheEntry = DL1(pAddr<10:2>);
-    cacheLine = if cacheEntry.valid and cacheEntry.tag == pAddr<36:11> then
-                    cacheEntry.data
-                else
-                    serveDCacheMiss(pAddr);
+    var cacheLine;
+    match hit (pAddr)
+    {
+        case Some (cacheEntry) =>
+        {
+            mark_log (3,log_dcache_read_hit(pAddr,getIdx(pAddr)));
+            cacheLine<-cacheEntry.data
+        }
+        case None => cacheLine <- serveDCacheMiss(pAddr)
+    };
     idx(cacheLine, pAddr<1:0>)
 }
 
