@@ -42,7 +42,7 @@ make
 Export the path to the **l3** binary in your `PATH` environment variable (if you are going to hack on the simulator's source code, you might want to consider adding that to your `.bashrc`):
 
 ```
-export PATH=__path__/__to__/L3-2014-09-01/bin:$PATH
+export PATH=__path__/__to__/L3-AAAA-MM-DD/bin:$PATH
 ```
 
 (with `__path__/__to__/` replaced with what is appropriate for your setup)
