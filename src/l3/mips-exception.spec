@@ -64,7 +64,7 @@ unit SignalException (ExceptionType::ExceptionType) =
    BranchTo <- None;
    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
    exceptionSignalled <- true;
-   mark(2, sig_exception(ExceptionCode(ExceptionType)))
+   mark_log(2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}

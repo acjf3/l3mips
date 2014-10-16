@@ -8,8 +8,10 @@
 --------------------------------------------------
 
 construct ExceptionType
-{ Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
-  CTLBL, CTLBS, C2E, XTLBRefillL, XTLBRefillS }
+{
+    Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
+    CTLBL, CTLBS, C2E, XTLBRefillL, XTLBRefillS
+}
 
 construct CapException
 {
@@ -102,7 +104,7 @@ unit SignalException (ExceptionType::ExceptionType) =
     PCC <- KCC;
 
     PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
-    mark(2, sig_exception(ExceptionCode(ExceptionType)))
+    mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}

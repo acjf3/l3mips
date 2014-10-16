@@ -25,6 +25,9 @@ declare
                                         -- in branch delay
 }
 
+-- Instruction counter
+declare instCnt :: nat
+
 -- Total amount of core(s)
 declare totalCore :: nat
 

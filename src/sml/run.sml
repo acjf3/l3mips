@@ -296,20 +296,15 @@ fun loop mx i =
       val () = mips.procID := BitsN.B(!current_core_id,
                                       BitsN.size(!mips.procID))
       val coreId = !current_core_id
-      val (h, a) =
-         case mips.Fetch () of
-            SOME w => (hex32 w, mips.instructionToString (mips.Decode w))
-          | NONE => ("-", "failed instruction fetch")
       val exl0 = #EXL (#Status (mips.Map.lookup(!mips.c_CP0, coreId)))
       val pc = mips.Map.lookup(!mips.c_PC, coreId)
    in
-      print ("instr " ^ Int.toString(coreId) ^ " "^
-             StringCvt.padRight #" " 9 (Int.toString i) ^ " " ^
-             hex64 pc ^ " : " ^ h ^ "   " ^ a ^ "\n")
-    ; uart ()
+    uart ()
+    ; mips.instCnt := i
     ; mips.Next ()
-    ; if 2 <= !trace_level then printLog(2) else ()
     ; printLog(0)
+    ; if 1 <= !trace_level then printLog(1) else ()
+    ; if 2 <= !trace_level then printLog(2) else ()
     ; if !mips.done orelse i = mx
          then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
       else 

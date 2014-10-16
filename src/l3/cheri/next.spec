@@ -7,11 +7,21 @@
 -- The next state function
 --================================================
 
+string log_instruction(w::word, inst::instruction) =
+    "instr " : [procID] : " " : [instCnt] : " " :
+    hex64(PC) : " : " : hex32(w) : "   " : instructionToString(inst)
+
 unit Next =
 {
+    clear_logs ();
     match Fetch
     {
-        case Some (w) => Run (Decode (w))
+        case Some (w) =>
+        {
+            inst = Decode (w);
+            mark_log (1, log_instruction(w,inst));
+            Run (inst)
+        }
         case None => nothing
     };
     match BranchDelay, BranchTo, BranchDelayPCC, BranchToPCC

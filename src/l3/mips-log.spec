@@ -45,19 +45,22 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
-string sig_exception (ExceptionCode::bits(5)) = "Exception 0x" : [ExceptionCode]
-string w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : [data]
-string w_hi (data::dword) = "HI <- 0x" : [data]
-string w_lo (data::dword) = "LO <- 0x" : [data]
-string w_c0 (r::reg, data::dword) = cpr(r) : " <- 0x" : [data]
+string log_sig_exception (ExceptionCode::bits(5)) = "Exception 0x" : [ExceptionCode]
+string log_w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : [data]
+string log_w_hi (data::dword) = "HI <- 0x" : [data]
+string log_w_lo (data::dword) = "LO <- 0x" : [data]
+string log_w_c0 (r::reg, data::dword) = cpr(r) : " <- 0x" : [data]
 
-string w_mem (pAddr::pAddr, mask::bits(64), sz::bits(3), data::dword) =
+string log_w_mem (pAddr::pAddr, mask::bits(64), sz::bits(3), data::dword) =
    "Address 0x" : [pAddr] : " <- 0x" : [data] : " [" : [[sz]::nat] :
    " bytes], mask 0x" : [mask]
 
 declare log :: nat -> string list   -- One log per "trace level"
 
-unit mark (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
-unit unmark (lvl::nat) = log(lvl) <- Tail (log(lvl))
+unit mark_log (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
+unit unmark_log (lvl::nat) = log(lvl) <- Tail (log(lvl))
+--unit clear_logs () = log <- InitMap(Nil)
+unit clear_logs () = for i in 0 .. 5 do log(i) <- Nil
 
+string hex32 (x::word)  = PadLeft (#"0", 8, [x])
 string hex64 (x::dword) = PadLeft (#"0", 16, [x])

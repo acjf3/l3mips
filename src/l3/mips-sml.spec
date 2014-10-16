@@ -16,17 +16,17 @@ declare done :: bool   -- Flag to request termination
 component GPR (n::reg) :: dword
 {
    value = if n == 0 then 0 else gpr(n)
-   assign value = when n <> 0 do { gpr(n) <- value; mark (2, w_gpr (n, value)) }
+   assign value = when n <> 0 do { gpr(n) <- value; mark_log (2, log_w_gpr (n, value)) }
 }
 
 unit dumpRegs () =
 {
-    mark(0, "======   Registers   ======")
-  ; mark(0, "Core = " : [[procID]::nat])
-  ; mark(0, "PC     " : hex64(PC))
+    mark_log (0, "======   Registers   ======")
+  ; mark_log (0, "Core = " : [[procID]::nat])
+  ; mark_log (0, "PC     " : hex64(PC))
   ; for i in 0 .. 31 do
-      mark(0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
-              hex64(GPR([i])))
+      mark_log (0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
+                hex64(GPR([i])))
 }
 
 --------------------------------------------------
@@ -44,7 +44,7 @@ component HI :: dword
    value = match hi { case Some (v) => v
                       case None => { UNPREDICTABLE_HI (); UNKNOWN }
                     }
-   assign value = { hi <- Some (value); mark (2, w_hi (value)) }
+   assign value = { hi <- Some (value); mark_log (2, log_w_hi (value)) }
 }
 
 component LO :: dword
@@ -52,7 +52,7 @@ component LO :: dword
    value = match lo { case Some (v) => v
                       case None => { UNPREDICTABLE_LO (); UNKNOWN }
                     }
-   assign value = { lo <- Some (value); mark (2, w_lo (value)) }
+   assign value = { lo <- Some (value); mark_log (2, log_w_lo (value)) }
 }
 
 
@@ -111,7 +111,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       }
    assign value =
    {
-      mark (2, w_c0 (reg, value));
+      mark_log (2, log_w_c0 (reg, value));
       match n, reg, sel
       {
          case 0,  0, 0 => CP0.Index.Index <- value<7:0>
@@ -147,7 +147,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
          case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
-         case _ => unmark(2)
+         case _ => unmark_log(2)
       }
    }
 }

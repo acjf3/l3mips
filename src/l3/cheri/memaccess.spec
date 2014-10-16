@@ -115,7 +115,7 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         a = pAddr<39:3>;
         l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
         mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-        mark (2, w_mem (pAddr, mask, AccessLength, MemElem));
+        mark_log (2, log_w_mem (pAddr, mask, AccessLength, MemElem));
 
         var found = false;
         if a == JTAG_UART.base_address then
@@ -173,7 +173,7 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
                 c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                     c_LLbit([core]) <- Some (false);
 
-        mark (2, store_cap (pAddr, Capability));
+        mark_log (2, log_store_cap (pAddr, Capability));
 
         MEM(a:'00') <- &Capability<255:192>;
         MEM(a:'01') <- &Capability<191:128>;
@@ -191,8 +191,6 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
 word option Fetch =
 {
-   log(0) <- Nil;
-   log(2) <- Nil;
     CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired
                             then [TLBEntries - 1]
                             else CP0.Random.Random - 1;
