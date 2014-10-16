@@ -2,11 +2,12 @@ L3 MIPS
 =======
 
 A **MIPS ISA simulator** implemented in [L3](http://www.cl.cam.ac.uk/~acjf3/l3/ "L3: An ISA Specification Language").
+The simulator also supports [CHERI](http://www.chericpu.org "Capability Hardware Enhanced RISC Instructions (CHERI) ") capability extensions.
 
 Getting started
 ---------------
 
-To build the sml simulator, you need L3 installed on your machine.
+To build the simulator, you need L3 installed on your machine.
 
 L3 is implemented in [Poly/ML 5.5](http://www.polyml.org/ "Poly/ML home page"), so in order to compile L3, you will need Poly/ML corectly installed.
 Simply follow the steps described on the [Poly/ML download page](http://www.polyml.org/download.html "Poly/ML download page"). It is basically a case of:
@@ -17,16 +18,19 @@ tar -xf polyml.5.5.2.tar.gz
 cd polyml.5.5.2/
 ./configure
 make
-make install
+sudo make install
 ```
 
-You can download the sources for L3 on the [L3 page](http://www.cl.cam.ac.uk/~acjf3/l3/ "L3: An ISA Specification Language").
-The sources are shipped as a *.tar.bz2* archive. Extract them and `cd` into the root directory of the archive (with the latest archive when writing those lines being `L3-2014-09-01/`):
+You can download the sources for L3 and the L3 manual on the [L3 page](http://www.cl.cam.ac.uk/~acjf3/l3/ "L3: An ISA Specification Language").
+The sources are shipped as a *.tar.bz2* archive. Extract them and `cd` into the root directory of the archive:
 
 ```
-bunzip2 l3.tar.bz2
-cd L3-2014-09-01/
+wget http://www.cl.cam.ac.uk/~acjf3/l3/l3.tar.bz2
+tar -xf l3.tar.bz2
+cd L3-AAAA-MM-DD/
 ```
+
+(with `L3-AAAA-MM-DD/` matching the date of your L3 realease):
 
 Edit the `Makefile` to specify what lib flags to use when compiling L3: the `POLYLIB` variable should be set to `-L${LIBPATH} -lpolymain -lpolyml -lpthread -lgmp -ldl -lstdc++`.
 You should now be able to build L3:
