@@ -1,125 +1,353 @@
 --------------------------------------------------------------------------------
--- CHERI default memory
+-- CHERI memory hierarchy (private L1s, shared L2)
 -- (c) Alexandre Joannou, University of Cambridge
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+-- types and declarations
+--------------------------------------------------------------------------------
 
------------------
--- stats utils --
------------------
+type CacheLine = dword list
 
-record MemStats
+construct L1Type {Data, Instr}
+string L1TypeToString (cacheType::L1Type) =
+    match cacheType
+    {
+        case Data  => "DCache"
+        case Instr => "ICache"
+    }
+
+type L1Tag = bits(26)
+record L1Entry {valid::bool tag::L1Tag data::CacheLine}
+type L1SetIndex = bits(9)
+type DirectMappedL1 = L1SetIndex -> L1Entry
+
+declare
 {
-    data_reads  :: nat
-    data_writes :: nat
-    inst_reads  :: nat
-    cap_reads   :: nat
-    cap_writes  :: nat
+    c_L1_data  :: id -> DirectMappedL1
+    c_L1_instr :: id -> DirectMappedL1
 }
 
-declare memStats :: MemStats
-
-unit initMemStats =
+component L1Cache (cacheType::L1Type, idx::L1SetIndex) :: L1Entry
 {
-    memStats.data_reads  <- 0;
-    memStats.data_writes <- 0;
-    memStats.inst_reads  <- 0;
-    memStats.cap_reads   <- 0;
-    memStats.cap_writes  <- 0
+    value =
+        match cacheType
+        {
+            case Data  => {m = c_L1_data(procID); m(idx)}
+            case Instr => {m = c_L1_instr(procID); m(idx)}
+        }
+    assign value =
+        match cacheType
+        {
+            case Data  =>
+            {
+                var new_cache = c_L1_data([procID]);
+                new_cache(idx) <- value;
+                c_L1_data([procID]) <- new_cache
+            }
+            case Instr  =>
+            {
+                var new_cache = c_L1_instr([procID]);
+                new_cache(idx) <- value;
+                c_L1_instr([procID]) <- new_cache
+            }
+        }
 }
 
-string printMemStats =
-    PadRight (#" ", 16, "data_reads")  : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat])  : "\\n" :
-    PadRight (#" ", 16, "data_writes") : " = " : PadLeft (#" ", 9, [memStats.data_writes::nat]) : "\\n" :
-    PadRight (#" ", 16, "inst_reads")  : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])  : "\\n" :
-    PadRight (#" ", 16, "cap_reads")   : " = " : PadLeft (#" ", 9, [memStats.cap_reads::nat])   : "\\n" :
-    PadRight (#" ", 16, "cap_writes")  : " = " : PadLeft (#" ", 9, [memStats.cap_writes::nat])
+type L2Tag = bits(24)
+record L2Entry {valid::bool tag::L2Tag sharers::nat list data::CacheLine}
+type L2SetIndex = bits(11)
+type DirectMappedL2 = L2SetIndex -> L2Entry
 
----------------------------
--- memory implementation --
----------------------------
+declare L2Cache :: DirectMappedL2
 
-type dwordAddr = bits(37)
-type capAddr   = bits(35)
+declare MEM  :: mAddr -> dword -- physical memory (37 bits), doubleword access
 
-declare MEM :: capAddr -> bits(257) -- physical memory (35 bits), capability access
+--------------------------------------------------------------------------------
+-- Log utils
+--------------------------------------------------------------------------------
+
+string log_l1_entry(entry::L1Entry) =
+    "[" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
+    -- : "|" : [entry.data]
+
+string log_l1_read (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] read, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l1_read_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] read hit, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l1_read_miss (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] read miss, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l1_evict (cacheType::L1Type, idx::L1SetIndex, old::L1Entry, new::L1Entry) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType) :
+    "] evict @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    " - old: " : log_l1_entry(old) :
+    " - new: " : log_l1_entry(new)
+
+string log_l1_write (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] write, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l1_write_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] write hit, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l2_entry(entry::L2Entry) =
+    "[" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
+    -- : "|" : [entry.data]
+
+string log_l2_read (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] L2 read, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l2_read_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] L2 read hit, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l2_read_miss (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] L2 read miss, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l2_evict (cacheType::L1Type, idx::L2SetIndex, old::L2Entry, new::L2Entry) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType) :
+    "] L2 evict @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    " - old: " : log_l2_entry(old) :
+    " - new: " : log_l2_entry(new)
+
+string log_l2_write (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] L2 write, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+string log_l2_write_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
+    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
+    "] L2 write hit, addr:0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx 0x" : PadLeft (#"0", 3, [idx])
+
+--------------------------------------------------------------------------------
+-- Internal functions
+--------------------------------------------------------------------------------
+
+dword idx(line::CacheLine, i::bits(2)) =
+  if i == 0 then Head(line) else idx(Tail(line), i-1)
+
+CacheLine upd(line::CacheLine, i::bits(2), dword::dword) =
+  if i == 0 then Cons(dword, Tail(line))
+            else Cons(Head(line),upd(Tail(line), i-1, dword))
+
+-- Direct mapped L1
+
+L1SetIndex l1_hash_default(addr::mAddr) = addr<10:2>
+L1Tag l1_tag_default(addr::mAddr) = addr<36:11>
+
+L1SetIndex L1Idx(addr::mAddr) = l1_hash_default(addr)
+L1Tag L1Tag(addr::mAddr) = l1_tag_default(addr)
+
+L1Entry mkL1CacheEntry(valid::bool, tag::L1Tag, data::CacheLine) =
+{
+    var line::L1Entry;
+    line.valid <- valid;
+    line.tag   <- tag;
+    line.data  <- data;
+    line
+}
+
+-- Direct mapped L2
+
+L2SetIndex l2_hash_default(addr::mAddr) = addr<12:2>
+L2Tag l2_tag_default(addr::mAddr) = addr<36:13>
+
+L2SetIndex L2Idx(addr::mAddr) = l2_hash_default(addr)
+L2Tag L2Tag(addr::mAddr) = l2_tag_default(addr)
+
+L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, sharers::nat list, data::CacheLine) =
+{
+    var line::L2Entry;
+    line.valid      <- valid;
+    line.tag        <- tag;
+    line.sharers    <- sharers;
+    line.data       <- data;
+    line
+}
+
+--------------------------------------------------------------------------------
+-- L2 API
+--------------------------------------------------------------------------------
+
+L2Entry option L2Hit (cacheType::L1Type, addr::mAddr) =
+{
+    cacheEntry = L2Cache(L2Idx(addr));
+    if (cacheEntry.valid and cacheEntry.tag == L2Tag(addr)) then
+        Some (cacheEntry)
+    else
+        None
+}
+
+CacheLine L2ServeMiss (cacheType::L1Type, addr::mAddr) =
+{
+    var cacheLine = Nil;
+    for i in 0 .. 3 do cacheLine <- cacheLine : list { MEM(addr<36:2> :[i]) };
+    new_entry = mkL2CacheEntry(true, L2Tag(addr), Nil, cacheLine); -- TODO THIS NEEDS TO BE CHANGES
+    old_entry = L2Cache(L2Idx(addr));
+    when old_entry.valid do
+        mark_log (3, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
+    L2Cache(L2Idx(addr)) <- new_entry;
+    cacheLine
+}
+
+unit L2Update (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+{
+    match L2Hit (cacheType, addr)
+    {
+        case Some (cacheEntry) =>
+        {
+            cacheLine = cacheEntry.data;
+            masked_data = idx(cacheLine, addr<1:0>) && ~mask || data && mask;
+            cacheLine = upd(cacheLine, addr<1:0>, masked_data);
+            L2Cache(L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, cacheLine)
+        }
+        case None => nothing
+    }
+}
+
+unit L2ServeWrite (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+    MEM(addr) <- MEM(addr) && ~mask || data && mask
+
+CacheLine L2Read (cacheType::L1Type, addr::mAddr) =
+{
+    mark_log (3, log_l2_read(cacheType, addr, L2Idx(addr)));
+    var cacheLine;
+    match L2Hit (cacheType, addr)
+    {
+        case Some (cacheEntry) =>
+        {
+            mark_log (3, log_l2_read_hit(cacheType, addr, L2Idx(addr)));
+            cacheLine <- cacheEntry.data
+        }
+        case None =>
+        {
+            mark_log (3, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
+            cacheLine <- L2ServeMiss(cacheType, addr)
+        }
+    };
+    cacheLine
+}
+
+unit L2Write (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+{
+    mark_log (3, log_l2_write(cacheType, addr, L2Idx(addr)));
+    L2Update(cacheType, addr, data, mask);
+    L2ServeWrite(cacheType, addr, data, mask)
+    -- TODO L2HandleCoherence()
+}
+
+--------------------------------------------------------------------------------
+-- L1 API
+--------------------------------------------------------------------------------
+
+L1Entry option L1Hit (cacheType::L1Type, addr::mAddr) =
+{
+    cacheEntry = L1Cache(cacheType, L1Idx(addr));
+    if (cacheEntry.valid and cacheEntry.tag == L1Tag(addr)) then
+        Some (cacheEntry)
+    else
+        None
+}
+
+CacheLine L1ServeMiss (cacheType::L1Type, addr::mAddr) =
+{
+    var cacheLine = L2Read(cacheType, addr);
+    new_entry = mkL1CacheEntry(true, L1Tag(addr), cacheLine);
+    old_entry = L1Cache(cacheType, L1Idx(addr));
+    when old_entry.valid do
+        mark_log (3, log_l1_evict(cacheType, L1Idx(addr), old_entry, new_entry));
+    L1Cache(cacheType, L1Idx(addr)) <- new_entry;
+    cacheLine
+}
+
+unit L1Update (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+{
+    match L1Hit (cacheType, addr)
+    {
+        case Some (cacheEntry) =>
+        {
+            cacheLine = cacheEntry.data;
+            masked_data = idx(cacheLine, addr<1:0>) && ~mask || data && mask;
+            cacheLine = upd(cacheLine, addr<1:0>, masked_data);
+            L1Cache(cacheType, L1Idx(addr)) <-
+                mkL1CacheEntry(true, cacheEntry.tag, cacheLine)
+        }
+        case None => nothing
+    }
+}
+
+unit L1ServeWrite (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+    L2Write(cacheType, addr, data, mask)
+
+dword L1Read (cacheType::L1Type, addr::mAddr) =
+{
+    mark_log (3, log_l1_read(cacheType, addr, L1Idx(addr)));
+    var cacheLine;
+    match L1Hit (cacheType, addr)
+    {
+        case Some (cacheEntry) =>
+        {
+            mark_log (3, log_l1_read_hit(cacheType, addr, L1Idx(addr)));
+            cacheLine <- cacheEntry.data
+        }
+        case None =>
+        {
+            mark_log (3, log_l1_read_miss(cacheType, addr, L1Idx(addr)));
+            cacheLine <- L1ServeMiss(cacheType, addr)
+        }
+    };
+    idx(cacheLine, addr<1:0>)
+}
+
+unit L1Write (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
+{
+    mark_log (3, log_l1_write(cacheType, addr, L1Idx(addr)));
+    L1Update(cacheType, addr, data, mask);
+    L1ServeWrite(cacheType, addr, data, mask)
+}
+
+--------------------------------------------------------------------------------
+-- Proc memory API
+--------------------------------------------------------------------------------
 
 unit InitMEM =
 {
-    initMemStats;
-    MEM <- InitMap (UNKNOWN)
-}
-
-dword ReadData (pAddr::dwordAddr) =
-{
-    memStats.data_reads <- memStats.data_reads + 1;
-    data_blob = MEM(pAddr<36:2>);
-    data = match pAddr<1:0>
+    MEM <- InitMap (0x0);
+    for i in 0 .. totalCore-1 do
     {
-        case '00' => data_blob<63:0>
-        case '01' => data_blob<127:64>
-        case '10' => data_blob<191:128>
-        case '11' => data_blob<255:192>
+        c_L1_data([i])  <- InitMap(mkL1CacheEntry(false, 0x0, Nil));
+        c_L1_instr([i]) <- InitMap(mkL1CacheEntry(false, 0x0, Nil))
     };
-    data
+    L2Cache <- InitMap(mkL2CacheEntry(false, 0x0, Nil, Nil))
 }
 
-unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
-{
-    memStats.data_writes <- memStats.data_writes + 1;
-    data_blob = MEM(pAddr<36:2>);
-    match pAddr<1:0>
-    {
-        case '00' => MEM(pAddr<36:2>) <- '0' : data_blob<255:64>  : (data_blob<63:0>    && ~mask || data && mask)
-        case '01' => MEM(pAddr<36:2>) <- '0' : data_blob<255:128> : (data_blob<127:64>  && ~mask || data && mask) : data_blob<63:0>
-        case '10' => MEM(pAddr<36:2>) <- '0' : data_blob<255:192> : (data_blob<191:128> && ~mask || data && mask) : data_blob<127:0>
-        case '11' => MEM(pAddr<36:2>) <- '0' : (data_blob<255:192> && ~mask || data && mask) : data_blob<191:0>
-    }
-}
+dword ReadData (pAddr::mAddr) =
+    L1Read(Data, pAddr)
+
+unit WriteData (pAddr::mAddr, data::dword, mask::dword) =
+    L1Write(Data, pAddr, data, mask)
 
 word ReadInst (a::pAddr) =
-{
-    memStats.inst_reads <- memStats.inst_reads + 1;
-    data_blob = MEM(a<39:5>);
-    match a<4:2>
-    {
-        case '000' => data_blob<63:32>
-        case '001' => data_blob<31:0>
-        case '010' => data_blob<127:96>
-        case '011' => data_blob<95:64>
-        case '100' => data_blob<191:160>
-        case '101' => data_blob<159:128>
-        case '110' => data_blob<255:224>
-        case '111' => data_blob<223:192>
-    }
-}
-
-Capability ReadCap (capAddr::capAddr) =
-{
-    memStats.cap_reads <- memStats.cap_reads + 1;
-    raw = MEM(capAddr);
-    Capability((if raw<256> then '1' else '0') : raw<63:0> : raw<127:64> : raw<191:128> : raw<255:192>)
-}
-
-unit WriteCap (capAddr::capAddr, cap::Capability) =
-{
-    memStats.cap_writes <- memStats.cap_writes + 1;
-    raw = &cap;
-    MEM(capAddr) <- ((if raw<256> then '1' else '0') : raw<63:0> : raw<127:64> : raw<191:128> : raw<255:192>)
-}
-
--- sml helper function
-unit WriteDWORD (pAddr::dwordAddr, data::dword) =
-{
-    data_blob = MEM(pAddr<36:2>);
-    match pAddr<1:0>
-    {
-        case '00' => MEM(pAddr<36:2>) <- '0' : data_blob<255:64>  : data
-        case '01' => MEM(pAddr<36:2>) <- '0' : data_blob<255:128> : data : data_blob<63:0>
-        case '10' => MEM(pAddr<36:2>) <- '0' : data_blob<255:192> : data : data_blob<127:0>
-        case '11' => MEM(pAddr<36:2>) <- '0' : data : data_blob<191:0>
-    }
-}
-
--- sml helper function
-unit Write256 (addr::bits(35), data::bits(256)) = MEM(addr) <- '0' : data
+    if a<2> then
+        L1Read (Instr, a<39:3>) <31:0>
+    else
+        L1Read (Instr, a<39:3>) <63:32>
+>>>>>>> Adding a cheri specific memory subsystem
