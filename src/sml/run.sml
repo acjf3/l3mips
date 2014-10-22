@@ -467,7 +467,7 @@ val () =
           val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
-          val () = trace_level := Int.max (0, Int.min (t, 2))
+          val () = trace_level := Int.max (0, t)
           val () = if   (!trace_level > 0) andalso (!non_blocking_input)
                    then failExit ( "Tracing and non-blocking input "
                                  ^ "do not work together." )
