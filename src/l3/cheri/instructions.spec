@@ -472,7 +472,10 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
         else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if addr<4:0> <> '00000' then
+        {
+            CP0.BadVAddr <- addr;
             SignalException(AdES)
+        }
         else
         {
             StoreCap(addr,CAPR(cs));
@@ -503,7 +506,10 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if addr<4:0> <> '00000' then
+        {
+            CP0.BadVAddr <- addr;
             SignalException(AdEL)
+        }
         else
         {
             tmp = LoadCap(addr);
@@ -567,7 +573,10 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
+        {
+            CP0.BadVAddr <- addr;
             SignalException(AdEL)
+        }
         else
         {
             LLbit <- None;
@@ -604,7 +613,10 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
     else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<3:0> <> 0 then
+    {
+        CP0.BadVAddr <- addr;
         SignalException(AdEL)
+    }
     else
     {
         data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD);
@@ -672,7 +684,10 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
+        {
+            CP0.BadVAddr <- addr;
             SignalException(AdES)
+        }
         else
         {
             pAddr = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), addr, DATA, STORE);
@@ -700,7 +715,10 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
     else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<4:0> <> 0 then
+    {
+        CP0.BadVAddr <- addr;
         SignalException(AdES)
+    }
     else
         match LLbit
         {
@@ -736,7 +754,10 @@ else {
     else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
         SignalCapException(capExcLength,cb)
     else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+    {
+        CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
         SignalException(AdEL)
+    }
     else
     {
         BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
@@ -766,7 +787,10 @@ else {
     else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
         SignalCapException(capExcLength,cb)
     else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+    {
+        CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
         SignalException(AdEL)
+    }
     else
     {
         CAPR(cd) <- PCC;
