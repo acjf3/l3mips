@@ -141,13 +141,16 @@ dword ReadData (pAddr::mAddr) =
         }
         case None => cacheLine <- serveDCacheMiss(pAddr)
     };
-    idx(cacheLine, pAddr<1:0>)
+    data = idx(cacheLine, pAddr<1:0>);
+    mark_log (2, log_r_mem (pAddr, data));
+    data
 }
 
 unit WriteData (pAddr::mAddr, data::dword, mask::dword) =
 {
     updateDCache(pAddr, data, mask);
-    serveDCacheWrite(pAddr, data, mask)
+    serveDCacheWrite(pAddr, data, mask);
+    mark_log (2, log_w_mem (pAddr, mask, data))
 }
 
 word ReadInst (a::pAddr) =
