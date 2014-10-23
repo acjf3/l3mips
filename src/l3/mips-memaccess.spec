@@ -65,7 +65,6 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         a = pAddr<39:3>;
         l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
         mask`64 = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-        mark_log (2, log_w_mem (pAddr, mask, AccessLength, MemElem));
 
         var found = false;
         if a == JTAG_UART.base_address then

@@ -45,15 +45,20 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
-string log_sig_exception (ExceptionCode::bits(5)) = "Exception 0x" : [ExceptionCode]
-string log_w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : [data]
-string log_w_hi (data::dword) = "HI <- 0x" : [data]
-string log_w_lo (data::dword) = "LO <- 0x" : [data]
-string log_w_c0 (r::reg, data::dword) = cpr(r) : " <- 0x" : [data]
+string log_sig_exception (ExceptionCode::bits(5)) = "Exception 0x" : PadLeft (#"0", 2, [ExceptionCode])
+string log_w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : PadLeft (#"0", 16, [data])
+string log_w_hi (data::dword) = "HI <- 0x" : PadLeft (#"0", 16, [data])
+string log_w_lo (data::dword) = "LO <- 0x" : PadLeft (#"0", 16, [data])
+string log_w_c0 (r::reg, data::dword) = cpr(r) : " <- 0x" : PadLeft (#"0", 16, [data])
 
-string log_w_mem (pAddr::pAddr, mask::bits(64), sz::bits(3), data::dword) =
-   "Address 0x" : [pAddr] : " <- 0x" : [data] : " [" : [[sz]::nat] :
-   " bytes], mask 0x" : [mask]
+string log_w_mem (addr::bits(37), mask::bits(64), data::dword) =
+    "MEM[0x" : PadLeft (#"0", 10, [addr]) :
+    "] <- (data: 0x" : PadLeft (#"0", 16, [data]) :
+    ", mask: 0x" : PadLeft (#"0", 16, [mask]) : ")"
+
+string log_r_mem (addr::bits(37), data::dword) =
+    "data <- MEM[0x" : PadLeft (#"0", 10, [addr]) :
+    "]: 0x" : PadLeft (#"0", 16, [data])
 
 declare log :: nat -> string list   -- One log per "trace level"
 
