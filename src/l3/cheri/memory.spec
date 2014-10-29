@@ -94,6 +94,14 @@ declare MEM  :: mAddr -> dword -- physical memory (37 bits), doubleword access
 --------------------------------------------------------------------------------
 -- Log utils
 --------------------------------------------------------------------------------
+
+nat L1ID (cacheType::L1Type) =
+    match cacheType
+    {
+        case Instr => (2 * [procID])
+        case Data  => (2 * [procID]) + 1
+    }
+
 string log_cache_line (data::CacheLine) =
 {
     var str = "{";
@@ -108,42 +116,62 @@ string log_cache_line (data::CacheLine) =
     return str : "}"
 }
 
+string log_sharers (sharers::NatSet) =
+{
+    var str = "{";
+    var i::nat = 0;
+    foreach sharer in sharers do
+    {
+        when i > 0 do
+            str <- str : ", ";
+        str <- str : "0x" : [sharer::nat];
+        i <- i + 1
+    };
+    return str : "}"
+}
+
 string log_l1_entry(entry::L1Entry) =
     "[" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
     -- : "|" : [entry.data]
 
 string log_l1_read (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] read, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx])
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) :") " :
+    "read dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l1_read_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] read hit, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "read hit dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " = " : log_cache_line(data)
 
 string log_l1_read_miss (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] read miss, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx])
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "read miss dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l1_evict (cacheType::L1Type, idx::L1SetIndex, old::L1Entry, new::L1Entry) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType) :
-    "] evict @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "evict @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " - old: " : log_l1_entry(old) :
     " - new: " : log_l1_entry(new)
 
 string log_l1_write (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] write, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
 
 string log_l1_write_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] write hit, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L1 " : [L1ID(cacheType)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write hit, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
 
 string log_l2_entry(entry::L2Entry) =
@@ -151,37 +179,38 @@ string log_l2_entry(entry::L2Entry) =
     -- : "|" : [entry.data]
 
 string log_l2_read (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] L2 read, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx])
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "read, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
-string log_l2_read_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] L2 read hit, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
-    " = " : log_cache_line(data)
+string log_l2_read_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, entry::L2Entry) =
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "read hit, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
+    " = " : log_cache_line(entry.data) :
+    " sharers = " : log_sharers(entry.sharers)
 
 string log_l2_read_miss (cacheType::L1Type, addr::mAddr, idx::L2SetIndex) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] L2 read miss, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx])
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "read miss, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l2_evict (cacheType::L1Type, idx::L2SetIndex, old::L2Entry, new::L2Entry) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType) :
-    "] L2 evict @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "evict @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " - old: " : log_l2_entry(old) :
     " - new: " : log_l2_entry(new)
 
 string log_l2_write (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] L2 write, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
 
 string log_l2_write_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, data::CacheLine) =
-    "[Core:" : [procID] : "][" : L1TypeToString(cacheType):
-    "] L2 write hit, dword addr:0x" : PadLeft (#"0", 10, [addr]) :
-    " @idx 0x" : PadLeft (#"0", 3, [idx]) :
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write hit, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
 
 --------------------------------------------------------------------------------
@@ -269,7 +298,7 @@ CacheLine L2ServeMiss (cacheType::L1Type, addr::mAddr) =
     new_entry = mkL2CacheEntry(true, L2Tag(addr), new_sharers, cacheLine);
     old_entry = L2Cache(L2Idx(addr));
     when old_entry.valid do
-        mark_log (3, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
+        mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
     L2Cache(L2Idx(addr)) <- new_entry;
     cacheLine
 }
@@ -283,7 +312,7 @@ L2Entry option L2Update (cacheType::L1Type, addr::mAddr, data::dword, mask::dwor
             masked_data = idx(old_cacheLine, addr<1:0>) && ~mask || data && mask;
             new_cacheLine = upd(old_cacheLine, addr<1:0>, masked_data);
             L2Cache(L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_cacheLine);
-            mark_log (3, log_l2_write(cacheType, addr, L2Idx(addr), new_cacheLine));
+            mark_log (4, log_l2_write_hit(cacheType, addr, L2Idx(addr), new_cacheLine));
             Some (L2Cache(L2Idx(addr)))
         }
         case None => None
@@ -323,7 +352,7 @@ unit L2HandleCoherence (cacheType::L1Type, addr::mAddr, data::dword, mask::dword
 
 CacheLine L2Read (cacheType::L1Type, addr::mAddr) =
 {
-    mark_log (3, log_l2_read(cacheType, addr, L2Idx(addr)));
+    mark_log (4, log_l2_read(cacheType, addr, L2Idx(addr)));
     var cacheLine;
     match L2Hit (cacheType, addr)
     {
@@ -331,12 +360,12 @@ CacheLine L2Read (cacheType::L1Type, addr::mAddr) =
         {
             new_sharers = L2UpdateSharers(cacheType, procID, true, cacheEntry.sharers);
             L2Cache(L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, new_sharers, cacheEntry.data);
-            mark_log (3, log_l2_read_hit(cacheType, addr, L2Idx(addr), cacheEntry.data));
+            mark_log (4, log_l2_read_hit(cacheType, addr, L2Idx(addr), L2Cache(L2Idx(addr))));
             cacheLine <- cacheEntry.data
         }
         case None =>
         {
-            mark_log (3, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
+            mark_log (4, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
             cacheLine <- L2ServeMiss(cacheType, addr)
         }
     };
@@ -383,7 +412,7 @@ unit L1Update (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
             masked_data = idx(cacheLine, addr<1:0>) && ~mask || data && mask;
             cacheLine = upd(cacheLine, addr<1:0>, masked_data);
             L1Cache(cacheType, L1Idx(addr)) <- mkL1CacheEntry(true, cacheEntry.tag, cacheLine);
-            mark_log (3, log_l1_write(cacheType, addr, L1Idx(addr), cacheLine))
+            mark_log (3, log_l1_write_hit(cacheType, addr, L1Idx(addr), cacheLine))
         }
         case None => nothing
     }
