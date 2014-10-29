@@ -25,7 +25,6 @@ string COP2InstructionToString (i::instruction) =
                 case CSet(CClearTag(cd, cb))      => op2r("ccleartag",cd,cb)
                 case CSet(CAndPerm(cd, cb, rt))   => op3r("candperm",cd,cb,rt)
                 case CSet(CSetOffset(cd, cb, rt)) => op3r("csetoffset",cd,cb,rt)
-                case CSet(CSetType(cd, cb, rt))   => op3r("csettype",cd,cb,rt)
                 case CCheck(CCheckPerm(cs, rt))   => op2r("ccheckperm",cs,rt)
                 case CCheck(CCheckType(cs, cb))   => op2r("cchecktype",cs,cb)
                 case CSet(CFromPtr(cd, cb, rt))   => op3r("cfromptr",cd,cb,rt)

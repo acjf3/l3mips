@@ -130,8 +130,7 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
 define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    if not Perms(PCC.perms).Access_EPCC then
+    else if not Perms(PCC.perms).Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
     {
@@ -139,7 +138,6 @@ else {
         GPR(rd)<15:8> <- capcause.ExcCode;
         GPR(rd)<63:16> <- 0
     }
-}
 
 -----------------------------------
 -- CSetCause rt
@@ -147,15 +145,13 @@ else {
 define COP2 > CHERICOP2 > CSet > CSetCause (rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    if not Perms(PCC.perms).Access_EPCC then
+    else if not Perms(PCC.perms).Access_EPCC then
         SignalCapException_noReg(capExcAccEPCC)
     else
     {
         capcause.ExcCode <- GPR(rt)<15:8>;
         capcause.RegNum <- GPR(rt)<7:0>
     }
-}
 
 -----------------------------------
 -- CIncBase
@@ -259,14 +255,6 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
     }
 
 -----------------------------------
--- CSetType
------------------------------------
-define COP2 > CHERICOP2 > CSet > CSetType (cd::reg, cb::reg, rt::reg) =
-    if not CP0.Status.CU2 then
-        SignalCP2UnusableException
-    else nothing
-
------------------------------------
 -- CCheckPerm
 -----------------------------------
 define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
@@ -361,52 +349,53 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
 define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    var equal = false;
-    var less;
-    var greater;
-    var lessu;
-    var greateru;
-    if register_inaccessible(cb) then
-        SignalCapException_v(cb)
-    else if register_inaccessible(ct) then
-        SignalCapException_v(ct)
-    else if CAPR(cb).tag <> CAPR(ct).tag then
-        if CAPR(cb).tag then
-        {
-            less <- false;
-            lessu <- false;
-            greater <- true;
-            greateru <- true
-        }
-        else
-        {
-            less <- true;
-            lessu <- true;
-            greater <- false;
-            greateru <- false
-        }
     else
     {
-        cursor1 = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
-        cursor2 = CAPR(ct).base + CAPR(ct).offset; -- mod 2^64
-        equal <- cursor1 == cursor2;
-        less <- cursor1 < cursor2;
-        greater <- cursor1 > cursor2;
-        lessu <- cursor1 <+ cursor2;
-        greateru <- cursor1 >+ cursor2
-    };
-    match t
-    {
-       case 0 => GPR(rd) <- [equal]
-       case 1 => GPR(rd) <- [not equal]
-       case 2 => GPR(rd) <- [less]
-       case 3 => GPR(rd) <- [less or equal]
-       case 4 => GPR(rd) <- [lessu]
-       case 5 => GPR(rd) <- [lessu or equal]
-       case _ => nothing
+        var equal = false;
+        var less;
+        var greater;
+        var lessu;
+        var greateru;
+        if register_inaccessible(cb) then
+            SignalCapException_v(cb)
+        else if register_inaccessible(ct) then
+            SignalCapException_v(ct)
+        else if CAPR(cb).tag <> CAPR(ct).tag then
+            if CAPR(cb).tag then
+            {
+                less <- false;
+                lessu <- false;
+                greater <- true;
+                greateru <- true
+            }
+            else
+            {
+                less <- true;
+                lessu <- true;
+                greater <- false;
+                greateru <- false
+            }
+        else
+        {
+            cursor1 = CAPR(cb).base + CAPR(cb).offset; -- mod 2^64
+            cursor2 = CAPR(ct).base + CAPR(ct).offset; -- mod 2^64
+            equal <- cursor1 == cursor2;
+            less <- cursor1 < cursor2;
+            greater <- cursor1 > cursor2;
+            lessu <- cursor1 <+ cursor2;
+            greateru <- cursor1 >+ cursor2
+        };
+        match t
+        {
+           case 0 => GPR(rd) <- [equal]
+           case 1 => GPR(rd) <- [not equal]
+           case 2 => GPR(rd) <- [less]
+           case 3 => GPR(rd) <- [less or equal]
+           case 4 => GPR(rd) <- [lessu]
+           case 5 => GPR(rd) <- [lessu or equal]
+           case _ => nothing
+        }
     }
-}
 
 -----------------------------------
 -- CBTU
@@ -414,18 +403,19 @@ else {
 define COP2 > CHERICOP2 > CBTU (cb::reg, offset::bits(16)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    CheckBranch;
-    if register_inaccessible(cb) then
-        SignalCapException_v(cb)
-    else if not CAPR(cb).tag then
-        if PC + SignExtend(offset) + 4 >+ PCC.length then
-            SignalCapException_noReg(capExcLength)
-        else
-            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
     else
-        nothing
-}
+    {
+        CheckBranch;
+        if register_inaccessible(cb) then
+            SignalCapException_v(cb)
+        else if not CAPR(cb).tag then
+            if PC + SignExtend(offset) + 4 >+ PCC.length then
+                SignalCapException_noReg(capExcLength)
+            else
+                BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+        else
+            nothing
+    }
 
 -----------------------------------
 -- CBTS
@@ -433,18 +423,19 @@ else {
 define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    CheckBranch;
-    if register_inaccessible(cb) then
-        SignalCapException_v(cb)
-    else if CAPR(cb).tag then
-        if PC + SignExtend(offset) + 4 >+ PCC.length then
-            SignalCapException_noReg(capExcLength)
-        else
-            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
     else
-        nothing
-}
+    {
+        CheckBranch;
+        if register_inaccessible(cb) then
+            SignalCapException_v(cb)
+        else if CAPR(cb).tag then
+            if PC + SignExtend(offset) + 4 >+ PCC.length then
+                SignalCapException_noReg(capExcLength)
+            else
+                BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+        else
+            nothing
+    }
 
 -----------------------------------
 -- CSC
@@ -719,18 +710,17 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         CP0.BadVAddr <- addr;
         SignalException(AdES)
     }
-    else
-        match LLbit
+    else match LLbit
+    {
+        case None => #UNPREDICTABLE("SCD: LLbit not set")
+        case Some (false) => GPR(rs) <- 0
+        case Some (true) =>
         {
-            case None => #UNPREDICTABLE("SCD: LLbit not set")
-            case Some (false) => GPR(rs) <- 0
-            case Some (true) =>
-            {
-                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
-                LLbit <- None;
-                GPR(rs) <- 1
-            }
+            pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
+            LLbit <- None;
+            GPR(rs) <- 1
         }
+    }
 }
 
 -----------------------------------
@@ -739,30 +729,31 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
 define COP2 > CHERICOP2 > CJR (cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    CheckBranch;
-    if register_inaccessible(cb) then
-        SignalCapException_v(cb)
-    else if not CAPR(cb).tag then
-        SignalCapException(capExcTag,cb)
-    else if CAPR(cb).sealed then
-        SignalCapException(capExcSeal,cb)
-    else if not Perms(CAPR(cb).perms).Permit_Execute then
-        SignalCapException(capExcPermExe,cb)
-    else if not Perms(CAPR(cb).perms).Global then
-        SignalCapException(capExcGlobal,cb)
-    else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
-        SignalCapException(capExcLength,cb)
-    else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
-    {
-        CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
-        SignalException(AdEL)
-    }
     else
     {
-        BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
+        CheckBranch;
+        if register_inaccessible(cb) then
+            SignalCapException_v(cb)
+        else if not CAPR(cb).tag then
+            SignalCapException(capExcTag,cb)
+        else if CAPR(cb).sealed then
+            SignalCapException(capExcSeal,cb)
+        else if not Perms(CAPR(cb).perms).Permit_Execute then
+            SignalCapException(capExcPermExe,cb)
+        else if not Perms(CAPR(cb).perms).Global then
+            SignalCapException(capExcGlobal,cb)
+        else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+        {
+            CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
+            SignalException(AdEL)
+        }
+        else
+        {
+            BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
+        }
     }
-}
 
 -----------------------------------
 -- CJALR
@@ -770,34 +761,35 @@ else {
 define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-else {
-    CheckBranch;
-    if register_inaccessible(cd) then
-        SignalCapException_v(cd)
-    else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
-    else if not CAPR(cb).tag then
-        SignalCapException(capExcTag,cb)
-    else if CAPR(cb).sealed then
-        SignalCapException(capExcSeal,cb)
-    else if not Perms(CAPR(cb).perms).Permit_Execute then
-        SignalCapException(capExcPermExe,cb)
-    else if not Perms(CAPR(cb).perms).Global then
-        SignalCapException(capExcGlobal,cb)
-    else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
-        SignalCapException(capExcLength,cb)
-    else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
-    {
-        CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
-        SignalException(AdEL)
-    }
     else
     {
-        CAPR(cd) <- PCC;
-        CAPR(cd).offset <- PC + 8;
-        BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
+        CheckBranch;
+        if register_inaccessible(cd) then
+            SignalCapException_v(cd)
+        else if register_inaccessible(cb) then
+            SignalCapException_v(cb)
+        else if not CAPR(cb).tag then
+            SignalCapException(capExcTag,cb)
+        else if CAPR(cb).sealed then
+            SignalCapException(capExcSeal,cb)
+        else if not Perms(CAPR(cb).perms).Permit_Execute then
+            SignalCapException(capExcPermExe,cb)
+        else if not Perms(CAPR(cb).perms).Global then
+            SignalCapException(capExcGlobal,cb)
+        else if CAPR(cb).offset + 4 >+ CAPR(cb).length then
+            SignalCapException(capExcLength,cb)
+        else if (CAPR(cb).base + CAPR(cb).offset)<1:0> <> '00' then
+        {
+            CP0.BadVAddr <- (CAPR(cb).base + CAPR(cb).offset);
+            SignalException(AdEL)
+        }
+        else
+        {
+            CAPR(cd) <- PCC;
+            CAPR(cd).offset <- PC + 8;
+            BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
+        }
     }
-}
 
 -----------------------------------
 -- CSeal

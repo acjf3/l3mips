@@ -23,7 +23,6 @@ instruction COP2Decode (v::bits(26)) =
            case '00100 cd cb _ 101'          => CSet(CClearTag(cd, cb))
            case '00100 cd cb rt _ 000'       => CSet(CAndPerm(cd, cb, rt))
            case '01101 cd cb rt _ 001'       => CSet(CSetOffset(cd, cb, rt))
-           case '00100 cd cb rt _ 001'       => CSet(CSetType(cd, cb, rt))
            case '01011 cs _`5 rt _ 000'      => CCheck(CCheckPerm(cs, rt))
            case '01011 cs cb _ 001'          => CCheck(CCheckType(cs, cb))
            case '00100 cd cb rt _ 111'       => CSet(CFromPtr(cd, cb, rt))
