@@ -204,10 +204,10 @@ define COP2 > CHERICOP2 > CSet > CSetLen (cd::reg, cb::reg, rt::reg) =
 define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-    else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
     else if register_inaccessible(cd) then
         SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
     else
     {
         CAPR(cd) <- CAPR(cb);
@@ -803,14 +803,14 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException_v(cs)
     else if register_inaccessible(ct) then
         SignalCapException_v(ct)
-    else if not CAPR(ct).tag then
-        SignalCapException(capExcTag,ct)
     else if not CAPR(cs).tag then
         SignalCapException(capExcTag,cs)
-    else if CAPR(ct).sealed then
-        SignalCapException(capExcSeal,ct)
+    else if not CAPR(ct).tag then
+        SignalCapException(capExcTag,ct)
     else if CAPR(cs).sealed then
         SignalCapException(capExcSeal,cs)
+    else if CAPR(ct).sealed then
+        SignalCapException(capExcSeal,ct)
     else if not Perms(CAPR(ct).perms).Permit_Seal then
         SignalCapException(capExcPermSeal,ct)
     else if CAPR(ct).offset >=+ CAPR(ct).length then
@@ -844,12 +844,12 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcSeal,cs)
     else if CAPR(ct).sealed then
         SignalCapException(capExcSeal,ct)
-    else if CAPR(ct).offset >=+ CAPR(ct).length then
-        SignalCapException(capExcLength,ct)
     else if (CAPR(ct).base + CAPR(ct).offset)<23:0> <> CAPR(cs).otype then
         SignalCapException(capExcType,ct)
     else if not Perms(CAPR(ct).perms).Permit_Seal then
         SignalCapException(capExcPermSeal,ct)
+    else if CAPR(ct).offset >=+ CAPR(ct).length then
+        SignalCapException(capExcLength,ct)
     else
     {
         CAPR(cd) <- CAPR(cs);
