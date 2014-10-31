@@ -95,11 +95,11 @@ declare MEM  :: mAddr -> dword -- physical memory (37 bits), doubleword access
 -- Log utils
 --------------------------------------------------------------------------------
 
-nat L1ID (cacheType::L1Type) =
+nat L1ID (cacheType::L1Type, cid::bits(8)) =
     match cacheType
     {
-        case Instr => (2 * [procID])
-        case Data  => (2 * [procID]) + 1
+        case Instr => (2 * [cid])
+        case Data  => (2 * [cid]) + 1
     }
 
 string log_cache_line (data::CacheLine) =
@@ -135,40 +135,40 @@ string log_l1_entry(entry::L1Entry) =
     -- : "|" : [entry.data]
 
 string log_l1_read (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) :") " :
     "read dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l1_read_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "read hit dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " = " : log_cache_line(data)
 
 string log_l1_read_miss (cacheType::L1Type, addr::mAddr, idx::L1SetIndex) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "read miss dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l1_evict (cacheType::L1Type, idx::L1SetIndex, old::L1Entry, new::L1Entry) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "evict @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " - old: " : log_l1_entry(old) :
     " - new: " : log_l1_entry(new)
 
 string log_l1_write (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "write, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
 
 string log_l1_write_hit (cacheType::L1Type, addr::mAddr, idx::L1SetIndex, data::CacheLine) =
-    "L1 " : [L1ID(cacheType)] :
+    "L1 " : [L1ID(cacheType, procID)] :
     " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "write hit, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
@@ -212,6 +212,18 @@ string log_l2_write_hit (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, data::
     "write hit, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_cache_line(data)
+
+string log_l2_updt_sharers (cacheType::L1Type, addr::mAddr, idx::L2SetIndex, old::NatSet, new::NatSet) =
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "update sharers, dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
+    " | " : log_sharers (old) : " <- " : log_sharers (new)
+
+string log_l2_inval_l1 (l1id::nat, addr::mAddr, idx1::L1SetIndex, idx2::L2SetIndex) =
+    "L2 inval L1 " : [l1id] :
+    " dword_addr: 0x" : PadLeft (#"0", 10, [addr]) :
+    " @L2idx: 0x" : PadLeft (#"0", 3, [idx2]) :
+    " @L1idx: 0x" : PadLeft (#"0", 3, [idx1])
 
 --------------------------------------------------------------------------------
 -- Internal functions
@@ -261,25 +273,34 @@ L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, sharers::NatSet, data::CacheLine
 
 {-
 bool * nat L2idxSharers (cacheType::L1Type, cid::bits(8), sharers::NatSet) =
-    match cacheType
-    {
-        case Data   => sharers<(cid*2)+1>, (cid*2)+1
-        case Instr  => sharers<cid*2>, cid*2
-    }
+    sharers<L1ID(cacheType,cid)>, L1ID(cacheType,cid)
 -}
 
 NatSet L2UpdateSharers (cacheType::L1Type, cid::bits(8), val::bool, sharers::NatSet) =
-    match cacheType, val
+    match val
     {
-        case Data, true     => natSetInsert([(cid*2)+1], sharers)
-        case Data, false    => natSetRemove([(cid*2)+1], sharers)
-        case Instr, true    => natSetInsert([cid*2], sharers)
-        case Instr, false   => natSetRemove([cid*2], sharers)
+        case true  => natSetInsert([L1ID(cacheType,cid)], sharers)
+        case false => natSetRemove([L1ID(cacheType,cid)], sharers)
     }
 
 --------------------------------------------------------------------------------
 -- L2 API
 --------------------------------------------------------------------------------
+
+unit L2InvalL1(addr::mAddr, sharers::NatSet) =
+{
+    currentProc = procID;
+    foreach sharer in sharers do
+    {
+        procID <- [sharer::nat div 2];
+        if (sharer mod 2) == 0 then
+            L1Cache(Instr, L1Idx(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
+        else
+            L1Cache(Data, L1Idx(addr))  <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN);
+        mark_log(4, log_l2_inval_l1 (sharer, addr, L1Idx(addr), L2Idx(addr)))
+    };
+    procID <- currentProc
+}
 
 L2Entry option L2Hit (cacheType::L1Type, addr::mAddr) =
 {
@@ -298,7 +319,10 @@ CacheLine L2ServeMiss (cacheType::L1Type, addr::mAddr) =
     new_entry = mkL2CacheEntry(true, L2Tag(addr), new_sharers, cacheLine);
     old_entry = L2Cache(L2Idx(addr));
     when old_entry.valid do
+    {
         mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
+        L2InvalL1(old_entry.tag:L2Idx(addr):'00', old_entry.sharers)
+    };
     L2Cache(L2Idx(addr)) <- new_entry;
     cacheLine
 }
@@ -324,30 +348,11 @@ unit L2ServeWrite (cacheType::L1Type, addr::mAddr, data::dword, mask::dword) =
     mark_log (2, log_w_mem (addr, mask, data))
 }
 
-unit L2InvalL1(addr::mAddr, sharers::NatSet) =
-{
-    currentProc = procID;
-    foreach sharer in sharers do
-    {
-        procID <- [sharer::nat];
-        if (sharer mod 2) == 0 then
-            L1Cache(Instr, L1Idx(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
-        else
-            L1Cache(Data, L1Idx(addr))  <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
-    };
-    procID <- currentProc
-}
-
 unit L2HandleCoherence (cacheType::L1Type, addr::mAddr, data::dword, mask::dword, entry::L2Entry option) =
     match entry
     {
-        case Some (cacheEntry) =>
-        {
-            new_sharers = L2UpdateSharers(cacheType, procID, true, Nil);
-            L2Cache(L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, new_sharers, cacheEntry.data);
-            L2InvalL1(addr, cacheEntry.sharers)
-        }
-        case None => nothing
+        case Some (cacheEntry) => L2InvalL1(addr, cacheEntry.sharers)
+        case None              => nothing
     }
 
 CacheLine L2Read (cacheType::L1Type, addr::mAddr) =
