@@ -18,8 +18,10 @@ declare
   c_hi           :: id -> dword option  -- mul/div register high result
   c_lo           :: id -> dword option  -- mul/div register low result
   c_CP0          :: id -> CP0           -- CP0 registers
-  c_BranchDelay  :: id -> dword option  -- Branch to be taken after instruction
-  c_BranchTo     :: id -> dword option  -- Requested branch
+  c_BranchDelay  :: id -> (dword option) option
+                                        -- Branch to be taken after instruction
+  c_BranchTo     :: id -> (bool * dword) option
+                                        -- Requested branch
   c_LLbit        :: id -> bool option   -- Load link flag
   c_exceptionSignalled :: id -> bool    -- flag exceptions to pick up
                                         -- in branch delay
@@ -70,13 +72,13 @@ component CP0 :: CP0
    assign value = c_CP0(procID) <- value
 }
 
-component BranchDelay :: dword option
+component BranchDelay :: (dword option) option
 {
    value = c_BranchDelay(procID)
    assign value = c_BranchDelay(procID) <- value
 }
 
-component BranchTo :: dword option
+component BranchTo :: (bool * dword) option
 {
    value = c_BranchTo(procID)
    assign value = c_BranchTo(procID) <- value
@@ -113,6 +115,3 @@ bool NotWordValue(value::dword) =
    else
       top <> 0x0
 }
-
-unit CheckBranch =
-   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")

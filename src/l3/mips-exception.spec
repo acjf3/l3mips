@@ -36,18 +36,19 @@ bits(5) ExceptionCode (ExceptionType::ExceptionType) =
 unit SignalException (ExceptionType::ExceptionType) =
 {
    when not CP0.Status.EXL do
-   {
-      if IsSome (BranchDelay) then
+      match BranchDelay
       {
-         CP0.EPC <- PC - 4;
-         CP0.Cause.BD <- true
-      }
-      else
-      {
-         CP0.EPC <- PC;
-         CP0.Cause.BD <- false
-      }
-   };
+         case Some (Some (_)) =>
+         {
+            CP0.EPC <- PC - 4;
+            CP0.Cause.BD <- true
+         }
+         case _ =>
+         {
+            CP0.EPC <- PC;
+            CP0.Cause.BD <- false
+         }
+      };
    vectorOffset = if (ExceptionType == XTLBRefillL or
                       ExceptionType == XTLBRefillS)
                       and not CP0.Status.EXL then
@@ -62,7 +63,7 @@ unit SignalException (ExceptionType::ExceptionType) =
                    0xFFFF_FFFF_8000_0000;
    BranchDelay <- None;
    BranchTo <- None;
-   PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
+   PC <- (vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)) - 4;
    exceptionSignalled <- true;
    mark_log(2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
@@ -73,9 +74,9 @@ unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
 -- ERET instruction
 -----------------------------------
 define ERET =
-{
-   CheckBranch;
-   if CP0.Status.CU0 or KernelMode then
+   if IsSome (BranchDelay) then
+      #UNPREDICTABLE ("ERET follows branch")
+   else if CP0.Status.CU0 or KernelMode then
    {
       if CP0.Status.ERL then
       {
@@ -91,4 +92,3 @@ define ERET =
    }
    else
      SignalException (CpU)
-}

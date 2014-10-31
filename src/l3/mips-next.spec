@@ -13,33 +13,44 @@ string log_instruction(w::word, inst::instruction) =
 
 unit Next =
 {
-    clear_logs ();
-    match Fetch
-    {
-        case Some (w) =>
-        {
-            inst = Decode (w);
-            mark_log (1, log_instruction(w,inst));
-            Run (inst)
-        }
-        case None => nothing
-    };
-    match BranchDelay, BranchTo
-    {
-        case None, None => when not exceptionSignalled do PC <- PC + 4
-        case Some (addr), None =>
-        {
-            BranchDelay <- None;
-            PC <- addr
-        }
-        case None, Some (addr) =>
-        {
-            BranchDelay <- Some (addr);
-            BranchTo <- None;
-            PC <- PC + 4
-        }
-        case _ => #UNPREDICTABLE("Branch follows branch")
-    };
-    exceptionSignalled <- false;
-    CP0.Count <- CP0.Count + 1
+   clear_logs ();
+   match Fetch
+   {
+       case Some (w) =>
+       {
+           inst = Decode (w);
+           mark_log (1, log_instruction(w,inst));
+           Run (inst)
+       }
+       case None => nothing
+   };
+   match BranchDelay, BranchTo
+   {
+      case None, None => PC <- PC + 4
+      case None, Some (true, addr) =>  -- untaken branch
+      {
+         BranchDelay <- Some (None);
+         BranchTo <- None;
+         PC <- addr
+      }
+      case None, Some (false, addr) => -- delayed branch
+      {
+         BranchDelay <- Some (Some (addr));
+         BranchTo <- None;
+         PC <- PC + 4
+      }
+      case Some (None), None =>
+      {
+         BranchDelay <- None;
+         PC <- PC + 4
+      }
+      case Some (Some (addr)), None =>
+      {
+         BranchDelay <- None;
+         PC <- addr
+      }
+      case _ => #UNPREDICTABLE ("Branch follows branch")
+   };
+   exceptionSignalled <- false;
+   CP0.Count <- CP0.Count + 1
 }

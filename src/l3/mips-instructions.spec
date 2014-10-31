@@ -1131,7 +1131,7 @@ define CP > DMFC0 (rt::reg, rd::reg, sel::bits(3)) =
 -- J target
 -----------------------------------
 define Branch > J (instr_index::bits(26)) =
-   BranchTo <- Some ((PC<63:28> : instr_index : '00'))
+   BranchTo <- Some (false, (PC<63:28> : instr_index : '00'))
 
 -----------------------------------
 -- JAL target
@@ -1139,68 +1139,62 @@ define Branch > J (instr_index::bits(26)) =
 define Branch > JAL (instr_index::bits(26)) =
 {
    GPR(31) <- PC + 8;
-   BranchTo <- Some ((PC<63:28> : instr_index : '00'))
+   BranchTo <- Some (false, (PC<63:28> : instr_index : '00'))
 }
 
 -----------------------------------
 -- JR rs
 -----------------------------------
 define Branch > JR (rs::reg) =
-   BranchTo <- Some (GPR(rs))
+   BranchTo <- Some (false, GPR(rs))
+
+unit ConditionalBranch (b::bool, offset::bits(16)) =
+   BranchTo <- Some (if b then (false, PC + 4 + SignExtend (offset) << 2)
+                     else (true, PC + 4))
+
+unit ConditionalBranchLikely (b::bool, offset::bits(16)) =
+   if b then
+      BranchTo <- Some (false, PC + 4 + SignExtend (offset) << 2)
+   else if IsSome (BranchDelay) then
+      BranchTo <- Some (true, PC + 8)
+   else
+      PC <- PC + 4
 
 -----------------------------------
 -- BEQ rs, rt, offset
 -----------------------------------
 define Branch > BEQ (rs::reg, rt::reg, offset::bits(16)) =
-   if GPR(rs) == GPR(rt) then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) == GPR(rt), offset)
 
 -----------------------------------
 -- BNE rs, rt, offset
 -----------------------------------
 define Branch > BNE (rs::reg, rt::reg, offset::bits(16)) =
-   if GPR(rs) <> GPR(rt) then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) <> GPR(rt), offset)
 
 -----------------------------------
 -- BLEZ rs, offset
 -----------------------------------
 define Branch > BLEZ (rs::reg, offset::bits(16)) =
-   if GPR(rs) <= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) <= 0, offset)
 
 -----------------------------------
 -- BGTZ rs, offset
 -----------------------------------
 define Branch > BGTZ (rs::reg, offset::bits(16)) =
-   if GPR(rs) > 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) > 0, offset)
 
 -----------------------------------
 -- BLTZ rs, offset
 -----------------------------------
 define Branch > BLTZ (rs::reg, offset::bits(16)) =
-   if GPR(rs) < 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) < 0, offset)
 
 -----------------------------------
 -- BGEZ rs, offset
 -----------------------------------
 define Branch > BGEZ (rs::reg, offset::bits(16)) =
-   if GPR(rs) >= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (GPR(rs) >= 0, offset)
 
 -----------------------------------
 -- BLTZAL rs, offset
@@ -1209,10 +1203,7 @@ define Branch > BLTZAL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   if temp < 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (temp < 0, offset)
 }
 
 -----------------------------------
@@ -1222,83 +1213,44 @@ define Branch > BGEZAL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   if temp >= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-      CheckBranch
+   ConditionalBranch (temp >= 0, offset)
 }
 
 -----------------------------------
 -- BEQL rs, rt, offset
 -----------------------------------
 define Branch > BEQL (rs::reg, rt::reg, offset::bits(16)) =
-   if GPR(rs) == GPR(rt) then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) == GPR(rt), offset)
 
 -----------------------------------
 -- BNEL rs, rt, offset
 -----------------------------------
 define Branch > BNEL (rs::reg, rt::reg, offset::bits(16)) =
-   if GPR(rs) <> GPR(rt) then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) <> GPR(rt), offset)
 
 -----------------------------------
 -- BLEZL rs, offset
 -----------------------------------
 define Branch > BLEZL (rs::reg, offset::bits(16)) =
-   if GPR(rs) <= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) <= 0, offset)
 
 -----------------------------------
 -- BGTZL rs, offset
 -----------------------------------
 define Branch > BGTZL (rs::reg, offset::bits(16)) =
-   if GPR(rs) > 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) > 0, offset)
 
 -----------------------------------
 -- BLTZL rs, offset
 -----------------------------------
 define Branch > BLTZL (rs::reg, offset::bits(16)) =
-   if GPR(rs) < 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) < 0, offset)
 
 -----------------------------------
 -- BGEZL rs, offset
 -----------------------------------
 define Branch > BGEZL (rs::reg, offset::bits(16)) =
-   if GPR(rs) >= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (GPR(rs) >= 0, offset)
 
 -----------------------------------
 -- BLTZALL rs, offset
@@ -1307,13 +1259,7 @@ define Branch > BLTZALL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   if temp < 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (temp < 0, offset)
 }
 
 -----------------------------------
@@ -1323,15 +1269,8 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
 {
    temp = GPR(rs);
    GPR(31) <- PC + 8;
-   if temp >= 0 then
-      BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
-   else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+   ConditionalBranchLikely (temp >= 0, offset)
 }
-
 -----------------------------------
 -- WAIT (implemented as no-op)
 -----------------------------------
