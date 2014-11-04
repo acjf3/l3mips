@@ -150,6 +150,7 @@ unit SignalCapException_noReg (capException::CapException) =
 unit SignalCapException_v (regNum::bits(5)) =
    match regNum
    {
+     case 31 => SignalCapException(capExcAccEPCC, ZeroExtend(regNum))
      case 30 => SignalCapException(capExcAccKDC, ZeroExtend(regNum))
      case 29 => SignalCapException(capExcAccKCC, ZeroExtend(regNum))
      case 27 => SignalCapException(capExcAccKR1C, ZeroExtend(regNum))

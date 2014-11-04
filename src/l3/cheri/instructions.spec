@@ -9,8 +9,8 @@ bool register_inaccessible(cb::reg) =
     return (cb == 31 and not perms.Access_EPCC
          or cb == 30 and not perms.Access_KDC
          or cb == 29 and not perms.Access_KCC
-         or cb == 28 and not perms.Access_KR2C
-         or cb == 27 and not perms.Access_KR1C)
+         or cb == 27 and not perms.Access_KR1C
+         or cb == 28 and not perms.Access_KR2C)
 }
 
 -- only works for non empty lists
