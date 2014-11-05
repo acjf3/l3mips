@@ -294,10 +294,23 @@ unit L2InvalL1(addr::mAddr, sharers::NatSet) =
     {
         procID <- [sharer::nat div 2];
         if (sharer mod 2) == 0 then
-            L1Cache(Instr, L1Idx(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
+        {
+            entry = L1Cache(Instr, L1Idx(addr));
+            when entry.valid and entry.tag<14:0> == L1Tag(addr)<14:0> do
+            {
+                L1Cache(Instr, L1Idx(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN);
+                mark_log(4, log_l2_inval_l1 (sharer, addr, L1Idx(addr), L2Idx(addr)))
+            }
+        }
         else
-            L1Cache(Data, L1Idx(addr))  <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN);
-        mark_log(4, log_l2_inval_l1 (sharer, addr, L1Idx(addr), L2Idx(addr)))
+        {
+            entry = L1Cache(Data, L1Idx(addr));
+            when entry.valid and entry.tag<14:0> == L1Tag(addr)<14:0> do
+            {
+                L1Cache(Data, L1Idx(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN);
+                mark_log(4, log_l2_inval_l1 (sharer, addr, L1Idx(addr), L2Idx(addr)))
+            }
+        }
     };
     procID <- currentProc
 }
