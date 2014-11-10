@@ -956,10 +956,13 @@ define Store > SC (base::reg, rt::reg, offset::bits(16)) =
       case None => #UNPREDICTABLE("SC: LLbit not set")
       case Some (false) => GPR(rt) <- 0
       case Some (true) =>
-        {
-           storeWord (base, rt, offset);
-           GPR(rt) <- 1
-        }
+         if CP0.LLAddr<39:5> == (SignExtend(offset) + GPR(base))<39:5> then
+         {
+            storeWord (base, rt, offset);
+            LLbit <- None;
+            GPR(rt) <- 1
+         }
+         else GPR(rt) <- 0
    }
 
 define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
@@ -968,10 +971,13 @@ define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
       case None => #UNPREDICTABLE("SCD: LLbit not set")
       case Some (false) => GPR(rt) <- 0
       case Some (true) =>
-        {
-           storeDoubleword (base, rt, offset);
-           GPR(rt) <- 1
-        }
+         if CP0.LLAddr<39:5> == (SignExtend(offset) + GPR(base))<39:5> then
+         {
+            storeDoubleword (base, rt, offset);
+            LLbit <- None;
+            GPR(rt) <- 1
+         }
+         else GPR(rt) <- 0
    }
 
 -----------------------------------
