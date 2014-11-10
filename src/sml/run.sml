@@ -217,7 +217,7 @@ fun uart_output () =
       if s = ""
          then ()
       else case !uart_out of
-              SOME strm => TextIO.output (strm, s)
+              SOME strm => (TextIO.output (strm, s); TextIO.flushOut strm)
             | NONE => TextIO.print s
    end
 
@@ -468,10 +468,6 @@ val () =
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, t)
-          val () = if   (!trace_level > 0) andalso (!non_blocking_input)
-                   then failExit ( "Tracing and non-blocking input "
-                                 ^ "do not work together." )
-                   else ()
           val (d, l) = processOption "--uart-delay" l
           val () =
              uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
