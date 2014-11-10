@@ -715,11 +715,13 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         case None => #UNPREDICTABLE("SCD: LLbit not set")
         case Some (false) => GPR(rs) <- 0
         case Some (true) =>
-        {
-            pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
-            LLbit <- None;
-            GPR(rs) <- 1
-        }
+            if CP0.LLAddr<39:5> == addr<39:5> then
+            {
+                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
+                LLbit <- None;
+                GPR(rs) <- 1
+            }
+            else GPR(rs) <- 0
     }
 }
 
