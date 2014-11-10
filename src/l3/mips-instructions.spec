@@ -962,7 +962,7 @@ define Store > SC (base::reg, rt::reg, offset::bits(16)) =
             LLbit <- None;
             GPR(rt) <- 1
          }
-         else GPR(rt) <- 0
+         else #UNPREDICTABLE("SC: address does not match previous LL address")
    }
 
 define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
@@ -977,7 +977,7 @@ define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
             LLbit <- None;
             GPR(rt) <- 1
          }
-         else GPR(rt) <- 0
+         else #UNPREDICTABLE("SCD: address does not match previous LL address")
    }
 
 -----------------------------------

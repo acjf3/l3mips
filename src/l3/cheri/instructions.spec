@@ -712,7 +712,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
     }
     else match LLbit
     {
-        case None => #UNPREDICTABLE("SCD: LLbit not set")
+        case None => #UNPREDICTABLE("CSCD: LLbit not set")
         case Some (false) => GPR(rs) <- 0
         case Some (true) =>
             if CP0.LLAddr<39:5> == addr<39:5> then
@@ -721,7 +721,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
                 LLbit <- None;
                 GPR(rs) <- 1
             }
-            else GPR(rs) <- 0
+            else #UNPREDICTABLE("CSCD: address does not match previous LL address")
     }
 }
 
