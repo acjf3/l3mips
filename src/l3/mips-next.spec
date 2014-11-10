@@ -14,7 +14,9 @@ string log_instruction(w::word, inst::instruction) =
 unit Next =
 {
     clear_logs ();
-    match Fetch
+    currentInst <- None;
+    currentInst <- Fetch;
+    match currentInst
     {
         case Some (w) =>
         {

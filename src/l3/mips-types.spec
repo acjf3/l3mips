@@ -171,6 +171,7 @@ record CP0
    Wired    :: Wired           -- 6   Number of wired TLB entries
    HWREna   :: HWREna          -- 7   See RDHWR instruction
    BadVAddr :: dword           -- 8   Bad virtual address
+   EInstr   :: word            -- 8   Selector 1, Instruction cause of the exception
    Count    :: word            -- 9   Timer count
    EntryHi  :: EntryHi         -- 10  High half of TLB entry
    Compare  :: word            -- 11  Timer compare

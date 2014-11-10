@@ -28,6 +28,9 @@ declare
 -- Instruction counter
 declare instCnt :: nat
 
+-- Current instruction
+declare currentInst :: bits(32) option
+
 -- Total amount of core(s)
 declare totalCore :: nat
 

@@ -86,6 +86,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  6, 0 => [CP0.&Wired]
          case 0,  7, 0 => [CP0.&HWREna]
          case 0,  8, 0 =>  CP0.BadVAddr
+         case 0,  8, 1 => [CP0.EInstr]
          case 0,  9, 0 => [CP0.Count]
          case 0, 10, 0 =>  CP0.&EntryHi
          case 0, 11, 0 => [CP0.Compare]

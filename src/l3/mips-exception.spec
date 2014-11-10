@@ -54,6 +54,7 @@ unit SignalException (ExceptionType::ExceptionType) =
                      0x080`30
                   else
                      0x180;
+   when IsSome(currentInst) do CP0.EInstr <- ValOf(currentInst);
    CP0.Cause.ExcCode <- ExceptionCode (ExceptionType);
    CP0.Status.EXL <- true;
    vectorBase = if CP0.Status.BEV then
