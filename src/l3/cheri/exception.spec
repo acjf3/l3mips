@@ -24,6 +24,7 @@ construct CapException
     capExcRet,               -- Return Trap
     capExcUnderflowTSS,      -- Underflow of trusted system stack
     capExcUser,              -- User-defined Permision Violation
+    capExcTLBNoStore,        -- User-defined Permision Violation
     capExcGlobal,            -- Global Violation
     capExcPermExe,           -- Permit_Execute Violation
     capExcPermLoad,          -- Permit_Load Violation
@@ -123,6 +124,7 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcRet               => 0x6
         case capExcUnderflowTSS      => 0x7
         case capExcUser              => 0x8
+        case capExcTLBNoStore        => 0x9
         case capExcGlobal            => 0x10
         case capExcPermExe           => 0x11
         case capExcPermLoad          => 0x12

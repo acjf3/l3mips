@@ -13,7 +13,7 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
                             IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
-    tmp, CCA = AddressTranslation (vAddr, DATA, LOAD);
+    tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
     {
@@ -63,7 +63,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 
 Capability LoadCap (vAddr::vAddr) =
 {
-    pAddr, CCA = AddressTranslation (vAddr, DATA, CLOAD);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, CLOAD);
     if not exceptionSignalled then
     {
         a = pAddr<39:5>;
@@ -82,7 +82,7 @@ Capability LoadCap (vAddr::vAddr) =
         &Capability<127:64>  <- ReadData(a:'10');
         &Capability<63:0>    <- ReadData(a:'11');
 
-        Capability.tag <- TAG(a);
+        Capability.tag <- if (L) then false else TAG(a);
 
         return Capability
     }
@@ -93,7 +93,7 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
     var pAddr;
-    tmp, CCA = AddressTranslation (vAddr, DATA, STORE);
+    tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
     {
@@ -147,7 +147,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 
 unit StoreCap (vAddr::vAddr, Capability::Capability) =
 {
-    pAddr, CCA = AddressTranslation (vAddr, DATA, CSTORE);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, CSTORE);
     if not exceptionSignalled then
     {
         a = pAddr<39:5>;
@@ -160,20 +160,25 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
                      and a <+ (PIC_base_address([core])+1072)<36:2> do
                     #UNPREDICTABLE ("Capability store attempted on PIC");
 
-        for core in 0 .. (totalCore - 1) do
-            when core <> [procID] and
-                c_LLbit([core]) == Some (true) and
-                c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
-                    c_LLbit([core]) <- Some (false);
+        if (S and Capability.tag) then
+            SignalCapException_noReg (capExcTLBNoStore)
+        else
+        {
+            for core in 0 .. (totalCore - 1) do
+                when core <> [procID] and
+                    c_LLbit([core]) == Some (true) and
+                    c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
+                        c_LLbit([core]) <- Some (false);
 
-        mark_log (2, log_store_cap (pAddr, Capability));
+            mark_log (2, log_store_cap (pAddr, Capability));
 
-        WriteData(a:'00', &Capability<255:192>, ~0);
-        WriteData(a:'01', &Capability<191:128>, ~0);
-        WriteData(a:'10', &Capability<127:64>, ~0);
-        WriteData(a:'11', &Capability<63:0>, ~0);
+            WriteData(a:'00', &Capability<255:192>, ~0);
+            WriteData(a:'01', &Capability<191:128>, ~0);
+            WriteData(a:'10', &Capability<127:64>, ~0);
+            WriteData(a:'11', &Capability<63:0>, ~0);
 
-        TAG(a) <- Capability.tag
+            TAG(a) <- Capability.tag
+        }
     }
     else return UNKNOWN
 }

@@ -3,13 +3,13 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
     unmapped, valid = CheckSegment (vAddr);
     if valid then
         match unmapped
         {
-            case Some (pAddr, cca) => pAddr, cca
+            case Some (pAddr, cca) => pAddr, cca, false, false
                 case None =>
                 match LookupTLB (vAddr<63:62>, vAddr<39:13>)
                 {
@@ -17,7 +17,8 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType
                     {
                         exc = if  AccessType == LOAD then XTLBRefillL
                               else XTLBRefillS;
-                        SignalTLBException (exc, CP0.EntryHi.ASID, vAddr)
+                        _ = SignalTLBException (exc, CP0.EntryHi.ASID, vAddr);
+                        UNKNOWN
                     }
                     case list {(_, e)} =>
                     {
@@ -41,23 +42,20 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType
 
                         if V then
                             if not D and AccessType == STORE then
-                                SignalTLBException (Mod, e.ASID, vAddr)
-                            else if L and AccessType == CLOAD then
-                                SignalTLBException (CTLBL, e.ASID, vAddr)
-                            else if S and AccessType == CSTORE then
-                                SignalTLBException (CTLBS, e.ASID, vAddr)
+                                { _ = SignalTLBException (Mod, e.ASID, vAddr); UNKNOWN }
                             else
                             {
                                 PFN_     = [PFN]   :: bool list;
                                 vAddr_   = [vAddr] :: bool list;
                                 pAddr    = PFN_<27:EvenOddBit-12>
                                    : vAddr_<EvenOddBit-1:0>;
-                                ([pAddr], C)
+                                ([pAddr], C, S, L)
                             }
                         else
                         {
                             exc = if AccessType == LOAD then TLBL else TLBS;
-                            SignalTLBException (exc, e.ASID, vAddr)
+                            _ = SignalTLBException (exc, e.ASID, vAddr);
+                            UNKNOWN
                         }
                     }
                     case _ => #UNPREDICTABLE ("TLB: multiple matches")
