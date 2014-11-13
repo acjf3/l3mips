@@ -111,3 +111,5 @@ component EPCC :: Capability
     value = CAPR(31)
     assign value = CAPR(31) <- value
 }
+
+type CapAddr = bits(35)
