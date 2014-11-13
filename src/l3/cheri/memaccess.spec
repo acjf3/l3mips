@@ -9,8 +9,8 @@ declare TAG:: bits(35) -> bool
 -- Data accesses
 -----------------
 
-dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType) =
+dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
+                     AccessType::AccessType, link::bool) =
 {
     var pAddr;
     tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
@@ -33,24 +33,36 @@ dword * pAddr LoadMemoryCap (MemType::bits(3), vAddr::vAddr,
         if a == JTAG_UART.base_address then
         {
             found <- true;
-            ret <- flip_endian_word (JTAG_UART.&data)
-                : flip_endian_word (JTAG_UART.&control);
+            ret <- flip_endian_word (JTAG_UART.&data) :
+                   flip_endian_word (JTAG_UART.&control);
             when pAddr<2:0> == 0 do JTAG_UART_load
         }
-        else for core in 0 .. (totalCore - 1) do
-            when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
-                {found <- true; ret <- PIC_load([core], a)};
+        else for core in 0 .. totalCore - 1 do
+            when a >=+ PIC_base_address([core]) and
+                  a <+ PIC_base_address([core]) + 1072 do
+            {
+                found <- true;
+                ret <- PIC_load([core], a)
+            };
+
+        if link then
+        {
+            LLbit <- Some (true);
+            CP0.LLAddr <- [pAddr]
+        }
+        else
+            LLbit <- None;
 
         when found == false do
             ret <- ReadData (a);
 
-        return (ret, pAddr)
+        return ret
     }
     else return UNKNOWN
 }
 
-dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType) =
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+                            IorD::IorD, AccessType::AccessType, link::bool) =
 {
     final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
     if not CAPR(0).tag then {SignalCapException(capExcTag,0); UNKNOWN}
@@ -58,7 +70,7 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
     else if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not Perms(CAPR(0).perms).Permit_Load then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
-    else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType)
+    else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
 }
 
 Capability LoadCap (vAddr::vAddr) =
@@ -84,15 +96,18 @@ Capability LoadCap (vAddr::vAddr) =
 
         Capability.tag <- if (L) then false else TAG(a);
 
+        LLbit <- None;
+
         return Capability
     }
     else return UNKNOWN
 }
 
-pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     var pAddr;
+    var sc_success = false;
     tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
@@ -104,7 +119,7 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         case _ => #UNPREDICTABLE ("bad access length")
     };
     pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-    if not exceptionSignalled then
+    when not exceptionSignalled do
     {
         a = pAddr<39:3>;
         l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
@@ -112,29 +127,49 @@ pAddr StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 
         var found = false;
         if a == JTAG_UART.base_address then
-            {found <- true; JTAG_UART_store (mask, MemElem)}
-        else
-            for core in 0 .. (totalCore - 1) do
-                when a >=+ PIC_base_address([core]) and a <+ (PIC_base_address([core])+1072) do
-                    {found <- true; PIC_store([core], a, mask, MemElem)};
-
-        when found == false do
         {
-            for core in 0 .. (totalCore - 1) do
-                when core <> [procID] and
-                    c_LLbit([core]) == Some (true) and
-                    c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
-                        c_LLbit([core]) <- Some (false);
-            WriteData(a, MemElem, mask);
-            TAG(a<36:2>) <- false
+            found <- true;
+            JTAG_UART_store (mask, MemElem)
+        }
+        else for core in 0 .. totalCore - 1 do
+            when a >=+ PIC_base_address([core]) and
+                 a <+ PIC_base_address([core]) + 1072 do
+            {
+                found <- true;
+                PIC_store([core], a, mask, MemElem)
+            };
+
+        when cond do match LLbit
+        {
+            case None => #UNPREDICTABLE("conditional store: LLbit not set")
+            case Some (false) => sc_success <- false
+            case Some (true) =>
+                if CP0.LLAddr<39:5> == pAddr<39:5> then
+                    sc_success <- true
+                else #UNPREDICTABLE("conditional store: address does not match previous LL address")
         };
-        return pAddr
-    }
-    else return UNKNOWN
+
+        LLbit <- None;
+
+        when not found do
+        {
+            for core in 0 .. totalCore - 1 do
+                when core <> [procID] and
+                     c_LLbit([core]) == Some (true) and
+                     c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
+                        c_LLbit([core]) <- Some (false);
+            when not cond or sc_success do
+            {
+                WriteData(a, MemElem, mask);
+                TAG(a<36:2>) <- false
+            }
+        }
+    };
+    return sc_success
 }
 
-pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     final_vAddr = vAddr + CAPR(0).base + CAPR(0).offset;
     if not CAPR(0).tag then {SignalCapException(capExcTag,0); UNKNOWN}
@@ -142,13 +177,13 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
     else if (final_vAddr <+ CAPR(0).base) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr >+ CAPR(0).base + CAPR(0).length) then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not Perms(CAPR(0).perms).Permit_Store then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else StoreMemoryCap(MemType, AccessLength, MemElem, final_vAddr, IorD, AccessType)
+    else StoreMemoryCap(MemType, AccessLength, MemElem, final_vAddr, IorD, AccessType, cond)
 }
 
 unit StoreCap (vAddr::vAddr, Capability::Capability) =
 {
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, CSTORE);
-    if not exceptionSignalled then
+    when not exceptionSignalled do
     {
         a = pAddr<39:5>;
 
@@ -159,6 +194,8 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
                 when a >=+ PIC_base_address([core])<36:2>
                      and a <+ (PIC_base_address([core])+1072)<36:2> do
                     #UNPREDICTABLE ("Capability store attempted on PIC");
+
+        LLbit <- None;
 
         if (S and Capability.tag) then
             SignalCapException_noReg (capExcTLBNoStore)
@@ -180,7 +217,6 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
             TAG(a) <- Capability.tag
         }
     }
-    else return UNKNOWN
 }
 
 -------------------------

@@ -5,8 +5,8 @@
 
 -- Pimitive memory load (with memory-mapped devices)
 
-dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                          IorD::IorD, AccessType::AccessType) =
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+                          IorD::IorD, AccessType::AccessType, link::bool) =
 {
     var pAddr;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
@@ -23,32 +23,47 @@ dword * pAddr LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
     if not exceptionSignalled then
     {
         a = pAddr<39:3>;
-        var ret = None;
+        var ret;
 
+        var found = false;
         if a == JTAG_UART.base_address then
         {
-            ret <- Some (flip_endian_word (JTAG_UART.&data) :
-                         flip_endian_word (JTAG_UART.&control));
+            found <- true;
+            ret <- flip_endian_word (JTAG_UART.&data) :
+                   flip_endian_word (JTAG_UART.&control);
             when pAddr<2:0> == 0 do JTAG_UART_load
         }
         else for core in 0 .. totalCore - 1 do
             when a >=+ PIC_base_address([core]) and
                   a <+ PIC_base_address([core]) + 1072 do
-                ret <- Some (PIC_load([core], a));
+            {
+                found <- true;
+                ret <- PIC_load([core], a)
+            };
 
-        return (match ret { case Some (d) => d
-                            case None => MEM (a)
-                          }, pAddr)
+        if link then
+        {
+            LLbit <- Some (true);
+            CP0.LLAddr <- [pAddr]
+        }
+        else
+            LLbit <- None;
+
+        when found == false do
+            ret <- ReadData (a);
+
+        return ret
     }
     else return UNKNOWN
 }
 
 -- Pimitive memory store. Big-endian.
 
-pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     var pAddr;
+    var sc_success = false;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
     pAddr <- tmp;
     pAddr<2:0> <- match MemType
@@ -60,7 +75,7 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         case _ => #UNPREDICTABLE ("bad access length")
     };
     pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-    if not exceptionSignalled then
+    when not exceptionSignalled do
     {
         a = pAddr<39:3>;
         l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
@@ -68,24 +83,41 @@ pAddr StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 
         var found = false;
         if a == JTAG_UART.base_address then
-            {found <- true; JTAG_UART_store (mask, MemElem)}
+        {
+            found <- true;
+            JTAG_UART_store (mask, MemElem)
+        }
         else for core in 0 .. totalCore - 1 do
-           when a >=+ PIC_base_address([core]) and
+            when a >=+ PIC_base_address([core]) and
                  a <+ PIC_base_address([core]) + 1072 do
-               {found <- true; PIC_store([core], a, mask, MemElem)};
+            {
+                found <- true;
+                PIC_store([core], a, mask, MemElem)
+            };
+
+        when cond do match LLbit
+        {
+            case None => #UNPREDICTABLE("conditional store: LLbit not set")
+            case Some (false) => sc_success <- false
+            case Some (true) =>
+                if CP0.LLAddr<39:5> == pAddr<39:5> then
+                    sc_success <- true
+                else #UNPREDICTABLE("conditional store: address does not match previous LL address")
+        };
+
+        LLbit <- None;
 
         when not found do
         {
             for core in 0 .. totalCore - 1 do
                 when core <> [procID] and
                      c_LLbit([core]) == Some (true) and
-                     c_CP0([core]).LLAddr<39:3> == pAddr<39:3> do
+                     c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                         c_LLbit([core]) <- Some (false);
-            WriteData(a, MemElem, mask)
-        };
-        return pAddr
-    }
-    else return UNKNOWN
+            when not cond or sc_success do WriteData(a, MemElem, mask)
+        }
+    };
+    sc_success
 }
 
 --------------------------------------------------

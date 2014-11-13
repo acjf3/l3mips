@@ -568,8 +568,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         }
         else
         {
-            LLbit <- None;
-            data, pAddr = LoadMemoryCap(access, addr, DATA, LOAD);
+            data = LoadMemoryCap(access, addr, DATA, LOAD, false);
             when not exceptionSignalled do
             {
                 data_list = [data]::bool list;
@@ -607,15 +606,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalException(AdEL)
     }
     else
-    {
-        data, pAddr = LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD);
-        when not exceptionSignalled do
-        {
-            GPR(rd) <- data;
-            LLbit <- Some (true);
-            CP0.LLAddr <- [pAddr]
-        }
-    }
+        GPR(rd) <- LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD, true)
 }
 
 -----------------------------------
@@ -679,8 +670,8 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         }
         else
         {
-            pAddr = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), addr, DATA, STORE);
-            LLbit <-None
+            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), addr, DATA, STORE, false);
+            nothing
         }
     }
 
@@ -708,19 +699,8 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         CP0.BadVAddr <- addr;
         SignalException(AdES)
     }
-    else match LLbit
-    {
-        case None => #UNPREDICTABLE("CSCD: LLbit not set")
-        case Some (false) => GPR(rs) <- 0
-        case Some (true) =>
-            if CP0.LLAddr<39:5> == addr<39:5> then
-            {
-                pAddr = StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD);
-                LLbit <- None;
-                GPR(rs) <- 1
-            }
-            else #UNPREDICTABLE("CSCD: address does not match previous LL address")
-    }
+    else
+        GPR(rs) <- if StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD, true) then 1 else 0
 }
 
 -----------------------------------
