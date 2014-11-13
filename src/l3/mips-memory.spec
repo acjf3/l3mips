@@ -21,3 +21,7 @@ unit WriteData (pAddr::mAddr, data::dword, mask::dword) =
 }
 
 word ReadInst (a::pAddr) = if a<2> then MEM (a<39:3>)<31:0> else MEM (a<39:3>)<63:32>
+
+-- sml helper function
+unit WriteDWORD (pAddr::mAddr, data::dword) =
+    MEM(pAddr) <- data

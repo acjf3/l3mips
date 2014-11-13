@@ -131,7 +131,7 @@ fun storeArrayInMem (base, marray) =
               val w2 = Array.sub (marray, 2 * i + 1)
               val dw = BitsN.@@ (w1, w2)
            in
-              mips.MEM := mips.Map.update (!mips.MEM, b + i, dw)
+              mips.WriteDWORD(BitsN.fromInt(b + i, 37), dw)
            end
            handle Subscript => print (Int.toString i ^ "\n"))
     ; print (Int.toString (Array.length marray) ^ " words.\n")
@@ -157,7 +157,7 @@ fun storeVecInMemHelper vec base i =
     val bits64 = BitsN.concat bytes1
   in
     if   j < Word8Vector.length vec
-    then ( mips.MEM := mips.Map.update (!mips.MEM, base+i, bits64)
+    then ( mips.WriteDWORD(BitsN.fromInt(base+i, 37), bits64)
          ; storeVecInMemHelper vec base (i+1)
          )
     else print (Int.toString (Word8Vector.length vec) ^ " words.\n")
