@@ -151,13 +151,14 @@ fun getByte v i =
 
 fun storeVecInMemHelper vec base i =
   let
-    val j = 8*i;
-    val bytes0 = List.map (getByte vec) [j+7,j+6,j+5,j+4,j+3,j+2,j+1,j+0]
-    val bytes1 = if !be then List.rev bytes0 else bytes0
-    val bits64 = BitsN.concat bytes1
+    val j = 32*i;
+    val bytes0  = List.tabulate(4, fn outer => List.tabulate (8, fn inner => getByte vec (j+outer*8+inner)));
+    val bytes1  = if !be then bytes0 else map rev bytes0
+    val bits256 = BitsN.concat (rev (map BitsN.concat bytes1))
   in
     if   j < Word8Vector.length vec
-    then ( mips.WriteDWORD(BitsN.fromInt(base+i, 37), bits64)
+    then ( mips.Write256(BitsN.fromInt(base+i, 35), bits256)
+         (*; print (Int.toString(base+i)^": 0x"^BitsN.toHexString(bits256)^"\n")*)
          ; storeVecInMemHelper vec base (i+1)
          )
     else print (Int.toString (Word8Vector.length vec) ^ " words.\n")
@@ -165,7 +166,7 @@ fun storeVecInMemHelper vec base i =
 
 fun storeVecInMem (base, vec) = 
   let
-    val b = IntInf.andb (base div 8, 0x1fffffffff)
+    val b = IntInf.andb (base div 32, 0x7ffffffff)
   in
     storeVecInMemHelper vec b 0
   end

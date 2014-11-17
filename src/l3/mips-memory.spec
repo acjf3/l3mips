@@ -25,3 +25,12 @@ word ReadInst (a::pAddr) = if a<2> then MEM (a<39:3>)<31:0> else MEM (a<39:3>)<6
 -- sml helper function
 unit WriteDWORD (pAddr::mAddr, data::dword) =
     MEM(pAddr) <- data
+
+-- sml helper function
+unit Write256 (pAddr::bits(35), data::bits(256)) =
+{
+    MEM(pAddr:'00') <- data<63:0>;
+    MEM(pAddr:'01') <- data<127:64>;
+    MEM(pAddr:'10') <- data<191:128>;
+    MEM(pAddr:'11') <- data<255:192>
+}
