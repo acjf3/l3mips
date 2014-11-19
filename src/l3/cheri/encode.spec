@@ -62,15 +62,15 @@ string LWC2InstructionToString (i::instruction) =
                 case CLoad(rd, cb, rt, offset, 0b0, t) =>
                     match t
                     {
-                        case 0b00 => op3ri("clbu",rd,cb,rt,offset)
-                        case 0b01 => op3ri("clhu",rd,cb,rt,offset)
-                        case 0b10 => op3ri("clwu",rd,cb,rt,offset)
-                        case 0b11 => op3ri("cld",rd,cb,rt,offset)
+                        case 0b00 => op3ro("clbu",rd,cb,rt,offset)
+                        case 0b01 => op3ro("clhu",rd,cb,rt,offset)
+                        case 0b10 => op3ro("clwu",rd,cb,rt,offset)
+                        case 0b11 => op3ro("cld",rd,cb,rt,offset)
                     }
-                case CLoad(rd, cb, rt, offset, 0b1, 0b00) => op3ri("clb",rd,cb,rt,offset)
-                case CLoad(rd, cb, rt, offset, 0b1, 0b01) => op3ri("clh",rd,cb,rt,offset)
-                case CLoad(rd, cb, rt, offset, 0b1, 0b10) => op3ri("clw",rd,cb,rt,offset)
-                case CLLD(rd, cb, rt, offset)             => op3ri("clld",rd,cb,rt,offset)
+                case CLoad(rd, cb, rt, offset, 0b1, 0b00) => op3ro("clb",rd,cb,rt,offset)
+                case CLoad(rd, cb, rt, offset, 0b1, 0b01) => op3ro("clh",rd,cb,rt,offset)
+                case CLoad(rd, cb, rt, offset, 0b1, 0b10) => op3ro("clw",rd,cb,rt,offset)
+                case CLLD(rd, cb, rt, offset)             => op3ro("clld",rd,cb,rt,offset)
                 case _                                    => "unmatched_cap_inst"
             }
         case _ => "unmatched_cap_inst"
@@ -82,7 +82,7 @@ string LDC2InstructionToString (i::instruction) =
         case LDC2(CHERILDC2(j)) =>
             match j
             {
-                case CLC(cd, cb, rt, offset) => op3ri("clc",cd,cb,rt,offset)
+                case CLC(cd, cb, rt, offset) => op3ro("clc",cd,cb,rt,offset)
             }
         case _ => "unmatched_cap_inst"
     }
@@ -96,12 +96,12 @@ string SWC2InstructionToString (i::instruction) =
                 case CStore(rs, cb, rt, offset, t) =>
                     match t
                     {
-                        case 0b00 => op3ri("csb",rs,cb,rt,offset)
-                        case 0b01 => op3ri("csh",rs,cb,rt,offset)
-                        case 0b10 => op3ri("csw",rs,cb,rt,offset)
-                        case 0b11 => op3ri("csd",rs,cb,rt,offset)
+                        case 0b00 => op3ro("csb",rs,cb,rt,offset)
+                        case 0b01 => op3ro("csh",rs,cb,rt,offset)
+                        case 0b10 => op3ro("csw",rs,cb,rt,offset)
+                        case 0b11 => op3ro("csd",rs,cb,rt,offset)
                     }
-                case CSCD(rs, cb, rt, offset) => op3ri("cscd",rs,cb,rt,offset)
+                case CSCD(rs, cb, rt, offset) => op3ro("cscd",rs,cb,rt,offset)
             }
         case _ => "unmatched_cap_inst"
     }
@@ -112,7 +112,7 @@ string SDC2InstructionToString (i::instruction) =
         case SDC2(CHERISDC2(j)) =>
             match j
             {
-                case CSC(cs, cb, rt, offset) => op3ri("csc",cs,cb,rt,offset)
+                case CSC(cs, cb, rt, offset) => op3ro("csc",cs,cb,rt,offset)
             }
         case _ => "unmatched_cap_inst"
     }

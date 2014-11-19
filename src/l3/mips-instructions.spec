@@ -1314,5 +1314,4 @@ define Run
 -- BCzTL, BCzFL
 -- CACHE
 -- Floating-point
--- RDHWR
 -------------------------------------------------------
