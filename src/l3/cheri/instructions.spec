@@ -177,6 +177,24 @@ define COP2 > CHERICOP2 > CSet > CIncBase (cd::reg, cb::reg, rt::reg) =
     }
 
 -----------------------------------
+-- CIncOffset
+-----------------------------------
+define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if CAPR(cb).tag and CAPR(cb).sealed then
+        SignalCapException(capExcSeal,cb)
+    else
+    {
+        CAPR(cd) <- CAPR(cb);
+        CAPR(cd).offset <- CAPR(cb).offset + GPR(rt)
+    }
+
+-----------------------------------
 -- CSetLen
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetLen (cd::reg, cb::reg, rt::reg) =

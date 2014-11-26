@@ -21,6 +21,7 @@ string COP2InstructionToString (i::instruction) =
                 case CGet(CGetCause(rd))          => op1r("cgetcause",rd)
                 case CSet(CSetCause(rt))          => op1r("csetcause",rt)
                 case CSet(CIncBase(cd, cb, rt))   => op3r("cincbase",cd,cb,rt)
+                case CSet(CIncOffset(cd, cb, rt)) => op3r("cincoffset",cd,cb,rt)
                 case CSet(CSetLen(cd, cb, rt))    => op3r("csetlen",cd,cb,rt)
                 case CSet(CClearTag(cd, cb))      => op2r("ccleartag",cd,cb)
                 case CSet(CAndPerm(cd, cb, rt))   => op3r("candperm",cd,cb,rt)
