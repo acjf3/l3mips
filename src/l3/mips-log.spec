@@ -45,7 +45,7 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
-string log_sig_exception (ExceptionCode::bits(5)) = "Exception 0x" : PadLeft (#"0", 2, [ExceptionCode])
+string log_sig_exception (ExceptionCode::bits(5)) = "MIPS exception 0x" : PadLeft (#"0", 2, [ExceptionCode])
 string log_w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : PadLeft (#"0", 16, [data])
 string log_w_hi (data::dword) = "HI <- 0x" : PadLeft (#"0", 16, [data])
 string log_w_lo (data::dword) = "LO <- 0x" : PadLeft (#"0", 16, [data])
