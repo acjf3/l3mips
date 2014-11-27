@@ -262,7 +262,7 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cd)
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
-    else if not CAPR(cb).tag and CAPR(cb).sealed then
+    else if CAPR(cb).tag and CAPR(cb).sealed then
         SignalCapException(capExcSeal,cb)
     else
     {
