@@ -120,8 +120,9 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
         SignalCapException_v(cd)
     else
     {
-        CAPR(cd) <- PCC;
-        CAPR(cd).offset <- PC
+        var new_cap = PCC;
+        new_cap.offset <- PC;
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -171,9 +172,10 @@ define COP2 > CHERICOP2 > CSet > CIncBase (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcLength,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).base <- CAPR(cb).base + GPR(rt);
-        CAPR(cd).length <- CAPR(cb).length - GPR(rt)
+        var new_cap     = CAPR(cb);
+        new_cap.base   <- CAPR(cb).base + GPR(rt);
+        new_cap.length <- CAPR(cb).length - GPR(rt);
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -190,8 +192,9 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).offset <- CAPR(cb).offset + GPR(rt)
+        var new_cap     = CAPR(cb);
+        new_cap.offset <- CAPR(cb).offset + GPR(rt);
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -212,8 +215,9 @@ define COP2 > CHERICOP2 > CSet > CSetLen (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcLength,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).length <- GPR(rt)
+        var new_cap = CAPR(cb);
+        new_cap.length <- GPR(rt);
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -228,8 +232,9 @@ define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
         SignalCapException_v(cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).tag <- false
+        var new_cap = CAPR(cb);
+        new_cap.tag <- false;
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -248,8 +253,9 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).perms <- CAPR(cd).perms && GPR(rt)<30:0>
+        var new_cap = CAPR(cb);
+        new_cap.perms <- CAPR(cd).perms && GPR(rt)<30:0>;
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -266,8 +272,9 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).offset <- GPR(rt)
+        var new_cap = CAPR(cb);
+        new_cap.offset <- GPR(rt);
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -320,14 +327,16 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cb)
     else if GPR(rt) == 0 then
     {
-        CAPR(cd).tag <- false;
-        CAPR(cd).sealed <- false;
-        CAPR(cd).perms <- 0;
-        CAPR(cd).base <- 0;
-        CAPR(cd).length <- 0;
-        CAPR(cd).offset <- 0;
-        CAPR(cd).otype <- 0;
-        CAPR(cd).reserved <- 0
+        var new_cap;
+        new_cap.tag <- false;
+        new_cap.sealed <- false;
+        new_cap.perms <- 0;
+        new_cap.base <- 0;
+        new_cap.length <- 0;
+        new_cap.offset <- 0;
+        new_cap.otype <- 0;
+        new_cap.reserved <- 0;
+        CAPR(cd) <- new_cap
     }
     else if not CAPR(cb).tag then
         SignalCapException(capExcTag,cb)
@@ -337,9 +346,10 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcLength,cb)
     else
     {
-        CAPR(cd) <- CAPR(cb);
-        CAPR(cd).base <- CAPR(cb).base + GPR(rt);
-        CAPR(cd).length <- CAPR(cb).length - GPR(rt)
+        var new_cap = CAPR(cb);
+        new_cap.base <- CAPR(cb).base + GPR(rt);
+        new_cap.length <- CAPR(cb).length - GPR(rt);
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -783,8 +793,9 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
         }
         else
         {
-            CAPR(cd) <- PCC;
-            CAPR(cd).offset <- PC + 8;
+            var new_cap = PCC;
+            new_cap.offset <- PC + 8;
+            CAPR(cd) <- new_cap;
             BranchToPCC <- Some (CAPR(cb).offset, CAPR(cb))
         }
     }
@@ -817,9 +828,10 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcLength,ct)
     else
     {
-        CAPR(cd) <- CAPR(cs);
-        CAPR(cd).sealed <- true;
-        CAPR(cd).otype <- (CAPR(ct).base + CAPR(ct).offset)<23:0>
+        var new_cap = CAPR(cs);
+        new_cap.sealed <- true;
+        new_cap.otype <- (CAPR(ct).base + CAPR(ct).offset)<23:0>;
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------
@@ -850,10 +862,11 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcLength,ct)
     else
     {
-        CAPR(cd) <- CAPR(cs);
-        CAPR(cd).sealed <- false;
-        CAPR(cd).otype <- 0;
-        Perms(CAPR(cd).perms).Global <- Perms(CAPR(cs).perms).Global and Perms(CAPR(ct).perms).Global
+        var new_cap = CAPR(cs);
+        new_cap.sealed <- false;
+        new_cap.otype <- 0;
+        Perms(new_cap.perms).Global <- Perms(CAPR(cs).perms).Global and Perms(CAPR(ct).perms).Global;
+        CAPR(cd) <- new_cap
     }
 
 -----------------------------------

@@ -100,8 +100,9 @@ unit SignalException (ExceptionType::ExceptionType) =
     exceptionSignalled <- true;
 
     -- move PCC to EPCC
-    EPCC <- PCC;
-    EPCC.offset <- PC;
+    var new_epcc = PCC;
+    new_epcc.offset <- PC;
+    EPCC <- new_epcc;
     -- move KCC to PCC
     PCC <- KCC;
 
