@@ -313,7 +313,6 @@ string log_l2_write_miss (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex) =
     "write miss, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
-
 string log_l2_updt_sharers (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex, old::NatSet, new::NatSet) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "update sharers, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
@@ -325,6 +324,11 @@ string log_l2_inval_l1 (l1id::nat, addr::CapAddr, idx1::L1SetIndex, idx2::L2SetI
     " line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @L2idx: 0x" : PadLeft (#"0", 3, [idx2]) :
     " @L1idx: 0x" : PadLeft (#"0", 3, [idx1])
+
+string log_l2_pointer_prefetch (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex) =
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "pointer prefetch, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_w_dram (addr::CapAddr, cap::bits(257)) =
     "write DRAM[0x" : PadLeft (#"0", 9, [addr]) :
@@ -444,7 +448,7 @@ L2Entry option L2Hit (cacheType::L1Type, addr::CapAddr) =
         None
 }
 
-bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr) =
+bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 {
     cap = DRAM(addr);
     mark_log(5, log_r_dram (addr, cap));
@@ -457,6 +461,19 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr) =
         L2InvalL1(old_entry.tag:L2Idx(addr), old_entry.sharers, true)
     };
     L2Cache(L2Idx(addr)) <- new_entry;
+    {- Pointer Prefecth
+    -}
+    when Capability(cap).tag and prefetchDepth > 0 do
+    match tryTranslation (Capability(cap).base)
+    {
+        case Some(paddr) =>
+        {
+            _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+            mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
+        }
+        case _ => nothing
+    };
+    {- return -}
     cap
 }
 
@@ -509,7 +526,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
         case None =>
         {
             mark_log (4, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
-            cacheLine <- L2ServeMiss(cacheType, addr)
+            cacheLine <- L2ServeMiss(cacheType, addr, 1)
         }
     };
     cacheLine

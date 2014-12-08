@@ -69,6 +69,42 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
     }
 }
 
+pAddr option tryTranslation (vAddr::vAddr) =
+match LookupTLB (vAddr<63:62>, vAddr<39:13>)
+{
+    case list {(_, e)} =>
+    {
+        EvenOddBit = match e.Mask
+        {
+            case 0b0000_0000_0000 => 12
+            case 0b0000_0000_0011 => 14
+            case 0b0000_0000_1111 => 16
+            case 0b0000_0011_1111 => 18
+            case 0b0000_1111_1111 => 20
+            case 0b0011_1111_1111 => 22
+            case 0b1111_1111_1111 => 24
+            case _                => #UNPREDICTABLE ("TLB: bad mask")
+        };
+
+        S, L, PFN, C, D, V =
+        if vAddr<EvenOddBit> then
+            e.S1, e.L1, e.PFN1, e.C1, e.D1, e.V1
+        else
+            e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
+
+        if V then
+        {
+            PFN_     = [PFN]   :: bool list;
+            vAddr_   = [vAddr] :: bool list;
+            pAddr    = PFN_<27:EvenOddBit-12>
+               : vAddr_<EvenOddBit-1:0>;
+            Some([pAddr])
+        }
+        else None
+    }
+    case _ => None
+}
+
 TLBEntry ModifyTLB (ie::TLBEntry) =
 {
    eHi = CP0.EntryHi;
