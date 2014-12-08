@@ -263,6 +263,12 @@ string log_l1_write_hit (cacheType::L1Type, addr::CapAddr, idx::L1SetIndex, data
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_257_block(data)
 
+string log_l1_write_miss (cacheType::L1Type, addr::CapAddr, idx::L1SetIndex) =
+    "L1 " : [L1ID(cacheType, procID)] :
+    " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write miss line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
+
 string log_l2_entry(entry::L2Entry) =
     "[" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
     -- : "|" : [entry.data]
@@ -301,6 +307,12 @@ string log_l2_write_hit (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex, data
     "write hit, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
     " <- " : log_257_block(data)
+
+string log_l2_write_miss (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex) =
+    "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
+    "write miss, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
+    " @idx: 0x" : PadLeft (#"0", 3, [idx])
+
 
 string log_l2_updt_sharers (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex, old::NatSet, new::NatSet) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
@@ -394,10 +406,11 @@ NatSet L2UpdateSharers (cacheType::L1Type, cid::bits(8), val::bool, sharers::Nat
 -- L2 API
 --------------------------------------------------------------------------------
 
-unit L2InvalL1(addr::CapAddr, sharers::NatSet) =
+unit L2InvalL1(addr::CapAddr, sharers::NatSet, invalCurrent::bool) =
 {
     currentProc = procID;
     foreach sharer in sharers do
+    when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
     {
         procID <- [sharer::nat div 2];
         if (sharer mod 2) == 0 then
@@ -441,7 +454,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr) =
     when old_entry.valid do
     {
         mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
-        L2InvalL1(old_entry.tag:L2Idx(addr), old_entry.sharers)
+        L2InvalL1(old_entry.tag:L2Idx(addr), old_entry.sharers, true)
     };
     L2Cache(L2Idx(addr)) <- new_entry;
     cap
@@ -458,7 +471,11 @@ L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits
             mark_log (4, log_l2_write_hit(cacheType, addr, L2Idx(addr), new_data));
             Some (L2Cache(L2Idx(addr)))
         }
-        case None => None
+        case None =>
+        {
+            mark_log (4, log_l2_write_miss(cacheType, addr, L2Idx(addr)));
+            None
+        }
     }
 
 unit L2ServeWrite (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
@@ -472,7 +489,7 @@ unit L2ServeWrite (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257),
 unit L2HandleCoherence (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257), entry::L2Entry option) =
     match entry
     {
-        case Some (cacheEntry) => L2InvalL1(addr, cacheEntry.sharers)
+        case Some (cacheEntry) => L2InvalL1(addr, cacheEntry.sharers, false)
         case None              => nothing
     }
 
@@ -539,7 +556,7 @@ unit L1Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mas
             L1Cache(cacheType, L1Idx(addr)) <- mkL1CacheEntry(true, cacheEntry.tag, new_data);
             mark_log (3, log_l1_write_hit(cacheType, addr, L1Idx(addr), new_data))
         }
-        case None => nothing
+        case None => mark_log (3, log_l1_write_miss(cacheType, addr, L1Idx(addr)))
     }
 
 unit L1ServeWrite (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
