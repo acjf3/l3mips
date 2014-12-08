@@ -327,7 +327,7 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cb)
     else if GPR(rt) == 0 then
     {
-        var new_cap;
+        var new_cap::Capability;
         new_cap.tag <- false;
         new_cap.sealed <- false;
         new_cap.perms <- 0;
