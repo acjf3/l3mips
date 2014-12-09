@@ -450,17 +450,34 @@ L2Entry option L2Hit (cacheType::L1Type, addr::CapAddr) =
 
 bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 {
-    cap = DRAM(addr);
-    mark_log(5, log_r_dram (addr, cap));
-    new_sharers = L2UpdateSharers(cacheType, procID, true, Nil);
-    new_entry = mkL2CacheEntry(true, L2Tag(addr), new_sharers, cap);
-    old_entry = L2Cache(L2Idx(addr));
-    when old_entry.valid do
+    cap  = DRAM(addr);
+
+    cap0 = DRAM(addr<34:2> : '00');
+    cap1 = DRAM(addr<34:2> : '01');
+    cap2 = DRAM(addr<34:2> : '10');
+    cap3 = DRAM(addr<34:2> : '11');
+    caps = list {(cap0, '00'), (cap1, '01'), (cap2, '10'), (cap3, '11')};
+    mark_log(5, log_r_dram (addr<34:2> : '00', cap0));
+    mark_log(5, log_r_dram (addr<34:2> : '01', cap1));
+    mark_log(5, log_r_dram (addr<34:2> : '10', cap2));
+    mark_log(5, log_r_dram (addr<34:2> : '11', cap3));
+
+    foreach elem in caps do
     {
-        mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
-        L2InvalL1(old_entry.tag:L2Idx(addr), old_entry.sharers, true)
+        this_addr = addr<34:2> : Snd(elem);
+        var new_sharers = Nil;
+        when (Snd(elem) == addr<1:0>) do
+            new_sharers <- L2UpdateSharers(cacheType, procID, true, Nil);
+        new_entry = mkL2CacheEntry(true, L2Tag(this_addr), new_sharers, Fst(elem));
+        old_entry = L2Cache(L2Idx(this_addr));
+        when old_entry.valid do
+        {
+            mark_log (4, log_l2_evict(cacheType, L2Idx(this_addr), old_entry, new_entry));
+            L2InvalL1(old_entry.tag:L2Idx(this_addr), old_entry.sharers, true)
+        };
+        L2Cache(L2Idx(this_addr)) <- new_entry
     };
-    L2Cache(L2Idx(addr)) <- new_entry;
+
     {- Pointer Prefecth
     -}
     when Capability(cap).tag and prefetchDepth > 0 do
@@ -473,6 +490,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
         }
         case _ => nothing
     };
+
     {- return -}
     cap
 }
