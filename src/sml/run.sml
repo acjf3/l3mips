@@ -20,6 +20,7 @@ val current_core_id = ref 0
 val nb_core = ref 1
 val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
+val l2_ptr_prefetch_depth = ref 0
 val schedule = ref (NONE: TextIO.instream option)
 
 (* --------------------------------------------------------------------------
@@ -355,6 +356,7 @@ in
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
+      ; mips.l2PtrPrefetchDepth := !l2_ptr_prefetch_depth
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app
@@ -504,6 +506,8 @@ val () =
           val c = Option.getOpt (Option.map getNumber c, ~1)
           val (n, l) = processOption "--nbcore" l
           val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
+          val (n, l) = processOption "--l2-ptr-prefetch" l
+          val () = l2_ptr_prefetch_depth := Option.getOpt (Option.map getNumber n, 1)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, t)
