@@ -411,7 +411,7 @@ NatSet L2UpdateSharers (cacheType::L1Type, cid::bits(8), val::bool, sharers::Nat
 --------------------------------------------------------------------------------
 
 unit L2InvalL1(addr::CapAddr, sharers::NatSet, invalCurrent::bool) =
-{
+when totalCore > 1 do {
     currentProc = procID;
     foreach sharer in sharers do
     when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
@@ -475,20 +475,20 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
             mark_log (4, log_l2_evict(cacheType, L2Idx(this_addr), old_entry, new_entry));
             L2InvalL1(old_entry.tag:L2Idx(this_addr), old_entry.sharers, true)
         };
-        L2Cache(L2Idx(this_addr)) <- new_entry
-    };
-
-    {- Pointer Prefecth
-    -}
-    when Capability(cap).tag and prefetchDepth > 0 do
-    match tryTranslation (Capability(cap).base)
-    {
-        case Some(paddr) =>
+        {- Pointer Prefecth
+        -}
+        when Capability(Fst(elem)).tag and prefetchDepth > 0 do
+        match tryTranslation (Capability(Fst(elem)).base + Capability(Fst(elem)).offset)
         {
-            _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
-            mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
-        }
-        case _ => nothing
+            case Some(paddr) =>
+            {
+                _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+                mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
+            }
+            case _ => nothing
+        };
+        {- update cache -}
+        L2Cache(L2Idx(this_addr)) <- new_entry
     };
 
     {- return -}
