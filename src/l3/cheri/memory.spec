@@ -273,7 +273,7 @@ string log_l1_write_miss (cacheType::L1Type, addr::CapAddr, idx::L1SetIndex) =
     " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
 string log_l2_entry(entry::L2Entry) =
-    "prefetch stats (lvl: ": [Fst(entry.stats)] : ", reads: " : [Snd(entry.stats)] : ")" :
+    "prefetch stats: (lvl: ": [Fst(entry.stats)] : ", reads: " : [Snd(entry.stats)] : ")" :
     " [" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
     -- : "|" : [entry.data]
 
