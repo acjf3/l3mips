@@ -254,7 +254,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else
     {
         var new_cap = CAPR(cb);
-        new_cap.perms <- CAPR(cd).perms && GPR(rt)<30:0>;
+        new_cap.perms <- CAPR(cb).perms && GPR(rt)<30:0>;
         CAPR(cd) <- new_cap
     }
 
