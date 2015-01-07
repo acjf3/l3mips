@@ -170,7 +170,7 @@ type pfetchStats = nat * nat
 record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::bits(257)}
 type L2SetIndex = bits(11)
 type DirectMappedL2 = L2SetIndex -> L2Entry
-record L2MetaEntry {wasInL2::bool wasUsed::bool}
+record L2MetaEntry {wasInL2::bool wasUsed::bool evictedUseful::bool}
 
 declare l2LineWidth :: nat
 declare l2PtrPrefetchDepth :: nat
@@ -281,7 +281,7 @@ string log_l2_entry(entry::L2Entry) =
     -- : "|" : [entry.data]
 
 string log_l2_meta_entry(mentry::L2MetaEntry) =
-    "l2 meta entry (was in L2: ": [mentry.wasInL2] : ", was used: " : [mentry.wasUsed] : ")"
+    "l2 meta entry (was in L2: ": [mentry.wasInL2] : ", was used: " : [mentry.wasUsed] : ", evicted useful: " : [mentry.evictedUseful] : ")"
 
 string log_l2_read (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
@@ -305,8 +305,8 @@ string log_l2_read_miss (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex) =
 string log_l2_evict (cacheType::L1Type, idx::L2SetIndex, old::L2Entry, new::L2Entry) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "evict @idx: 0x" : PadLeft (#"0", 3, [idx]) :
-    " - old: " : log_l2_entry(old) :
-    " - new: " : log_l2_entry(new)
+    " - old: " : log_l2_entry(old) : " | " : log_l2_meta_entry (metaL2(old.tag:idx)) :
+    " - new: " : log_l2_entry(new) : " | " : log_l2_meta_entry (metaL2(new.tag:idx))
 
 string log_l2_write (cacheType::L1Type, addr::CapAddr, idx::L2SetIndex, data::bits(257)) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
@@ -428,11 +428,12 @@ L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, stats::pfetchStats, sharers::Nat
     line
 }
 
-L2MetaEntry mkL2MetaEntry(wasInL2::bool, wasUsed::bool) =
+L2MetaEntry mkL2MetaEntry(wasInL2::bool, wasUsed::bool, evictedUseful::bool) =
 {
     var metaEntry::L2MetaEntry;
     metaEntry.wasInL2 <- wasInL2;
     metaEntry.wasUsed <- wasUsed;
+    metaEntry.evictedUseful <- evictedUseful;
     metaEntry
 }
 
@@ -505,8 +506,10 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
         else
             new_entry <- mkL2CacheEntry(true, L2Tag(this_addr), (l2PtrPrefetchDepth-prefetchDepth, 0) , Nil, Fst(elem));
         old_entry = L2Cache(L2Idx(this_addr));
+        var evicted_useful = false;
         when old_entry.valid do
         {
+            evicted_useful <- (Snd(old_entry.stats) > 0);
             mark_log (4, log_l2_evict(cacheType, L2Idx(this_addr), old_entry, new_entry));
             L2InvalL1(old_entry.tag:L2Idx(this_addr), old_entry.sharers, true)
         };
@@ -523,7 +526,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
             case _ => nothing
         };
         {- update cache -}
-        metaL2(this_addr) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth));
+        metaL2(this_addr) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
         L2Cache(L2Idx(this_addr)) <- new_entry
     };
 
@@ -672,7 +675,7 @@ unit InitMEM =
         c_L1_instr([i]) <- InitMap(mkL1CacheEntry(false, UNKNOWN, UNKNOWN))
     };
     L2Cache <- InitMap(mkL2CacheEntry(false, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN));
-    metaL2  <- InitMap(mkL2MetaEntry(false, false))
+    metaL2  <- InitMap(mkL2MetaEntry(false, false, false))
 }
 
 dword ReadData (dwordAddr::bits(37)) =
