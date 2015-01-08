@@ -87,6 +87,9 @@ SMLSRCBASE+=l3mips.mlb
 MLBFILE=l3mips.mlb
 SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 
+# checking memory subsystem params
+L2WAYS ?= 1
+
 # make targets
 #######################################
 SIM ?= l3mips
@@ -97,9 +100,11 @@ all: ${SIM}
 
 all: l3mips
 
-
 hol: ${L3SRC}
 	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
+
+$(L3SRCDIR)/cheri/memory.spec: $(L3SRCDIR)/cheri/memory.spec.m4
+	m4 -D L2WAYS=$(L2WAYS) $^ > $@
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
@@ -112,3 +117,4 @@ ${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
+	rm -f $(L3SRCDIR)/cheri/memory.spec
