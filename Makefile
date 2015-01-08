@@ -73,8 +73,6 @@ SIM_PROFILE ?= l3mips_prof
 
 all: ${SIM}
 
-all: l3mips
-
 hol: ${L3SRC}
 	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
 

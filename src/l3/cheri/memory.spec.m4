@@ -184,7 +184,6 @@ record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::
 type DirectMappedL2 = L2Index -> L2Entry
 record L2MetaEntry {wasInL2::bool wasUsed::bool evictedUseful::bool}
 
-declare l2LineWidth :: nat
 declare l2PtrPrefetchDepth :: nat
 
 declare c_L2 :: nat -> DirectMappedL2
@@ -533,7 +532,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 {
     cap  = DRAM(addr);
 
-    caps = getCapList(addr, l2LineWidth);
+    caps = getCapList(addr, eval(L2LINESIZE/32));
 
     foreach elem in caps do
     {
