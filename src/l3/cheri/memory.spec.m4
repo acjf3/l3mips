@@ -12,6 +12,7 @@ define(`L2ADDRWIDTH', 40)dnl -- address size in 40 bits
 define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
 define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
 define(`L2TAGWIDTH', eval(L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH))dnl -- size of tag feild in bits
+define(`L2LINENUMBERWIDTH', eval(L2ADDRWIDTH-L2OFFSETWIDTH))dnl -- size of linenumber feild in bits
 
 type NatSet = nat list
 
@@ -178,6 +179,7 @@ component L1Cache (cacheType::L1Type, idx::L1SetIndex) :: L1Entry
 type L2Offset = bits(L2OFFSETWIDTH)
 type L2Index = bits(L2INDEXWIDTH)
 type L2Tag = bits(L2TAGWIDTH)
+type L2LineNumber = bits(L2LINENUMBERWIDTH)
 
 type pfetchStats = nat * nat
 record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::bits(257)}
@@ -196,7 +198,7 @@ component L2Cache (way::nat, idx::L2Index) :: L2Entry
 }
 declare l2LastVictimWay::nat
 
-declare metaL2 :: CapAddr -> L2MetaEntry
+declare metaL2 :: L2LineNumber -> L2MetaEntry
 
 declare DRAM :: CapAddr -> bits(257) -- 257 bits accesses (256 cap/data + tag bit)
 
@@ -320,7 +322,7 @@ string log_l2_read_miss (cacheType::L1Type, addr::CapAddr, idx::L2Index) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
     "read miss, line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
-    " - " : log_l2_meta_entry (metaL2(addr))
+    " - " : log_l2_meta_entry (metaL2(addr<34:eval(35-L2LINENUMBERWIDTH)>))
 
 string log_l2_evict (cacheType::L1Type, idx::L2Index, old::L2Entry, new::L2Entry) =
     "L2 " : " (Core:" : [procID] : " " : L1TypeToString(cacheType) : ") " :
@@ -431,8 +433,8 @@ L1Entry mkL1CacheEntry(valid::bool, tag::L1Tag, data::bits(257)) =
 
 -- Direct mapped L2
 
-L2Index l2_hash_default(addr::CapAddr) = addr<L2INDEXWIDTH-1:0>
-L2Tag l2_tag_default(addr::CapAddr) = addr<34:L2INDEXWIDTH>
+L2Index l2_hash_default(addr::CapAddr) = addr<eval(34-L2TAGWIDTH):eval(35-L2TAGWIDTH-L2INDEXWIDTH)>
+L2Tag l2_tag_default(addr::CapAddr) = addr<34:eval(35-L2TAGWIDTH)>
 
 L2Index L2Idx(addr::CapAddr) = l2_hash_default(addr)
 L2Tag L2Tag(addr::CapAddr) = l2_tag_default(addr)
@@ -549,7 +551,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
         {
             evicted_useful <- (Snd(old_entry.stats) > 0);
             mark_log (4, log_l2_evict(cacheType, L2Idx(this_addr), old_entry, new_entry));
-            L2InvalL1(old_entry.tag:L2Idx(this_addr), old_entry.sharers, true)
+            L2InvalL1(old_entry.tag:this_addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
         };
         {- Pointer Prefecth
         -}
@@ -564,7 +566,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
             case _ => nothing
         };
         {- update cache -}
-        metaL2(this_addr) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
+        metaL2(this_addr<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
         L2Cache(victimWay,L2Idx(this_addr)) <- new_entry
     };
 
