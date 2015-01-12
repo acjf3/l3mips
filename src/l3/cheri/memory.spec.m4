@@ -3,8 +3,9 @@
 -- (c) Alexandre Joannou, University of Cambridge
 --------------------------------------------------------------------------------
 
-dnl -- compile time values
+dnl -- math utils
 define(`log2', `ifelse($1, 1, 0, `eval(1 + log2(eval($1 / 2)))')')dnl -- compute log2
+dnl -- compile time values
 define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
 define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
 define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
@@ -13,7 +14,10 @@ define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
 define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
 define(`L2TAGWIDTH', eval(L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH))dnl -- size of tag feild in bits
 define(`L2LINENUMBERWIDTH', eval(L2ADDRWIDTH-L2OFFSETWIDTH))dnl -- size of linenumber feild in bits
-
+dnl -- indexing utils
+define(`L2CHUNKIDX', ifelse(L2LINESIZE,32,0,L2LINESIZE,64,[$1<0>],L2LINESIZE,128,[$1<1:0>]))dnl
+define(`REPLACE',Take($1,$3):Cons($2,Drop($1+1,$3)))dnl
+dnl
 type NatSet = nat list
 
 NatSet natSetInsert(x::nat, S::NatSet) =
@@ -182,7 +186,7 @@ type L2Tag = bits(L2TAGWIDTH)
 type L2LineNumber = bits(L2LINENUMBERWIDTH)
 
 type pfetchStats = nat * nat
-record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::bits(257)}
+record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::bits(257) list}
 type DirectMappedL2 = L2Index -> L2Entry
 record L2MetaEntry {wasInL2::bool wasUsed::bool evictedUseful::bool}
 
@@ -297,10 +301,18 @@ string log_l1_write_miss (cacheType::L1Type, addr::CapAddr, idx::L1SetIndex) =
     "write miss line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx])
 
+string log_l2_entry_data (data::bits(257) list) =
+{
+    var str = "";
+    foreach chunk in data do
+        str <- str : log_257_block (chunk);
+    str
+}
+
 string log_l2_entry(entry::L2Entry) =
     "prefetch stats: (lvl: ": [Fst(entry.stats)] : ", reads: " : [Snd(entry.stats)] : ")" :
     " [" : [entry.valid] : "|0x" : PadLeft (#"0", 7, [entry.tag]) : "]"
-    -- : "|" : [entry.data]
+    -- : "|" : log_l2_entry_data(entry.data)
 
 string log_l2_meta_entry(mentry::L2MetaEntry) =
     "l2 meta entry (was in L2: ": [mentry.wasInL2] : ", was used: " : [mentry.wasUsed] : ", evicted useful: " : [mentry.evictedUseful] : ")"
@@ -315,7 +327,7 @@ string log_l2_read_hit (cacheType::L1Type, addr::CapAddr, idx::L2Index, entry::L
     "read hit, prefetch stats: (lvl: ": [Fst(entry.stats)] : ", reads: " : [Snd(entry.stats)] : ")":
     " line_addr: 0x" : PadLeft (#"0", 9, [addr]) :
     " @idx: 0x" : PadLeft (#"0", 3, [idx]) :
-    " = " : log_257_block(entry.data) :
+    " = " : log_l2_entry_data(entry.data) :
     " sharers = " : log_sharers(entry.sharers)
 
 string log_l2_read_miss (cacheType::L1Type, addr::CapAddr, idx::L2Index) =
@@ -384,25 +396,25 @@ string log_r_cap_mem (addr::CapAddr, cap::bits(257)) =
 -- Internal functions
 --------------------------------------------------------------------------------
 
-(bits(257) * CapAddr) list getCapList (addr::CapAddr, width::nat) =
+bits(257) list * CapAddr list getCapList (addr::CapAddr, width::nat) =
 {
-    var caps :: (bits(257) * CapAddr) list = Nil;
+    var caps :: bits(257) list = Nil;
 
     addr_list :: CapAddr list = match width
     {
         case 1 => list {addr}
-        case 2 => list {addr<34:1> : '0', addr<34:1> : '1'}
-        case 4 => list {addr<34:2> : '00', addr<34:2> : '01', addr<34:2> : '10', addr<34:2> : '11'}
+        case 2 => list {addr<34:1> : '1', addr<34:1> : '0'}
+        case 4 => list {addr<34:2> : '11', addr<34:2> : '10', addr<34:2> : '01', addr<34:2> : '00'}
         case _ => #UNPREDICTABLE ("Unsupported fetch width (can only be 1, 2 or 4)")
     };
 
     foreach address in addr_list do
     {
         cap = DRAM(address);
-        caps <- Cons((cap, address), caps);
+        caps <- Cons(cap, caps);
         mark_log(5, log_r_dram (address, cap))
     };
-    caps
+    (caps, addr_list)
 }
 
 {-
@@ -439,7 +451,7 @@ L2Tag l2_tag_default(addr::CapAddr) = addr<34:eval(35-L2TAGWIDTH)>
 L2Index L2Idx(addr::CapAddr) = l2_hash_default(addr)
 L2Tag L2Tag(addr::CapAddr) = l2_tag_default(addr)
 
-L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, stats::pfetchStats, sharers::NatSet, data::bits(257)) =
+L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, stats::pfetchStats, sharers::NatSet, data::bits(257) list) =
 {
     var line::L2Entry;
     line.valid      <- valid;
@@ -534,29 +546,28 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 {
     cap  = DRAM(addr);
 
-    caps = getCapList(addr, eval(L2LINESIZE/32));
+    caps, addr_list = getCapList(addr, eval(L2LINESIZE/32));
 
+    var new_entry;
+    if (prefetchDepth == l2PtrPrefetchDepth) then
+        new_entry <- mkL2CacheEntry(true, L2Tag(addr), (0, 1) , L2UpdateSharers(cacheType, procID, true, Nil), caps)
+    else
+        new_entry <- mkL2CacheEntry(true, L2Tag(addr), (l2PtrPrefetchDepth-prefetchDepth, 0) , Nil, caps);
+
+    victimWay = L2ReplacePolicy(addr);
+    old_entry = L2Cache(victimWay,L2Idx(addr));
+    var evicted_useful = false;
+    when old_entry.valid do
+    {
+        evicted_useful <- (Snd(old_entry.stats) > 0);
+        mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
+        L2InvalL1(old_entry.tag:addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
+    };
+    {- Pointer Prefecth -}
     foreach elem in caps do
     {
-        this_addr = Snd(elem);
-        var new_entry;
-        if (this_addr == addr) and (prefetchDepth == l2PtrPrefetchDepth) then
-            new_entry <- mkL2CacheEntry(true, L2Tag(this_addr), (0, 1) , L2UpdateSharers(cacheType, procID, true, Nil), Fst(elem))
-        else
-            new_entry <- mkL2CacheEntry(true, L2Tag(this_addr), (l2PtrPrefetchDepth-prefetchDepth, 0) , Nil, Fst(elem));
-        victimWay = L2ReplacePolicy(this_addr);
-        old_entry = L2Cache(victimWay,L2Idx(this_addr));
-        var evicted_useful = false;
-        when old_entry.valid do
-        {
-            evicted_useful <- (Snd(old_entry.stats) > 0);
-            mark_log (4, log_l2_evict(cacheType, L2Idx(this_addr), old_entry, new_entry));
-            L2InvalL1(old_entry.tag:this_addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
-        };
-        {- Pointer Prefecth
-        -}
-        when Capability(Fst(elem)).tag and prefetchDepth > 0 do
-        match tryTranslation (Capability(Fst(elem)).base + Capability(Fst(elem)).offset)
+        when Capability(elem).tag and prefetchDepth > 0 do
+        match tryTranslation (Capability(elem).base + Capability(elem).offset)
         {
             case Some(paddr) =>
             {
@@ -564,12 +575,14 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
                 mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
             }
             case _ => nothing
-        };
-        {- update cache -}
-        metaL2(this_addr<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
-        L2Cache(victimWay,L2Idx(this_addr)) <- new_entry
+        }
     };
-
+    {- update cache -}
+    foreach a in addr_list do
+    {
+        metaL2(a<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
+        L2Cache(victimWay,L2Idx(a)) <- new_entry
+    };
     {- return -}
     cap
 }
@@ -579,9 +592,9 @@ L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits
     {
         case Some (cacheEntry, way) =>
         {
-            var new_data = mergeBlocks257 (cacheEntry.data, data, mask);
+            var new_data = mergeBlocks257 (Element(L2CHUNKIDX(addr),cacheEntry.data), data, mask);
             new_data<256> <- tag;
-            L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.stats, cacheEntry.sharers, new_data);
+            L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.stats, cacheEntry.sharers, REPLACE(L2CHUNKIDX(addr),new_data,cacheEntry.data));
             mark_log (4, log_l2_write_hit(cacheType, addr, L2Idx(addr), new_data));
             Some (L2Cache(way,L2Idx(addr)))
         }
@@ -618,7 +631,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
             new_sharers = L2UpdateSharers(cacheType, procID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, (Fst(cacheEntry.stats), Snd(cacheEntry.stats)+1), new_sharers, cacheEntry.data);
             mark_log (4, log_l2_read_hit(cacheType, addr, L2Idx(addr), L2Cache(way,L2Idx(addr))));
-            cacheLine <- cacheEntry.data
+            cacheLine <- Element(L2CHUNKIDX(addr), cacheEntry.data)
         }
         case None =>
         {
