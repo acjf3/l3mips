@@ -543,8 +543,12 @@ nat naiveReplace(addr::CapAddr) =
 nat LRUReplace(addr::CapAddr) =
 {
     r = Reverse(l2LRUBits(L2Idx(addr)));
-    l2LRUBits(L2Idx(addr)) <- Reverse(Tail(r));
-    Head(r)
+    if r == Nil then 0
+    else
+    {
+        l2LRUBits(L2Idx(addr)) <- Reverse(Tail(r));
+        Head(r)
+    }
 }
 
 nat innerL2ReplacePolicy(addr::CapAddr) =
