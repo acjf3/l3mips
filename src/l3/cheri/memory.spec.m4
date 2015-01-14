@@ -200,7 +200,12 @@ component L2Cache (way::nat, idx::L2Index) :: L2Entry
                     ; m(idx) <- value
                     ; c_L2(way) <- m }
 }
+
+declare l2ReplacePolicy :: nat
+-- naive replace policy
 declare l2LastVictimWay::nat
+-- LRU replace policy
+declare l2LRUBits::L2Index -> nat list
 
 declare metaL2 :: L2LineNumber -> L2MetaEntry
 
@@ -528,18 +533,38 @@ when totalCore > 1 do {
     ret
 }
 
+nat naiveReplace(addr::CapAddr) =
+{
+    ret = l2LastVictimWay;
+    l2LastVictimWay <- (l2LastVictimWay + 1) mod L2WAYS;
+    ret
+}
+
+nat LRUReplace(addr::CapAddr) =
+{
+    r = Reverse(l2LRUBits(L2Idx(addr)));
+    l2LRUBits(L2Idx(addr)) <- Reverse(Tail(r));
+    Head(r)
+}
+
+nat innerL2ReplacePolicy(addr::CapAddr) =
+match l2ReplacePolicy
+{
+    case 0 => naiveReplace(addr)
+    case 1 => LRUReplace(addr)
+}
+
 nat L2ReplacePolicy(addr::CapAddr) =
 {
     var found_empty = false;
-    var ret = l2LastVictimWay;
+    var ret;
     -- chose empty way
     for i in L2WAYS .. 1 do
         when ! L2Cache(i,L2Idx(addr)).valid do
             {found_empty <- true; ret <- i};
-    -- no empty, choose pseudo random
-    when ! found_empty do
-        l2LastVictimWay <- (l2LastVictimWay + 1) mod L2WAYS;
-    ret
+    -- potential call to inner replace policy
+    if ! found_empty then innerL2ReplacePolicy(addr)
+    else ret
 }
 
 bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
@@ -631,6 +656,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
             new_sharers = L2UpdateSharers(cacheType, procID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, (Fst(cacheEntry.stats), Snd(cacheEntry.stats)+1), new_sharers, cacheEntry.data);
             mark_log (4, log_l2_read_hit(cacheType, addr, L2Idx(addr), L2Cache(way,L2Idx(addr))));
+            l2LRUBits(L2Idx(addr)) <- way @ l2LRUBits(L2Idx(addr));
             cacheLine <- Element(L2CHUNKIDX(addr), cacheEntry.data)
         }
         case None =>
