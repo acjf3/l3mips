@@ -537,7 +537,7 @@ nat naiveReplace(addr::CapAddr) =
 {
     ret = l2LastVictimWay;
     l2LastVictimWay <- (l2LastVictimWay + 1) mod L2WAYS;
-    ret
+    (ret + 1)
 }
 
 nat LRUReplace(addr::CapAddr) =
@@ -757,7 +757,7 @@ unit InitMEM =
     };
     for i in 1 .. L2WAYS do
         c_L2(i) <- InitMap(mkL2CacheEntry(false, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN));
-    l2LastVictimWay <- 1;
+    l2LastVictimWay <- 0;
     metaL2  <- InitMap(mkL2MetaEntry(false, false, false))
 }
 
