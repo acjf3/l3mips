@@ -757,7 +757,7 @@ unit InitMEM =
     };
     for i in 1 .. L2WAYS do
         c_L2(i) <- InitMap(mkL2CacheEntry(false, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN));
-    l2LastVictimWay <- 0;
+    l2LastVictimWay <- 1;
     metaL2  <- InitMap(mkL2MetaEntry(false, false, false))
 }
 
