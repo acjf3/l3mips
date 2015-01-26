@@ -608,10 +608,8 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     };
     {- update cache -}
     foreach a in addr_list do
-    {
         metaL2(a<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
-        L2Cache(victimWay,L2Idx(a)) <- new_entry
-    };
+    L2Cache(victimWay,L2Idx(addr)) <- new_entry;
     {- return -}
     cap
 }
