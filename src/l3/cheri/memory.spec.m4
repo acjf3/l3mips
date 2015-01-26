@@ -543,7 +543,7 @@ nat naiveReplace(addr::CapAddr) =
 nat LRUReplace(addr::CapAddr) =
 {
     r = Reverse(l2LRUBits(L2Idx(addr)));
-    if r == Nil then 0
+    if r == Nil then 1
     else
     {
         l2LRUBits(L2Idx(addr)) <- Reverse(Tail(r));
