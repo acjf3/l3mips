@@ -20,8 +20,8 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config1.IS <- 3;         -- Icache sets per way
    CP0.Config1.IL <- 4;         -- Icache line size
    CP0.Config1.IA <- 0;         -- Icache associativity
-   CP0.Config1.DS <- 3;         -- Dcache sets per way
-   CP0.Config1.DL <- 4;         -- Dcache line size
+   CP0.Config1.DS <- 1;         -- Dcache sets per way
+   CP0.Config1.DL <- 6;         -- Dcache line size
    CP0.Config1.DA <- 0;         -- Dcache associativity
    CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
@@ -38,9 +38,9 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config2.TL <- 0;         -- Tertiary cache line size
    CP0.Config2.TA <- 0;         -- Tertiary cache associativity
    CP0.Config2.SU <- 3;         -- Secondary cache control
-   CP0.Config2.SS <- 8;         -- Secondary cache sets per way
-   CP0.Config2.SL <- 4;         -- Secondary cache line size
-   CP0.Config2.SA <- 0;         -- Secondary cache associativity
+   CP0.Config2.SS <- 1;         -- Secondary cache sets per way
+   CP0.Config2.SL <- 6;         -- Secondary cache line size
+   CP0.Config2.SA <- 3;         -- Secondary cache associativity
 
    -- Configuration register 3 (mimic BERI)
    CP0.Config3.M  <- true;      -- true if config register 4 exists
