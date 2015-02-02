@@ -133,8 +133,9 @@ word option Fetch =
 
    when CP0.Compare == CP0.Count do
    {
-      CP0.Cause.IP<7> <- true;
-      CP0.Cause.TI <- true
+      CP0.Cause.IP<7> <- true
+      -- TI not in MIPS R4000
+      -- CP0.Cause.TI <- true
    };
 
    when CP0.Status.IE and not (CP0.Status.EXL or CP0.Status.ERL) do
