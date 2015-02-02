@@ -521,7 +521,7 @@ when totalCore > 1 do {
     procID <- currentProc
 }
 
-(L2Entry * nat) option L2Hit (cacheType::L1Type, addr::CapAddr) =
+(L2Entry * nat) option L2Hit (addr::CapAddr) =
 {
     var ret = None;
     for i in L2WAYS .. 1 do
@@ -598,10 +598,14 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
         when Capability(elem).tag and prefetchDepth > 0 do
         match tryTranslation (Capability(elem).base + Capability(elem).offset)
         {
-            case Some(paddr) =>
+            case Some(paddr) => match L2Hit (paddr<39:5>)
             {
-                _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
-                mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
+                case None =>
+                {
+                    _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+                    mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
+                }
+                case _ => nothing
             }
             case _ => nothing
         }
@@ -615,7 +619,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 }
 
 L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
-    match L2Hit (cacheType, addr)
+    match L2Hit (addr)
     {
         case Some (cacheEntry, way) =>
         {
@@ -651,7 +655,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
 {
     mark_log (4, log_l2_read(cacheType, addr, L2Idx(addr)));
     var cacheLine;
-    match L2Hit (cacheType, addr)
+    match L2Hit (addr)
     {
         case Some (cacheEntry, way) =>
         {
