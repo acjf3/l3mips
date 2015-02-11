@@ -628,7 +628,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcLength,cb)
     else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
-    else if addr<3:0> <> 0 then
+    else if addr<2:0> <> 0 then
     {
         CP0.BadVAddr <- addr;
         SignalException(AdEL)
@@ -718,11 +718,11 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcSeal,cb)
     else if not Perms(CAPR(cb).perms).Permit_Store then
         SignalCapException(capExcPermStore,cb)
-    else if SignExtend(offset) + ('0':GPR(rt)) + 32 >+ ('0':CAPR(cb).length) then
+    else if SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':CAPR(cb).length) then
         SignalCapException(capExcLength,cb)
     else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
-    else if addr<4:0> <> 0 then
+    else if addr<2:0> <> 0 then
     {
         CP0.BadVAddr <- addr;
         SignalException(AdES)
