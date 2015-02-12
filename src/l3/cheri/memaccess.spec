@@ -56,6 +56,8 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
         when found == false do
             ret <- ReadData (a);
 
+        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
+
         return ret
     }
     else return UNKNOWN
@@ -97,6 +99,8 @@ Capability LoadCap (vAddr::vAddr) =
         Capability.tag <- if (L) then false else TAG(a);
 
         LLbit <- None;
+
+        mark_log (2, "Load cap: " : log_load_cap (pAddr, Capability));
 
         return Capability
     }
@@ -163,7 +167,8 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                 WriteData(a, MemElem, mask);
                 TAG(a<36:2>) <- false
             }
-        }
+        };
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)")
     };
     return sc_success
 }
@@ -207,7 +212,7 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
                     c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                         c_LLbit([core]) <- Some (false);
 
-            mark_log (2, log_store_cap (pAddr, Capability));
+            mark_log (2, "Store cap: " : log_store_cap (pAddr, Capability));
 
             WriteData(a:'00', &Capability<255:192>, ~0);
             WriteData(a:'01', &Capability<191:128>, ~0);

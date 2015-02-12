@@ -90,6 +90,7 @@ string log_cap_write (cap::Capability) =
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
 string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":log_cap_write(cap)
+string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[0x":hex40(pAddr):"]"
 string log_cap_exce (e::bits(8), cr::bits(8)) =
 {
     m = c_capr(procID);
