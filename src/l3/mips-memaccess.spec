@@ -52,6 +52,8 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
         when found == false do
             ret <- ReadData (a);
 
+        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
+
         return ret
     }
     else return UNKNOWN
@@ -115,7 +117,8 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                      c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                         c_LLbit([core]) <- Some (false);
             when not cond or sc_success do WriteData(a, MemElem, mask)
-        }
+        };
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)")
     };
     sc_success
 }
