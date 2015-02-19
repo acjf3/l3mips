@@ -159,6 +159,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         {
             for core in 0 .. totalCore - 1 do
                 when core <> [procID] and
+                     (not cond or sc_success) and
                      c_LLbit([core]) == Some (true) and
                      c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                         c_LLbit([core]) <- Some (false);
