@@ -20,8 +20,8 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Config1.IS <- 3;         -- Icache sets per way
    CP0.Config1.IL <- 4;         -- Icache line size
    CP0.Config1.IA <- 0;         -- Icache associativity
-   CP0.Config1.DS <- 1;         -- Dcache sets per way
-   CP0.Config1.DL <- 6;         -- Dcache line size
+   CP0.Config1.DS <- 3;         -- Dcache sets per way
+   CP0.Config1.DL <- 4;         -- Dcache line size
    CP0.Config1.DA <- 0;         -- Dcache associativity
    CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
