@@ -18,6 +18,9 @@ dnl -- indexing utils
 define(`L2CHUNKIDX', ifelse(L2LINESIZE,32,0,L2LINESIZE,64,[$1<0>],L2LINESIZE,128,[$1<1:0>]))dnl
 define(`REPLACE',Take($1,$3):Cons($2,Drop($1+1,$3)))dnl
 dnl
+
+string printMemStats = " !!! unimplemented !!! \\n"
+
 type NatSet = nat list
 
 NatSet natSetInsert(x::nat, S::NatSet) =
@@ -191,6 +194,7 @@ type DirectMappedL2 = L2Index -> L2Entry
 record L2MetaEntry {wasInL2::bool wasUsed::bool evictedUseful::bool}
 
 declare l2PtrPrefetchDepth :: nat
+declare l2Prefetcher :: nat
 
 declare c_L2 :: nat -> DirectMappedL2
 component L2Cache (way::nat, idx::L2Index) :: L2Entry
@@ -422,6 +426,30 @@ bits(257) list * CapAddr list getCapList (addr::CapAddr, width::nat) =
     (caps, addr_list)
 }
 
+dword list * CapAddr list getDWordList (addr::CapAddr, width::nat) =
+{
+    var dwords :: dword list = Nil;
+
+    addr_list :: CapAddr list = match width
+    {
+        case 1 => list {addr}
+        case 2 => list {addr<34:1> : '1', addr<34:1> : '0'}
+        case 4 => list {addr<34:2> : '11', addr<34:2> : '10', addr<34:2> : '01', addr<34:2> : '00'}
+        case _ => #UNPREDICTABLE ("Unsupported fetch width (can only be 1, 2 or 4)")
+    };
+
+    foreach address in addr_list do
+    {
+        cap = DRAM(address);
+        dwords <- Cons(cap<255:192>, dwords);
+        dwords <- Cons(cap<191:128>, dwords);
+        dwords <- Cons(cap<127:64> , dwords);
+        dwords <- Cons(cap<63:0>   , dwords);
+        mark_log(5, log_r_dram (address, cap))
+    };
+    (dwords, addr_list)
+}
+
 {-
 dword idx(line::CacheLine, i::bits(2)) =
   if i == 0 then Head(line) else idx(Tail(line), i-1)
@@ -571,11 +599,31 @@ nat L2ReplacePolicy(addr::CapAddr) =
     else ret
 }
 
+-- Prefetcher helpers --
+------------------------
+
+Capability option firstcap (caps::bits(257) list) = match caps
+{
+    case Nil    => None
+    case y @ ys => if Capability(y).tag then Some(Capability(y)) else firstcap (ys)
+}
+
+pAddr option firstptr (dwords::dword list) = match dwords
+{
+    case Nil    => None
+    case y @ ys => match tryTranslation (y)
+    {
+        case Some(paddr) => Some(paddr)
+        case _ => firstptr (ys)
+    }
+}
+
 bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
 {
     cap  = DRAM(addr);
 
     caps, addr_list = getCapList(addr, eval(L2LINESIZE/32));
+    dwords, _ = getDWordList(addr, eval(L2LINESIZE/32));
 
     var new_entry;
     if (prefetchDepth == l2PtrPrefetchDepth) then
@@ -592,10 +640,48 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
         mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
         L2InvalL1(old_entry.tag:addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
     };
-    {- Pointer Prefecth -}
-    foreach elem in caps do
+
+    -- Various Prefecth Flavors --
+    ------------------------------
+    when prefetchDepth > 0 do match l2Prefetcher
     {
-        when Capability(elem).tag and prefetchDepth > 0 do
+        -- Cap Prefetch - first --
+        --------------------------
+        case 0 => match firstcap (caps)
+        {
+            case Some(cap) => match tryTranslation (cap.base + cap.offset)
+            {
+                case Some(paddr) => match L2Hit (paddr<39:5>)
+                {
+                    case None =>
+                    {
+                        _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+                        mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
+                    }
+                    case _ => nothing
+                }
+                case _ => nothing
+            }
+            case _ => nothing
+        }
+        -- Ptr Prefetch - first --
+        --------------------------
+        case 1 => match firstptr (dwords)
+        {
+            case Some(ptr) => match L2Hit (ptr<39:5>)
+            {
+                case None =>
+                {
+                    _ = L2ServeMiss(cacheType, ptr<39:5>, prefetchDepth - 1);
+                    mark_log(4, log_l2_pointer_prefetch (cacheType, ptr<39:5>, L2Idx(ptr<39:5>)))
+                }
+                case _ => nothing
+            }
+            case _ => nothing
+        }
+        -- Cap Prefetch - all --
+        ------------------------
+        case 2 => foreach elem in caps do when Capability(elem).tag do
         match tryTranslation (Capability(elem).base + Capability(elem).offset)
         {
             case Some(paddr) => match L2Hit (paddr<39:5>)
@@ -609,12 +695,28 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
             }
             case _ => nothing
         }
+        -- Ptr Prefetch - all --
+        ------------------------
+        case 3 => foreach elem in dwords do match tryTranslation (elem)
+        {
+            case Some(ptr) => match L2Hit (ptr<39:5>)
+            {
+                case None =>
+                {
+                    _ = L2ServeMiss(cacheType, ptr<39:5>, prefetchDepth - 1);
+                    mark_log(4, log_l2_pointer_prefetch (cacheType, ptr<39:5>, L2Idx(ptr<39:5>)))
+                }
+                case _ => nothing
+            }
+            case _ => nothing
+        }
+        case _ => nothing
     };
-    {- update cache -}
+    -- update cache --
     foreach a in addr_list do
         metaL2(a<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
-    {- return -}
+    -- return --
     cap
 }
 
