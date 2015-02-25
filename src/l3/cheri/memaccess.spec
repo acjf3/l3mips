@@ -3,8 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-declare TAG:: bits(35) -> bool
-
 -----------------
 -- Data accesses
 -----------------
@@ -90,13 +88,9 @@ Capability LoadCap (vAddr::vAddr) =
                      and a <+ (PIC_base_address([core])+1072)<36:2> do
                     #UNPREDICTABLE ("Capability load attempted on PIC");
 
-        var Capability::Capability;
-        &Capability<255:192> <- ReadData(a:'00');
-        &Capability<191:128> <- ReadData(a:'01');
-        &Capability<127:64>  <- ReadData(a:'10');
-        &Capability<63:0>    <- ReadData(a:'11');
+        var Capability = ReadCap(a);
 
-        Capability.tag <- if (L) then false else TAG(a);
+        when L do Capability.tag <- false;
 
         LLbit <- None;
 
@@ -164,10 +158,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                      c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
                         c_LLbit([core]) <- Some (false);
             when not cond or sc_success do
-            {
-                WriteData(a, MemElem, mask);
-                TAG(a<36:2>) <- false
-            }
+                WriteData(a, MemElem, mask)
         };
         mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)")
     };
@@ -215,12 +206,7 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
             mark_log (2, "Store cap: " : log_store_cap (pAddr, Capability));
 
-            WriteData(a:'00', &Capability<255:192>, ~0);
-            WriteData(a:'01', &Capability<191:128>, ~0);
-            WriteData(a:'10', &Capability<127:64>, ~0);
-            WriteData(a:'11', &Capability<63:0>, ~0);
-
-            TAG(a) <- Capability.tag
+            WriteCap(a, Capability)
         }
     }
 }

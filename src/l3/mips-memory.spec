@@ -24,9 +24,9 @@ unit initMemStats =
 }
 
 string printMemStats =
-    PadRight (#" ", 16, "data_reads") : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat]) : "\\n" :
+    PadRight (#" ", 16, "data_reads")  : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat])  : "\\n" :
     PadRight (#" ", 16, "data_writes") : " = " : PadLeft (#" ", 9, [memStats.data_writes::nat]) : "\\n" :
-    PadRight (#" ", 16, "inst_reads") : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])
+    PadRight (#" ", 16, "inst_reads")  : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])
 
 ---------------------------
 -- memory implementation --
@@ -37,7 +37,7 @@ declare MEM :: mAddr -> dword -- physical memory (37 bits), doubleword access
 unit InitMEM =
 {
     initMemStats;
-    MEM <- InitMap (0x0)
+    MEM <- InitMap (UNKNOWN)
 }
 
 dword ReadData (pAddr::mAddr) =

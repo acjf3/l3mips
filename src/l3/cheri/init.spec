@@ -7,7 +7,6 @@ bool hasCP2 = true
 
 unit COP2Init () =
 {
-    TAG <- InitMap (false);
     var defaultCapCause :: CapCause;
     defaultCapCause.ExcCode <- 0;
     defaultCapCause.RegNum <- 0;
