@@ -14,6 +14,7 @@ val uart_countdown = ref (!uart_delay)
 val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
+val dump_stats = ref false
 val current_core_id = ref 0
 val nb_core = ref 1
 val schedule = ref (NONE: TextIO.instream option)
@@ -326,7 +327,7 @@ fun pureLoop mx =
    ; uart ()
    ; mips.Next ()
    ; printLog(0)
-   ; if !mips.done orelse (mx = 1) then (print "done\n")
+   ; if !mips.done orelse (mx = 1) then ( if !dump_stats then print(mips.dumpStats()) else print "done\n")
      else pureLoop (decr mx)
    )
 
@@ -383,6 +384,7 @@ fun printUsage () =
       \  --uart-out <file>         UART output file (stdout if omitted)\n\
       \  --format <format>         'raw' or 'hex' file format \n\
       \  --non-block <on|off>      non-blocking UART input 'on' or 'off' \n\
+      \  --dump-stats <on|off>     display statistics, 'on' or 'off' \n\
       \  --schedule <file>         file of core ids indicating schedule\n\
       \  --ignore <string>         UNPREDICTABLE#(<string>) behaviour is \n\
       \                            ignored (currently <string> must be \n\
@@ -458,6 +460,12 @@ val () =
                      | SOME "on"  => non_blocking_input := true
                      | SOME "off" => non_blocking_input := false
                      | _          => failExit "--non-block must be on or off\n"
+          val (nb, l) = processOption "--dump-stats" l
+          val () = case nb of
+                       NONE       => ()
+                     | SOME "on"  => dump_stats := true
+                     | SOME "off" => dump_stats := false
+                     | _          => failExit "--dump-stats must be on or off\n"
           val (p, l) = processOption "--pc" l
           val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l

@@ -3,12 +3,46 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+-----------------
+-- stats utils --
+-----------------
+
+record MemStats
+{
+    data_reads  :: nat
+    data_writes :: nat
+    inst_reads  :: nat
+}
+
+declare memStats :: MemStats
+
+unit initMemStats =
+{
+    memStats.data_reads  <- 0;
+    memStats.data_writes <- 0;
+    memStats.inst_reads  <- 0
+}
+
+string printMemStats =
+    PadRight (#" ", 16, "data_reads") : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat]) : "\\n" :
+    PadRight (#" ", 16, "data_writes") : " = " : PadLeft (#" ", 9, [memStats.data_writes::nat]) : "\\n" :
+    PadRight (#" ", 16, "inst_reads") : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])
+
+---------------------------
+-- memory implementation --
+---------------------------
+
 declare MEM :: mAddr -> dword -- physical memory (37 bits), doubleword access
 
-unit InitMEM = MEM <- InitMap (0x0) 
+unit InitMEM =
+{
+    initMemStats;
+    MEM <- InitMap (0x0)
+}
 
 dword ReadData (pAddr::mAddr) =
 {
+    memStats.data_reads <- memStats.data_reads + 1;
     data = MEM(pAddr);
     mark_log (2, log_r_mem (pAddr, data));
     data
@@ -16,11 +50,16 @@ dword ReadData (pAddr::mAddr) =
 
 unit WriteData (pAddr::mAddr, data::dword, mask::dword) =
 {
+    memStats.data_writes <- memStats.data_writes + 1;
     MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
     mark_log (2, log_w_mem (pAddr, mask, data))
 }
 
-word ReadInst (a::pAddr) = if a<2> then MEM (a<39:3>)<31:0> else MEM (a<39:3>)<63:32>
+word ReadInst (a::pAddr) =
+{
+    memStats.inst_reads <- memStats.inst_reads + 1;
+    if a<2> then MEM (a<39:3>)<31:0> else MEM (a<39:3>)<63:32>
+}
 
 -- sml helper function
 unit WriteDWORD (pAddr::mAddr, data::dword) =

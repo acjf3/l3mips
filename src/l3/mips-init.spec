@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- Model of the 64-bit MIPS ISA (MIPS III with some extra instructions)
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 TLBEntry initTLB = { var e::TLBEntry; e.R <- '10'; return e }
@@ -86,6 +87,7 @@ unit initMips (pc::nat, uart::nat) =
    done <- false;
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;
    PIC_initialise (0x7f804000 + [procID] * 0x4000);
+   initCoreStats;
    when procID == 0 do
    {
       JTAG_UART_initialise (uart);

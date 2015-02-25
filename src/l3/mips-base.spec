@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- Model of the 64-bit MIPS ISA (MIPS III with some extra instructions)
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 --================================================
@@ -119,3 +120,30 @@ bool NotWordValue(value::dword) =
 
 unit CheckBranch =
    when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
+
+-- stats utils --
+
+record CoreStats
+{
+    branch_taken :: nat
+    branch_not_taken :: nat
+}
+
+declare c_CoreStats :: id -> CoreStats
+component coreStats :: CoreStats
+{
+   value = { m = c_CoreStats(procID); m }
+   assign value = { var m = c_CoreStats(procID)
+                  ; m <- value
+                  ; c_CoreStats(procID) <- m }
+}
+
+unit initCoreStats =
+{
+    coreStats.branch_taken <- 0;
+    coreStats.branch_not_taken <- 0
+}
+
+string printCoreStats =
+    PadRight (#" ", 16, "branch_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_taken::nat]) : "\\n" :
+    PadRight (#" ", 16, "branch_not_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_not_taken::nat])
