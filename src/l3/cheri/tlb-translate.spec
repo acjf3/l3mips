@@ -111,8 +111,16 @@ pAddr option tryTranslation (vAddr::vAddr) =
     };
     match ret
     {
-        case Some(paddr) => mark_log(4, "TLB - " : " (Core:" : [procID] : ") try success 0x" : [vAddr] : " : 0x" : [paddr])
-        case _ => mark_log(4, "TLB - " : " (Core:" : [procID] : ") try fail 0x" : [vAddr])
+        case Some(paddr) =>
+        {
+            coreStats.tlb_try_success <- coreStats.tlb_try_success + 1;
+            mark_log(4, "TLB - " : " (Core:" : [procID] : ") try success 0x" : [vAddr] : " : 0x" : [paddr])
+        }
+        case _ =>
+        {
+            coreStats.tlb_try_fail <- coreStats.tlb_try_fail + 1;
+            mark_log(4, "TLB - " : " (Core:" : [procID] : ") try fail 0x" : [vAddr])
+        }
     };
     ret
 }

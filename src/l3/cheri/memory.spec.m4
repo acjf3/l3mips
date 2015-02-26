@@ -19,7 +19,9 @@ define(`L2CHUNKIDX', ifelse(L2LINESIZE,32,0,L2LINESIZE,64,[$1<0>],L2LINESIZE,128
 define(`REPLACE',Take($1,$3):Cons($2,Drop($1+1,$3)))dnl
 dnl
 
-string printMemStats = " !!! unimplemented !!! \\n"
+-----------
+-- utils --
+-----------
 
 type NatSet = nat list
 
@@ -214,6 +216,148 @@ declare l2LRUBits::L2Index -> nat list
 declare metaL2 :: L2LineNumber -> L2MetaEntry
 
 declare DRAM :: CapAddr -> bits(257) -- 257 bits accesses (256 cap/data + tag bit)
+
+-----------------
+-- stats utils --
+-----------------
+
+record MemStats
+{
+	icache_read_hit                :: nat
+	icache_read_miss               :: nat
+	icache_write_hit               :: nat
+	icache_write_miss              :: nat
+	icache_evict                   :: nat
+	dcache_read_hit                :: nat
+	dcache_read_miss               :: nat
+	dcache_write_hit               :: nat
+	dcache_write_miss              :: nat
+	dcache_evict                   :: nat
+	l2_read                        :: nat
+	l2_read_hit                    :: nat
+	l2_read_miss                   :: nat
+	l2_write_hit                   :: nat
+	l2_write_miss                  :: nat
+	l2_evict                       :: nat
+	l2_prefetch                    :: nat
+--	l2_read_hit_prefetch_lvl[0]    :: nat
+--	l2_read_hit_prefetch_lvl[1]    :: nat
+--	l2_read_hit_prefetch_lvl[2]    :: nat
+--	l2_read_hit_prefetch_lvl_more  :: nat
+	l2_read_miss_mandatory         :: nat
+	l2_read_miss_previously_used   :: nat
+	l2_read_miss_previously_unused :: nat
+--	l2_evict_prefetch_lvl[0]       :: nat
+--	l2_evict_prefetch_lvl[1]       :: nat
+--	l2_evict_prefetch_lvl[2]       :: nat
+--	l2_evict_prefetch_lvl_more     :: nat
+	l2_evict_by_prefetch           :: nat
+--	l2_evict_by_prefetch_lvl[0]    :: nat
+--	l2_evict_by_prefetch_lvl[1]    :: nat
+--	l2_evict_by_prefetch_lvl[2]    :: nat
+--	l2_evict_by_prefetch_lvl_more  :: nat
+	l2_bad_evict                   :: nat
+--	l2_unused_lvl[0]               :: nat
+--	l2_unused_lvl[1]               :: nat
+--	l2_unused_lvl[2]               :: nat
+--	l2_unused_lvl_more             :: nat
+--	l2_used_lvl[0]                 :: nat
+--	l2_used_lvl[1]                 :: nat
+--	l2_used_lvl[2]                 :: nat
+--	l2_used_lvl_more               :: nat
+}
+
+declare memStats :: MemStats
+
+unit initMemStats =
+{
+	memStats.icache_read_hit                <- 0;
+	memStats.icache_read_miss               <- 0;
+	memStats.icache_write_hit               <- 0;
+	memStats.icache_write_miss              <- 0;
+	memStats.icache_evict                   <- 0;
+	memStats.dcache_read_hit                <- 0;
+	memStats.dcache_read_miss               <- 0;
+	memStats.dcache_write_hit               <- 0;
+	memStats.dcache_write_miss              <- 0;
+	memStats.dcache_evict                   <- 0;
+	memStats.l2_read                        <- 0;
+	memStats.l2_read_hit                    <- 0;
+	memStats.l2_read_miss                   <- 0;
+	memStats.l2_write_hit                   <- 0;
+	memStats.l2_write_miss                  <- 0;
+	memStats.l2_evict                       <- 0;
+	memStats.l2_prefetch                    <- 0;
+--	memStats.l2_read_hit_prefetch_lvl[0]    <- 0;
+--	memStats.l2_read_hit_prefetch_lvl[1]    <- 0;
+--	memStats.l2_read_hit_prefetch_lvl[2]    <- 0;
+--	memStats.l2_read_hit_prefetch_lvl_more  <- 0;
+	memStats.l2_read_miss_mandatory         <- 0;
+	memStats.l2_read_miss_previously_used   <- 0;
+	memStats.l2_read_miss_previously_unused <- 0;
+--	memStats.l2_evict_prefetch_lvl[0]       <- 0;
+--	memStats.l2_evict_prefetch_lvl[1]       <- 0;
+--	memStats.l2_evict_prefetch_lvl[2]       <- 0;
+--	memStats.l2_evict_prefetch_lvl_more     <- 0;
+	memStats.l2_evict_by_prefetch           <- 0;
+--	memStats.l2_evict_by_prefetch_lvl[0]    <- 0;
+--	memStats.l2_evict_by_prefetch_lvl[1]    <- 0;
+--	memStats.l2_evict_by_prefetch_lvl[2]    <- 0;
+--	memStats.l2_evict_by_prefetch_lvl_more  <- 0;
+	memStats.l2_bad_evict                   <- 0
+--	memStats.l2_unused_lvl[0]               <- 0;
+--	memStats.l2_unused_lvl[1]               <- 0;
+--	memStats.l2_unused_lvl[2]               <- 0;
+--	memStats.l2_unused_lvl_more             <- 0;
+--	memStats.l2_used_lvl[0]                 <- 0;
+--	memStats.l2_used_lvl[1]                 <- 0;
+--	memStats.l2_used_lvl[2]                 <- 0;
+--	memStats.l2_used_lvl_more               <- 0;
+}
+
+string printMemStats =
+	PadRight (#" ", 35, "icache_read_hit")                : " = " : PadLeft (#" ", 9, [memStats.icache_read_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "icache_read_miss")               : " = " : PadLeft (#" ", 9, [memStats.icache_read_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "icache_write_hit")               : " = " : PadLeft (#" ", 9, [memStats.icache_write_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "icache_write_miss")              : " = " : PadLeft (#" ", 9, [memStats.icache_write_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "icache_evict")                   : " = " : PadLeft (#" ", 9, [memStats.icache_evict::nat]) : "\\n" : 
+	PadRight (#" ", 35, "dcache_read_hit")                : " = " : PadLeft (#" ", 9, [memStats.dcache_read_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "dcache_read_miss")               : " = " : PadLeft (#" ", 9, [memStats.dcache_read_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "dcache_write_hit")               : " = " : PadLeft (#" ", 9, [memStats.dcache_write_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "dcache_write_miss")              : " = " : PadLeft (#" ", 9, [memStats.dcache_write_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "dcache_evict")                   : " = " : PadLeft (#" ", 9, [memStats.dcache_evict::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read")                        : " = " : PadLeft (#" ", 9, [memStats.l2_read::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read_hit")                    : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read_miss")                   : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_write_hit")                   : " = " : PadLeft (#" ", 9, [memStats.l2_write_hit::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_write_miss")                  : " = " : PadLeft (#" ", 9, [memStats.l2_write_miss::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_evict")                       : " = " : PadLeft (#" ", 9, [memStats.l2_evict::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_prefetch")                    : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_read_hit_prefetch_lvl[0]")    : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit_prefetch_lvl[0]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_read_hit_prefetch_lvl[1]")    : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit_prefetch_lvl[1]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_read_hit_prefetch_lvl[2]")    : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit_prefetch_lvl[2]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_read_hit_prefetch_lvl_more")  : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit_prefetch_lvl_more::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read_miss_mandatory")         : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss_mandatory::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read_miss_previously_used")   : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss_previously_used::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_read_miss_previously_unused") : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss_previously_unused::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_prefetch_lvl[0]")       : " = " : PadLeft (#" ", 9, [memStats.l2_evict_prefetch_lvl[0]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_prefetch_lvl[1]")       : " = " : PadLeft (#" ", 9, [memStats.l2_evict_prefetch_lvl[1]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_prefetch_lvl[2]")       : " = " : PadLeft (#" ", 9, [memStats.l2_evict_prefetch_lvl[2]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_prefetch_lvl_more")     : " = " : PadLeft (#" ", 9, [memStats.l2_evict_prefetch_lvl_more::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_evict_by_prefetch")           : " = " : PadLeft (#" ", 9, [memStats.l2_evict_by_prefetch::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_by_prefetch_lvl[0]")    : " = " : PadLeft (#" ", 9, [memStats.l2_evict_by_prefetch_lvl[0]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_by_prefetch_lvl[1]")    : " = " : PadLeft (#" ", 9, [memStats.l2_evict_by_prefetch_lvl[1]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_by_prefetch_lvl[2]")    : " = " : PadLeft (#" ", 9, [memStats.l2_evict_by_prefetch_lvl[2]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_evict_by_prefetch_lvl_more")  : " = " : PadLeft (#" ", 9, [memStats.l2_evict_by_prefetch_lvl_more::nat]) : "\\n" : 
+	PadRight (#" ", 35, "l2_bad_evict")                   : " = " : PadLeft (#" ", 9, [memStats.l2_bad_evict::nat])
+--	PadRight (#" ", 35, "l2_unused_lvl[0]")               : " = " : PadLeft (#" ", 9, [memStats.l2_unused_lvl[0]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_unused_lvl[1]")               : " = " : PadLeft (#" ", 9, [memStats.l2_unused_lvl[1]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_unused_lvl[2]")               : " = " : PadLeft (#" ", 9, [memStats.l2_unused_lvl[2]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_unused_lvl_more")             : " = " : PadLeft (#" ", 9, [memStats.l2_unused_lvl_more::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_used_lvl[0]")                 : " = " : PadLeft (#" ", 9, [memStats.l2_used_lvl[0]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_used_lvl[1]")                 : " = " : PadLeft (#" ", 9, [memStats.l2_used_lvl[1]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_used_lvl[2]")                 : " = " : PadLeft (#" ", 9, [memStats.l2_used_lvl[2]::nat]) : "\\n" : 
+--	PadRight (#" ", 35, "l2_used_lvl_more")               : " = " : PadLeft (#" ", 9, [memStats.l2_used_lvl_more::nat]) : "\\n" : 
 
 --------------------------------------------------------------------------------
 -- Log utils
@@ -637,6 +781,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     when old_entry.valid do
     {
         evicted_useful <- (Snd(old_entry.stats) > 0);
+        memStats.l2_evict <- memStats.l2_evict + 1;
         mark_log (4, log_l2_evict(cacheType, L2Idx(addr), old_entry, new_entry));
         L2InvalL1(old_entry.tag:addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
     };
@@ -656,6 +801,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
                     case None =>
                     {
                         _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+                        memStats.l2_prefetch <- memStats.l2_prefetch + 1;
                         mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
                     }
                     case _ => nothing
@@ -673,6 +819,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
                 case None =>
                 {
                     _ = L2ServeMiss(cacheType, ptr<39:5>, prefetchDepth - 1);
+                    memStats.l2_prefetch <- memStats.l2_prefetch + 1;
                     mark_log(4, log_l2_pointer_prefetch (cacheType, ptr<39:5>, L2Idx(ptr<39:5>)))
                 }
                 case _ => nothing
@@ -689,6 +836,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
                 case None =>
                 {
                     _ = L2ServeMiss(cacheType, paddr<39:5>, prefetchDepth - 1);
+                    memStats.l2_prefetch <- memStats.l2_prefetch + 1;
                     mark_log(4, log_l2_pointer_prefetch (cacheType, paddr<39:5>, L2Idx(paddr<39:5>)))
                 }
                 case _ => nothing
@@ -704,6 +852,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
                 case None =>
                 {
                     _ = L2ServeMiss(cacheType, ptr<39:5>, prefetchDepth - 1);
+                    memStats.l2_prefetch <- memStats.l2_prefetch + 1;
                     mark_log(4, log_l2_pointer_prefetch (cacheType, ptr<39:5>, L2Idx(ptr<39:5>)))
                 }
                 case _ => nothing
@@ -728,11 +877,13 @@ L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits
             var new_data = mergeBlocks257 (Element(L2CHUNKIDX(addr),cacheEntry.data), data, mask);
             new_data<256> <- tag;
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.stats, cacheEntry.sharers, REPLACE(L2CHUNKIDX(addr),new_data,cacheEntry.data));
+            memStats.l2_write_hit <- memStats.l2_write_hit + 1;
             mark_log (4, log_l2_write_hit(cacheType, addr, L2Idx(addr), new_data));
             Some (L2Cache(way,L2Idx(addr)))
         }
         case None =>
         {
+            memStats.l2_write_miss <- memStats.l2_write_miss + 1;
             mark_log (4, log_l2_write_miss(cacheType, addr, L2Idx(addr)));
             None
         }
@@ -755,6 +906,7 @@ unit L2HandleCoherence (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(
 
 bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
 {
+    memStats.l2_read <- memStats.l2_read + 1;
     mark_log (4, log_l2_read(cacheType, addr, L2Idx(addr)));
     var cacheLine;
     match L2Hit (addr)
@@ -763,12 +915,14 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
         {
             new_sharers = L2UpdateSharers(cacheType, procID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, (Fst(cacheEntry.stats), Snd(cacheEntry.stats)+1), new_sharers, cacheEntry.data);
+            memStats.l2_read_hit <- memStats.l2_read_hit + 1;
             mark_log (4, log_l2_read_hit(cacheType, addr, L2Idx(addr), L2Cache(way,L2Idx(addr))));
             l2LRUBits(L2Idx(addr)) <- way @ l2LRUBits(L2Idx(addr));
             cacheLine <- Element(L2CHUNKIDX(addr), cacheEntry.data)
         }
         case None =>
         {
+            memStats.l2_read_miss <- memStats.l2_read_miss + 1;
             mark_log (4, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
             cacheLine <- L2ServeMiss(cacheType, addr, l2PtrPrefetchDepth)
         }
@@ -901,10 +1055,6 @@ unit WriteCap (capAddr::CapAddr, cap::Capability) =
 }
 
 word ReadInst (a::pAddr) =
-    if a<2> then
-        L1Read (Instr, a<39:3>) <31:0>
-    else
-        L1Read (Instr, a<39:3>) <63:32>
 {
     cap = L1Read(Instr, a<39:5>);
     Element ([a<4:3> : ~[a<2>]], block257ToWORDList (cap))

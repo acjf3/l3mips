@@ -521,11 +521,11 @@ val () =
           val (n, l) = processOption "--nbcore" l
           val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
           val (n, l) = processOption "--l2-prefetch-depth" l
-          val () = l2_prefetch_depth := Option.getOpt (Option.map getNumber n, 1)
+          val () = l2_prefetch_depth := Option.getOpt (Option.map getNumber n, 0)
           val (n, l) = processOption "--l2-prefetcher" l
-          val () = l2_prefetcher := Option.getOpt (Option.map getNumber n, 1)
+          val () = l2_prefetcher := Option.getOpt (Option.map getNumber n, 0)
           val (n, l) = processOption "--l2-replace-policy" l
-          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 1)
+          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, t)

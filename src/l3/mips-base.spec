@@ -143,8 +143,8 @@ unit dumpRegs () =
 
 record CoreStats
 {
-    branch_taken :: nat
-    branch_not_taken :: nat
+    tlb_try_fail :: nat
+    tlb_try_success :: nat
 }
 
 declare c_CoreStats :: id -> CoreStats
@@ -158,10 +158,10 @@ component coreStats :: CoreStats
 
 unit initCoreStats =
 {
-    coreStats.branch_taken <- 0;
-    coreStats.branch_not_taken <- 0
+    coreStats.tlb_try_fail <- 0;
+    coreStats.tlb_try_success <- 0
 }
 
 string printCoreStats =
-    PadRight (#" ", 16, "branch_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_taken::nat]) : "\\n" :
-    PadRight (#" ", 16, "branch_not_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_not_taken::nat])
+    PadRight (#" ", 16, "tlb_try_fail") : " = " : PadLeft (#" ", 9, [coreStats.tlb_try_fail::nat]) : "\\n" :
+    PadRight (#" ", 16, "tlb_try_success") : " = " : PadLeft (#" ", 9, [coreStats.tlb_try_success::nat])
