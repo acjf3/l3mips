@@ -10,23 +10,21 @@ nat PSIZE = 40         -- 40-bit physical memory
 declare done :: bool   -- Flag to request termination
 
 --------------------------------------------------
--- Gereral purpose register access
+-- Stats dump and reset
 --------------------------------------------------
 
-component GPR (n::reg) :: dword
+unit resetStats =
 {
-   value = if n == 0 then 0 else gpr(n)
-   assign value = when n <> 0 do { gpr(n) <- value; mark_log (2, log_w_gpr (n, value)) }
+    initCoreStats;
+    initMemStats
 }
 
-unit dumpRegs () =
+string dumpStats =
 {
-    mark_log (0, "======   Registers   ======")
-  ; mark_log (0, "Core = " : [[procID]::nat])
-  ; mark_log (0, "PC     " : hex64(PC))
-  ; for i in 0 .. 31 do
-      mark_log (0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
-                hex64(GPR([i])))
+    var out = "";
+    for i in 0 .. totalCore-1 do out <- out : "-- Core " : [i::nat] : " stats --\\n" : printCoreStats : "\\n";
+    out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
+    out
 }
 
 --------------------------------------------------
@@ -54,18 +52,6 @@ component LO :: dword
                     }
    assign value = { lo <- Some (value); mark_log (2, log_w_lo (value)) }
 }
-
-
---------------------------------------------------
--- Main memory
---------------------------------------------------
-
-word flip_endian_word (w::word) =
-   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
-
-dword flip_endian_dword (dw::dword) =
-  match dw { case 'a`8 b`8 c`8 d`8 e`8 f`8 g`8 h' =>
-                  h : g : f : e : d : c : b : a }
 
 --------------------------------------------------
 -- CP0 register access
@@ -148,6 +134,8 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 16, 6 => CP0.Config6.LTLB <- value<2>
          case 0, 20, 0 => CP0.XContext.PTEBase <- value<63:33>
          case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
+         case 0, 24, 0 => resetStats
+         case 0, 24, 1 => print(dumpStats)
          case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
          case _ => unmark_log(2)

@@ -32,7 +32,9 @@ string printMemStats =
 -- memory implementation --
 ---------------------------
 
-declare MEM :: mAddr -> dword -- physical memory (37 bits), doubleword access
+type dwordAddr = bits(37)
+
+declare MEM :: dwordAddr -> dword -- physical memory (37 bits), doubleword access
 
 unit InitMEM =
 {
@@ -40,19 +42,17 @@ unit InitMEM =
     MEM <- InitMap (UNKNOWN)
 }
 
-dword ReadData (pAddr::mAddr) =
+dword ReadData (pAddr::dwordAddr) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     data = MEM(pAddr);
-    mark_log (2, log_r_mem (pAddr, data));
     data
 }
 
-unit WriteData (pAddr::mAddr, data::dword, mask::dword) =
+unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
-    MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
-    mark_log (2, log_w_mem (pAddr, mask, data))
+    MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask
 }
 
 word ReadInst (a::pAddr) =
@@ -62,7 +62,7 @@ word ReadInst (a::pAddr) =
 }
 
 -- sml helper function
-unit WriteDWORD (pAddr::mAddr, data::dword) =
+unit WriteDWORD (pAddr::dwordAddr, data::dword) =
     MEM(pAddr) <- data
 
 -- sml helper function

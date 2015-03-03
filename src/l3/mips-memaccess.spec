@@ -3,6 +3,11 @@
 -- (c) Anthony Fox, University of Cambridge
 ---------------------------------------------------------------------------
 
+-- utils functions
+
+word flip_endian_word (w::word) =
+   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+
 -- Pimitive memory load (with memory-mapped devices)
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,

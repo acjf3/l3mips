@@ -3,6 +3,11 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+-- utils functions
+
+word flip_endian_word (w::word) =
+   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+
 -----------------
 -- Data accesses
 -----------------

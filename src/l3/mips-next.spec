@@ -46,11 +46,3 @@ unit Next =
     exceptionSignalled <- false;
     CP0.Count <- CP0.Count + 1
 }
-
-string dumpStats =
-{
-    var out = "";
-    for i in 0 .. totalCore-1 do out <- out : "-- Core " : [i::nat] : " stats --\\n" : printCoreStats : "\\n";
-    out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
-    out
-}

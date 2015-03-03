@@ -2,9 +2,6 @@
 # Makefile for the L3 mips simulator ##
 #######################################
 
-# The CAP environment variable, when defined,
-# enables the CHERI capability coprocessor
-
 # generating the L3 source list
 # /!\ inclusion order matters /!\
 #######################################
@@ -13,8 +10,8 @@ L3SRCBASE+=mips-print.spec
 ifdef CAP
 L3SRCBASE+=cheri/tlb-types.spec
 L3SRCBASE+=mips-types.spec
-L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-log.spec
+L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 L3SRCBASE+=cheri/state.spec
@@ -23,9 +20,9 @@ L3SRCBASE+=tlb/base.spec
 L3SRCBASE+=cheri/tlb-translate.spec
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
-L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cheri/memory.spec
 L3SRCBASE+=cheri/memaccess.spec
+L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cheri/instructions.spec
 L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=cheri/decode.spec
@@ -37,8 +34,8 @@ L3SRCBASE+=cheri/init.spec
 else
 L3SRCBASE+=tlb/types.spec
 L3SRCBASE+=mips-types.spec
-L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-log.spec
+L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 L3SRCBASE+=mips-exception.spec
@@ -46,9 +43,9 @@ L3SRCBASE+=tlb/base.spec
 L3SRCBASE+=tlb/translate.spec
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
-L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=mips-memory.spec
 L3SRCBASE+=mips-memaccess.spec
+L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cp2-null/instructions.spec
 L3SRCBASE+=mips-instructions.spec
 L3SRCBASE+=cp2-null/decode.spec
@@ -87,15 +84,22 @@ SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 
 # make targets
 #######################################
+SIM ?= l3mips
+
+SIM_PROFILE ?= l3mips_prof
+
+all: ${SIM}
 
 all: l3mips
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
-l3mips: ${SMLLIB} ${SMLSRC}
-	mlton -inline 1000 -default-type intinf -verbose 1 -output ./l3mips ${SMLSRCDIR}/$(MLBFILE)
+${SIM}: ${SMLLIB} ${SMLSRC}
+	mlton -inline 1000 -default-type intinf -verbose 1 -output ${SIM} ${SMLSRCDIR}/$(MLBFILE)
+
+${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
+	mlton -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} ${SMLSRCDIR}/$(MLBFILE)
 
 clean:
-	rm -f l3mips
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml

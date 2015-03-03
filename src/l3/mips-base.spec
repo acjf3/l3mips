@@ -50,6 +50,12 @@ component gpr (n::reg) :: dword
                   ; c_gpr(procID) <- m }
 }
 
+component GPR (n::reg) :: dword
+{
+   value = if n == 0 then 0 else gpr(n)
+   assign value = when n <> 0 do { gpr(n) <- value; mark_log (2, log_w_gpr (n, value)) }
+}
+
 component PC :: dword
 {
    value = c_PC(procID)
@@ -120,6 +126,18 @@ bool NotWordValue(value::dword) =
 
 unit CheckBranch =
    when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
+
+-- dump regs --
+
+unit dumpRegs () =
+{
+    mark_log (0, "======   Registers   ======")
+  ; mark_log (0, "Core = " : [[procID]::nat])
+  ; mark_log (0, "PC     " : hex64(PC))
+  ; for i in 0 .. 31 do
+      mark_log (0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
+                hex64(GPR([i])))
+}
 
 -- stats utils --
 
