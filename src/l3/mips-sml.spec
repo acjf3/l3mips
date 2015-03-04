@@ -54,7 +54,7 @@ component LO :: dword
 }
 
 --------------------------------------------------
--- CP0 register access
+-- Coprocessor register access
 --------------------------------------------------
 
 component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
@@ -62,6 +62,9 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
    value =
       match n, reg, sel
       {
+        --------------------------------------------------
+        -- CP0 register access
+        --------------------------------------------------
          case 0,  0, 0 => [CP0.&Index]
          case 0,  1, 0 => [CP0.&Random]
          case 0,  2, 0 =>  CP0.&EntryLo0
@@ -134,42 +137,9 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 16, 6 => CP0.Config6.LTLB <- value<2>
          case 0, 20, 0 => CP0.XContext.PTEBase <- value<63:33>
          case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
-         case 0, 24, 0 => resetStats
-         case 0, 24, 1 => print(dumpStats)
          case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
          case _ => unmark_log(2)
       }
    }
 }
-
--------------------------
--- CACHE op, offset(base)
--------------------------
-define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
-   if !CP0.Status.CU0 and !KernelMode then
-      SignalException(CpU)
-   else
-   {
-      vAddr = GPR(base) + SignExtend(offset);
-      pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
-      nothing
-   }
-
----------------
--- RDHWR rt, rd
----------------
-
-define RDHWR (rt::reg, rd::reg) =
-   if CP0.Status.CU0 or KernelMode or CP0.&HWREna<[rd]::nat> then
-      match rd
-      {
-         case  0 => GPR(rt) <- [procID]
-         case  2 => GPR(rt) <- SignExtend(CP0.Count)
-         case  3 => GPR(rt) <- 1
-         case 29 => GPR(rt) <- CP0.UsrLocal
-         case 30 => GPR(rt) <- [totalCore - 1]
-         case _  => SignalException(ResI)
-      }
-   else
-      SignalException(ResI)

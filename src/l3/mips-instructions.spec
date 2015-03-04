@@ -1290,6 +1290,39 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
    }
 }
 
+---------------
+-- RDHWR rt, rd
+---------------
+
+define RDHWR (rt::reg, rd::reg) =
+   if CP0.Status.CU0 or KernelMode or CP0.&HWREna<[rd]::nat> then
+      match rd
+      {
+         case  0 => GPR(rt) <- [procID]
+         case  2 => GPR(rt) <- SignExtend(CP0.Count)
+         case  3 => GPR(rt) <- 1
+         case 27 => resetStats          -- reset stats from userland
+         case 28 => print(dumpStats)    -- dump stats from userland
+         case 29 => GPR(rt) <- CP0.UsrLocal
+         case 30 => GPR(rt) <- [totalCore - 1]
+         case _  => SignalException(ResI)
+      }
+   else
+      SignalException(ResI)
+
+-------------------------
+-- CACHE op, offset(base)
+-------------------------
+define CACHE (base::reg, opn::bits(5), offset::bits(16)) =
+   if !CP0.Status.CU0 and !KernelMode then
+      SignalException(CpU)
+   else
+   {
+      vAddr = GPR(base) + SignExtend(offset);
+      pAddr, cca = AddressTranslation (vAddr, DATA, LOAD);
+      nothing
+   }
+
 -----------------------------------
 -- WAIT (implemented as no-op)
 -----------------------------------
@@ -1312,6 +1345,5 @@ define Run
 -- LWCz, SWCz, MTCz, MFCz, CTCz, CFCz, COPz, BCzT, BCzF
 -- DMFCz, DMTCz, LDCz, SDCz
 -- BCzTL, BCzFL
--- CACHE
 -- Floating-point
 -------------------------------------------------------
