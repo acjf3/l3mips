@@ -60,6 +60,7 @@ L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 
 # sml lib sources
 #######################################
+HOLSRCDIR=src/hol
 SMLSRCDIR=src/sml
 SMLLIBDIR=src/sml/lib
 SMLLIBSRC=Runtime.sig Runtime.sml\
@@ -91,6 +92,10 @@ SIM_PROFILE ?= l3mips_prof
 all: ${SIM}
 
 all: l3mips
+
+
+hol: ${L3SRC}
+	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3

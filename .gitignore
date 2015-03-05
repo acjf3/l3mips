@@ -1,0 +1,3 @@
+src/hol/*.sig
+src/hol/*.sml
+src/sml/*
