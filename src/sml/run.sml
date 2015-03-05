@@ -17,6 +17,7 @@ val non_blocking_input = ref false
 val dump_stats = ref false
 val current_core_id = ref 0
 val nb_core = ref 1
+val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 
 (* --------------------------------------------------------------------------
@@ -292,6 +293,14 @@ val () = mips.UNPREDICTABLE_HI :=
    Run code
    ------------------------------------------------------------------------ *)
 
+fun end_sim i =
+   let val t = Timer.checkCPUTimer(!cpu_time) in
+     ( if !dump_stats then print(mips.dumpStats()) else ()
+     ; print ("Completed " ^ Int.toString (i + 1) ^ " instructions in " ^ Time.toString(#usr(t)) ^ " seconds ")
+     ; print ("(" ^ Real.toString (real (i + 1) / Time.toReal (#usr(t))) ^ " inst/sec)\n")
+     )
+   end
+
 fun loop mx i =
    let
       val () = current_core_id := scheduleNext ()
@@ -307,8 +316,10 @@ fun loop mx i =
     ; printLog(0)
     ; if 1 <= !trace_level then printLog(1) else ()
     ; if 2 <= !trace_level then printLog(2) else ()
-    ; if !mips.done orelse i = mx
-         then print ("Completed " ^ Int.toString (i + 1) ^ " instructions.\n")
+    ; if 3 <= !trace_level then printLog(3) else ()
+    ; if 4 <= !trace_level then printLog(4) else ()
+    ; if 5 <= !trace_level then printLog(5) else ()
+    ; if !mips.done orelse i = mx then end_sim i
       else 
         let val exl1 = #EXL (#Status (
                          mips.Map.lookup(!mips.c_CP0, coreId)))
@@ -320,22 +331,22 @@ fun loop mx i =
 
 fun decr i = if i <= 0 then i else i - 1
 
-fun pureLoop mx =
+fun pureLoop mx i =
    ( current_core_id := scheduleNext ()
    ; mips.procID := BitsN.B(!current_core_id,
                             BitsN.size(!mips.procID))
    ; uart ()
    ; mips.Next ()
    ; printLog(0)
-   ; if !mips.done orelse (mx = 1) then ( if !dump_stats then print(mips.dumpStats()) else print "done\n")
-     else pureLoop (decr mx)
+   ; if !mips.done orelse (mx = 1) then end_sim i
+     else pureLoop (decr mx) (i + 1)
    )
 
 local
    fun t f x = if !time_run then Runtime.time f x else f x
 in
    fun run_mem mx =
-      if 1 <= !trace_level then t (loop mx) 0 else t pureLoop mx
+      if 1 <= !trace_level then t (loop mx) 0 else t (pureLoop mx) 0
    fun run pc_uart mx code raw =
       ( List.tabulate(!nb_core,
         fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
@@ -352,6 +363,7 @@ in
              )) code 
       ; uart_countdown := !uart_delay
       ; if 0 < !uart_delay then uart_input () else ()
+      ; cpu_time := Timer.startCPUTimer()
       ; run_mem mx
       ; if 0 < !uart_delay then uart_output () else ()
       )

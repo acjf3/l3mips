@@ -76,6 +76,8 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Random.Random <- [TLBEntries-1];
    CP0.Wired.Wired <- 0;
    CP0.&HWREna <- 0;
+   CP0.HWREna.RS <- true;
+   CP0.HWREna.DS <- true;
    for i in 0 .. 127 do TLB_assoc([i]) <- initTLB;
    BranchDelay <- None;
    BranchTo <- None;

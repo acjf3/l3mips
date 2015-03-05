@@ -120,6 +120,8 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
                             CP0.HWREna.CPUNum <- value<0>;
                             CP0.HWREna.CC     <- value<2>;
                             CP0.HWREna.CCRes  <- value<3>;
+                            CP0.HWREna.RS     <- value<27>;
+                            CP0.HWREna.DS     <- value<28>;
                             CP0.HWREna.UL     <- value<29>
                           }
          case 0,  9, 0 => CP0.Count <- value<31:0>

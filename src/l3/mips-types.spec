@@ -156,6 +156,8 @@ register HWREna :: word
    0 : CPUNum      -- Enable CPU num register
    2 : CC          -- Enable high-res cycle count register
    3 : CCRes       -- Enable CC resolution register
+  27 : RS          -- Enable ResetStats
+  28 : DS          -- Enable Dump Stats
   29 : UL          -- Enable UserLocal register
 }
 
