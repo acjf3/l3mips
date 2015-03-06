@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- Basic types declarations for standard MIPS data structures
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 type id     = bits(8)          -- max 256 cores
@@ -156,7 +157,8 @@ register HWREna :: word
    0 : CPUNum      -- Enable CPU num register
    2 : CC          -- Enable high-res cycle count register
    3 : CCRes       -- Enable CC resolution register
-  27 : RS          -- Enable ResetStats
+  26 : KS          -- Enamble Kill Simulator
+  27 : RS          -- Enable Reset Stats
   28 : DS          -- Enable Dump Stats
   29 : UL          -- Enable UserLocal register
 }

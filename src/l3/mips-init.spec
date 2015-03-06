@@ -6,7 +6,7 @@
 
 TLBEntry initTLB = { var e::TLBEntry; e.R <- '10'; return e }
 
-unit initMips (pc::nat, uart::nat) =
+unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
 {
    -- Configuration register (mimic BERI)
    CP0.Config.M   <- true;      -- true if config register 1 exists
@@ -76,8 +76,12 @@ unit initMips (pc::nat, uart::nat) =
    CP0.Random.Random <- [TLBEntries-1];
    CP0.Wired.Wired <- 0;
    CP0.&HWREna <- 0;
-   CP0.HWREna.RS <- true;
-   CP0.HWREna.DS <- true;
+   when rdhwr_extra do
+   {
+      CP0.HWREna.KS <- true;
+      CP0.HWREna.RS <- true;
+      CP0.HWREna.DS <- true
+   };
    for i in 0 .. 127 do TLB_assoc([i]) <- initTLB;
    BranchDelay <- None;
    BranchTo <- None;

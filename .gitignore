@@ -1,3 +1,5 @@
+roms/*
 src/hol/*.sig
 src/hol/*.sml
 src/sml/*
+!src/sml/run.sml

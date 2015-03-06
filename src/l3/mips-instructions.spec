@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- The standard MIPS instructions implementation
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 -----------------------------------
@@ -1301,6 +1302,7 @@ define RDHWR (rt::reg, rd::reg) =
          case  0 => GPR(rt) <- [procID]
          case  2 => GPR(rt) <- SignExtend(CP0.Count)
          case  3 => GPR(rt) <- 1
+         case 26 => done <- true        -- kill simulator
          case 27 => resetStats          -- reset stats from userland
          case 28 => print(dumpStats)    -- dump stats from userland
          case 29 => GPR(rt) <- CP0.UsrLocal

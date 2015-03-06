@@ -15,6 +15,7 @@ val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
 val dump_stats = ref false
+val rdhwr_extra = ref false
 val current_core_id = ref 0
 val nb_core = ref 1
 val cpu_time = ref (Timer.startCPUTimer())
@@ -350,7 +351,7 @@ in
    fun run pc_uart mx code raw =
       ( List.tabulate(!nb_core,
         fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
-                 mips.initMips pc_uart))
+                 mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.print := debug_print
       ; mips.println := debug_println
@@ -397,6 +398,7 @@ fun printUsage () =
       \  --format <format>         'raw' or 'hex' file format \n\
       \  --non-block <on|off>      non-blocking UART input 'on' or 'off' \n\
       \  --dump-stats <on|off>     display statistics, 'on' or 'off' \n\
+      \  --rdhwr-extra <on|off>    enable simulator control features through rdhwr inst, 'on' or 'off' \n\
       \  --schedule <file>         file of core ids indicating schedule\n\
       \  --ignore <string>         UNPREDICTABLE#(<string>) behaviour is \n\
       \                            ignored (currently <string> must be \n\
@@ -478,6 +480,12 @@ val () =
                      | SOME "on"  => dump_stats := true
                      | SOME "off" => dump_stats := false
                      | _          => failExit "--dump-stats must be on or off\n"
+          val (nb, l) = processOption "--rdhwr-extra" l
+          val () = case nb of
+                       NONE       => ()
+                     | SOME "on"  => rdhwr_extra := true
+                     | SOME "off" => rdhwr_extra := false
+                     | _          => failExit "--rdhwr-extra must be on or off\n"
           val (p, l) = processOption "--pc" l
           val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l
