@@ -8,6 +8,44 @@
 word flip_endian_word (w::word) =
    match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
 
+-- watch paddr
+
+declare watchPaddr::bits(40) option
+
+unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
+{
+    case Some(watch_paddr) =>
+    {
+        when addr<39:3> == watch_paddr<39:3> do
+            println ("watching --> load 0x" : PadLeft (#"0", 16, [data]) : " from 0x" : PadLeft (#"0", 10, [addr]))
+    }
+    case None => nothing
+}
+
+unit watchForCapLoad (addr::bits(40), cap::Capability) = match watchPaddr
+{
+    case Some(watch_paddr) =>
+    {
+        when addr<39:5> == watch_paddr<39:5> do
+            println ("watching --> load " : log_cap_write (cap) : " from 0x" : PadLeft (#"0", 10, [addr]))
+    }
+    case None => nothing
+}
+
+unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
+{
+    case Some(watch_paddr) => when addr<39:3> == watch_paddr<39:3> do
+        println ("watching --> Store 0x" : PadLeft (#"0", 16, [data]) : "(mask:" : PadLeft (#"0", 16, [mask]) : ") at 0x" : PadLeft (#"0", 10, [addr]))
+    case None => nothing
+}
+
+unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
+{
+    case Some(watch_paddr) => when addr<39:5> == watch_paddr<39:5> do
+        println ("watching --> Store 0x" :log_cap_write (cap) : ") at 0x" : PadLeft (#"0", 10, [addr]))
+    case None => nothing
+}
+
 -----------------
 -- Data accesses
 -----------------
@@ -61,6 +99,7 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
 
         mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
 
+        watchForLoad(pAddr, ret);
         return ret
     }
     else return UNKNOWN
@@ -101,6 +140,7 @@ Capability LoadCap (vAddr::vAddr) =
 
         mark_log (2, "Load cap: " : log_load_cap (pAddr, Capability));
 
+        watchForCapLoad(pAddr, Capability);
         return Capability
     }
     else return UNKNOWN
@@ -165,7 +205,8 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             when not cond or sc_success do
                 WriteData(a, MemElem, mask)
         };
-        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)")
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)");
+        watchForStore(pAddr, MemElem, mask)
     };
     return sc_success
 }
@@ -211,6 +252,7 @@ unit StoreCap (vAddr::vAddr, Capability::Capability) =
 
             mark_log (2, "Store cap: " : log_store_cap (pAddr, Capability));
 
+            watchForCapStore(pAddr, Capability);
             WriteCap(a, Capability)
         }
     }

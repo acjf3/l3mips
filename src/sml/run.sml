@@ -18,6 +18,7 @@ val dump_stats = ref false
 val rdhwr_extra = ref false
 val current_core_id = ref 0
 val nb_core = ref 1
+val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 
@@ -353,6 +354,7 @@ in
         fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
+      ; mips.watchPaddr := !watch_paddr
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app
@@ -390,6 +392,7 @@ fun printUsage () =
       \                            start address for main Intel Hex file\n\
       \  --at <address> <file>     load extra Intel Hex <file> into physical\n\
       \                            memory at location <address>\n\
+      \  --watch-paddr <address>   specify a physical address to monitor accesses\n\
       \  --nbcore <number>         number of core(s) (default is 1)\n\
       \  --uart <address>          base physical address for UART memory-map\n\
       \  --uart-delay <number>     UART cycle delay (determines baud rate)\n\
@@ -409,6 +412,11 @@ fun getNumber s =
    case IntExtra.fromString s of
       SOME n => n
     | NONE => failExit ("Bad number: " ^ s)
+
+fun getHexNumber s =
+   case StringCvt.scanString (Int.scan StringCvt.HEX) s of
+      SOME n => n
+    | NONE => failExit ("Bad hex number: " ^ s)
 
 fun getArguments () =
    List.map
@@ -468,6 +476,8 @@ val () =
                        | "LO" => mips.UNPREDICTABLE_LO := (fn _ => ())
                        | _    => failExit "Unknown argument to --ignore"
                    ) igns
+          val (w, l) = processOption "--watch-paddr" l
+          val () = watch_paddr := Option.map (fn s => BitsN.B(getHexNumber s, 40)) w
           val (nb, l) = processOption "--non-block" l
           val () = case nb of
                        NONE       => ()

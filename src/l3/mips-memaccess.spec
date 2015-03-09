@@ -8,6 +8,27 @@
 word flip_endian_word (w::word) =
    match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
 
+-- watch paddr
+
+declare watchPaddr::bits(40) option
+
+unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
+{
+    case Some(watch_paddr) =>
+    {
+        when addr<39:3> == watch_paddr<39:3> do
+            println ("watching --> load 0x" : PadLeft (#"0", 16, [data]) : " from 0x" : PadLeft (#"0", 10, [addr]))
+    }
+    case None => nothing
+}
+
+unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
+{
+    case Some(watch_paddr) => when addr<39:3> == watch_paddr<39:3> do
+        println ("watching --> Store 0x" : PadLeft (#"0", 16, [data]) : "(mask:" : PadLeft (#"0", 16, [mask]) : ") at 0x" : PadLeft (#"0", 10, [addr]))
+    case None => nothing
+}
+
 -- Pimitive memory load (with memory-mapped devices)
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
@@ -59,6 +80,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 
         mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
 
+        watchForLoad(pAddr, ret);
         return ret
     }
     else return UNKNOWN
@@ -124,7 +146,8 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                         c_LLbit([core]) <- Some (false);
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
-        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)")
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)");
+        watchForStore(pAddr, MemElem, mask)
     };
     sc_success
 }
