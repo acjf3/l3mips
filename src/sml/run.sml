@@ -358,7 +358,7 @@ in
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
-      ; mips.l2PtrPrefetchDepth := !l2_prefetch_depth
+      ; mips.l2PrefetchDepth := !l2_prefetch_depth
       ; mips.l2Prefetcher := !l2_prefetcher
       ; mips.l2ReplacePolicy := !l2_replace_policy
       ; mips.print := debug_print

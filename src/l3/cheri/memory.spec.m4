@@ -195,7 +195,7 @@ record L2Entry {valid::bool tag::L2Tag stats::pfetchStats sharers::NatSet data::
 type DirectMappedL2 = L2Index -> L2Entry
 record L2MetaEntry {wasInL2::bool wasUsed::bool evictedUseful::bool}
 
-declare l2PtrPrefetchDepth :: nat
+declare l2PrefetchDepth :: nat
 declare l2Prefetcher :: nat
 
 declare c_L2 :: nat -> DirectMappedL2
@@ -704,7 +704,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     dwords, _ = getDWordList(addr, eval(L2LINESIZE/32));
 
     var new_entry;
-    if (prefetchDepth == l2PtrPrefetchDepth) then
+    if (prefetchDepth == l2PrefetchDepth) then
     {
         memStats.l2_mandatory_fetch <- memStats.l2_mandatory_fetch + 1;
         new_entry <- mkL2CacheEntry(true, L2Tag(addr), (0, 1) , L2UpdateSharers(cacheType, procID, true, Nil), caps)
@@ -712,7 +712,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     else
     {
         memStats.l2_prefetch <- memStats.l2_prefetch + 1;
-        new_entry <- mkL2CacheEntry(true, L2Tag(addr), (l2PtrPrefetchDepth-prefetchDepth, 0) , Nil, caps)
+        new_entry <- mkL2CacheEntry(true, L2Tag(addr), (l2PrefetchDepth-prefetchDepth, 0) , Nil, caps)
     };
 
     victimWay = L2ReplacePolicy(addr);
@@ -722,7 +722,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     {
         -- stats updates --
         memStats.l2_evict <- memStats.l2_evict + 1;
-        if (prefetchDepth == l2PtrPrefetchDepth) then
+        if (prefetchDepth == l2PrefetchDepth) then
             memStats.l2_mandatory_evict <- memStats.l2_mandatory_evict + 1
         else
             memStats.l2_prefetch_evict <- memStats.l2_prefetch_evict + 1;
@@ -833,7 +833,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, prefetchDepth::nat) =
     };
     -- update cache --
     foreach a in addr_list do
-        metaL2(a<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PtrPrefetchDepth), evicted_useful);
+        metaL2(a<34:eval(35-L2LINENUMBERWIDTH)>) <- mkL2MetaEntry(true, (prefetchDepth == l2PrefetchDepth), evicted_useful);
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
     -- return --
     cap
@@ -894,7 +894,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
         {
             memStats.l2_read_miss <- memStats.l2_read_miss + 1;
             mark_log (4, log_l2_read_miss(cacheType, addr, L2Idx(addr)));
-            cacheLine <- L2ServeMiss(cacheType, addr, l2PtrPrefetchDepth)
+            cacheLine <- L2ServeMiss(cacheType, addr, l2PrefetchDepth)
         }
     };
     cacheLine
