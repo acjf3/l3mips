@@ -24,6 +24,7 @@ define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size 
 define(`L2TAGWIDTH', eval(L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH))dnl -- size of tag feild in bits
 define(`L2LINENUMBERWIDTH', eval(L2ADDRWIDTH-L2OFFSETWIDTH))dnl -- size of linenumber feild in bits
 dnl -- indexing utils
+define(`L2CHUNKIDXWIDTH', eval(log2(L2LINESIZE)-5))dnl
 define(`L2CHUNKIDX', ifelse(L2LINESIZE,32,0,L2LINESIZE,64,[$1<0>],L2LINESIZE,128,[$1<1:0>]))dnl
 define(`REPLACE',Take($1,$3):Cons($2,Drop($1+1,$3)))dnl
 dnl
@@ -734,6 +735,21 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
     var evicted_useful = false;
     when old_entry.valid do
     {
+        ifelse(L2CHUNKIDXWIDTH,0,
+        -- write cache line back to memory --
+        address = old_entry.tag : addr<eval(34-L2TAGWIDTH):0>;
+        DRAM(address) <- Head(old_entry.data);
+        mark_log(5, log_w_dram (address, Head(old_entry.data)));
+        ,
+        -- write cache line back to memory --
+        var chunck_idx::bits(eval(log2(L2LINESIZE)-5)) = 0;
+        foreach elem in old_entry.data do
+        {
+            address = old_entry.tag : addr<eval(34-L2TAGWIDTH):eval(log2(L2LINESIZE)-5)> : chunck_idx;
+            chunck_idx <- chunck_idx + 1;
+            DRAM(address) <- elem;
+            mark_log(5, log_w_dram (address, elem))
+        };)dnl
         -- stats updates --
         memStats.l2_evict <- memStats.l2_evict + 1;
         if (prefetchDepth == 0) then
@@ -857,7 +873,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
     cap
 }
 
-L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
+L2Entry L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
     match L2Hit (addr)
     {
         case Some (cacheEntry, way) =>
@@ -867,30 +883,31 @@ L2Entry option L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.stats, cacheEntry.sharers, REPLACE(L2CHUNKIDX(addr),new_data,cacheEntry.data));
             memStats.l2_write_hit <- memStats.l2_write_hit + 1;
             mark_log (4, log_l2_write_hit(cacheType, addr, way, new_data));
-            Some (L2Cache(way,L2Idx(addr)))
+            L2Cache(way,L2Idx(addr))
         }
         case None =>
         {
             memStats.l2_write_miss <- memStats.l2_write_miss + 1;
             mark_log (4, log_l2_write_miss(cacheType, addr));
-            None
+            cacheLine = L2ServeMiss (cacheType, addr, Nil);
+            var retEntry;
+            match L2Hit (addr)
+            {
+                case Some (cacheEntry, way) =>
+                {
+                    var new_data = mergeBlocks257 (Element(L2CHUNKIDX(addr),cacheEntry.data), data, mask);
+                    new_data<256> <- tag;
+                    retEntry <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.stats, cacheEntry.sharers, REPLACE(L2CHUNKIDX(addr),new_data,cacheEntry.data));
+                    L2Cache(way,L2Idx(addr)) <- retEntry
+                }
+                case _ => #UNPREDICTABLE ("L2 cache reached an inconsistent state (write miss -> serve miss -> no hit)")
+            };
+            retEntry
         }
     }
 
-unit L2ServeWrite (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257)) =
-{
-    var new_data = mergeBlocks257 (DRAM(addr), data, mask);
-    new_data<256> <- tag;
-    DRAM(addr) <- new_data;
-    mark_log (5, log_w_dram (addr, new_data))
-}
-
-unit L2HandleCoherence (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257), entry::L2Entry option) =
-    match entry
-    {
-        case Some (cacheEntry) => L2InvalL1(addr, cacheEntry.sharers, false)
-        case None              => nothing
-    }
+unit L2HandleCoherence (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask::bits(257), entry::L2Entry) =
+    L2InvalL1(addr, entry.sharers, false)
 
 bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
 {
@@ -923,7 +940,6 @@ unit L2Write (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), mask
 {
     memStats.l2_write <- memStats.l2_write + 1;
     cacheEntry = L2Update(cacheType, addr, tag, data, mask);
-    L2ServeWrite(cacheType, addr, tag, data, mask);
     L2HandleCoherence(cacheType, addr, tag, data, mask, cacheEntry)
 }
 
