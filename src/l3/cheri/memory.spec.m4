@@ -393,13 +393,13 @@ string log_l2_read_miss (cacheType::L1Type, addr::CapAddr) =
 
 string log_l2_fill (cacheType::L1Type, addr::CapAddr, way::nat, old::L2Entry, new::L2Entry) =
     l2prefix_str(cacheType, addr) : " - fill - way " : [way::nat] : " - " :
-    "old@" : addr_str([old.tag:L2Idx(addr)]) : l2entry_str(old) : " - " :
-    "new@" : addr_str([new.tag:L2Idx(addr)]) : l2entry_str(new)
+    "old@" : addr_str(old.tag:addr<34-L2TAGWIDTH:0>) : l2entry_str(old) : " - " :
+    "new@" : addr_str(new.tag:addr<34-L2TAGWIDTH:0>) : l2entry_str(new)
 
 string log_l2_evict (cacheType::L1Type, addr::CapAddr, way::nat, old::L2Entry, new::L2Entry) =
     l2prefix_str(cacheType, addr) : " - evict - way " : [way::nat] : " - " :
-    "old@" : addr_str([old.tag:L2Idx(addr)]) : l2entry_str(old) : " - " :
-    "new@" : addr_str([new.tag:L2Idx(addr)]) : l2entry_str(new)
+    "old@" : addr_str(old.tag:addr<34-L2TAGWIDTH:0>) : l2entry_str(old) : " - " :
+    "new@" : addr_str(new.tag:addr<34-L2TAGWIDTH:0>) : l2entry_str(new)
 
 string log_l2_write_hit (cacheType::L1Type, addr::CapAddr, way::nat, data::bits(257)) =
     l2prefix_str(cacheType, addr) : " - write hit - way " : [way::nat] : " - " :
@@ -735,21 +735,6 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
     var evicted_useful = false;
     when old_entry.valid do
     {
-        ifelse(L2CHUNKIDXWIDTH,0,
-        -- write cache line back to memory --
-        address = old_entry.tag : addr<eval(34-L2TAGWIDTH):0>;
-        DRAM(address) <- Head(old_entry.data);
-        mark_log(5, log_w_dram (address, Head(old_entry.data)));
-        ,
-        -- write cache line back to memory --
-        var chunck_idx::bits(eval(log2(L2LINESIZE)-5)) = 0;
-        foreach elem in old_entry.data do
-        {
-            address = old_entry.tag : addr<eval(34-L2TAGWIDTH):eval(log2(L2LINESIZE)-5)> : chunck_idx;
-            chunck_idx <- chunck_idx + 1;
-            DRAM(address) <- elem;
-            mark_log(5, log_w_dram (address, elem))
-        };)dnl
         -- stats updates --
         memStats.l2_evict <- memStats.l2_evict + 1;
         if (prefetchDepth == 0) then
@@ -767,6 +752,23 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
         -- stats updates --
         evicted_useful <- (Snd(old_entry.stats) > 0);
         mark_log (4, log_l2_evict(cacheType, addr, victimWay, old_entry, new_entry));
+        -- actual actions --
+        ifelse(L2CHUNKIDXWIDTH,0,
+        -- write cache line back to memory --
+        address = old_entry.tag : addr<eval(34-L2TAGWIDTH):0>;
+        DRAM(address) <- Head(old_entry.data);
+        mark_log(5, log_w_dram (address, Head(old_entry.data)));
+        ,
+        -- write cache line back to memory --
+        var chunk_idx::bits(L2CHUNKIDXWIDTH) = 0;
+        foreach elem in old_entry.data do
+        {
+            address = old_entry.tag : addr<eval(34-L2TAGWIDTH):eval(log2(L2LINESIZE)-5)> : chunk_idx;
+            chunk_idx <- chunk_idx + 1;
+            DRAM(address) <- elem;
+            mark_log(5, log_w_dram (address, elem))
+        };)dnl
+        -- take care of coherence --
         L2InvalL1(old_entry.tag:addr<eval(34-L2TAGWIDTH):0>, old_entry.sharers, true)
     };
 
