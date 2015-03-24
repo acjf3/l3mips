@@ -369,10 +369,28 @@ string l2entry_str (entry::L2Entry) =
     "|sharers" : sharers_str(entry.sharers) :
     "|" : block257_list_str(entry.data) : "]"
 
+string l2addr_str (addr::CapAddr) =
+    addr_str(addr) :
+    "(tag:" : addr_l2tag_str(addr) :
+    ",idx:" : addr_l2idx_str(addr) : ")"
+
+string l2addr_list_str (addr_list::CapAddr list) =
+{
+    var str = "{";
+    var i :: nat = 0;
+    foreach addr in addr_list do
+    {
+        when i > 0 do
+            str <- str : ",";
+        str <- str : l2addr_str (addr);
+        i <- i + 1
+    };
+    return str : "}"
+}
+
 string l2prefix_str (cacheType::L1Type, addr::CapAddr) =
     "L2(core" : [[procID]::nat] : "," : l1type_str(cacheType) : ")" :
-    "@" : addr_str(addr) :
-    "(tag:" : addr_l2tag_str(addr) : ",idx:" : addr_l2idx_str(addr) : ")"
+    "@" : l2addr_str(addr)
 
 string l2metaEntry_str (mentry::L2MetaEntry) =
     "l2meta(wasIn: ": [mentry.wasInL2] : ",wasUsed: " : [mentry.wasUsed] : ",killedUsefull: " : [mentry.evictedUseful] : ")"
@@ -416,8 +434,9 @@ string log_l2_inval_l1 (l1id::nat, addr::CapAddr) =
     "L2 inval L1 " : [l1id::nat] : " @" : addr_str(addr) :
     " L2idx:" : addr_l2idx_str(addr) : ",L1idx:" : addr_l1idx_str(addr)
 
-string log_l2_prefetch (cacheType::L1Type, addr::CapAddr) =
-    l2prefix_str(cacheType, addr) : " - prefetch"
+string log_l2_prefetch (cacheType::L1Type, addr::CapAddr, depth::nat, past_addr::CapAddr list) =
+    l2prefix_str(cacheType, addr) : " - prefetch - " :
+    "depth " : [depth] : " - " : l2addr_list_str (past_addr)
 
 --------------------------------------------------------------------------------
 -- DRAM LOGS
@@ -713,7 +732,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
 {
     cap  = DRAM(addr);
 
-    prefetchDepth = Length (past_addr);
+    prefetchDepth = Length (past_addr) - 1;
 
     caps, addr_list = getCapList(addr, eval(L2LINESIZE/32));
     dwords, _ = getDWordList(addr, eval(L2LINESIZE/32));
@@ -763,7 +782,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
         var chunk_idx::bits(L2CHUNKIDXWIDTH) = 0;
         foreach elem in old_entry.data do
         {
-            address = old_entry.tag : addr<eval(34-L2TAGWIDTH):eval(log2(L2LINESIZE)-5)> : chunk_idx;
+            address = old_entry.tag : addr<eval(34-L2TAGWIDTH):L2CHUNKIDXWIDTH> : chunk_idx;
             chunk_idx <- chunk_idx + 1;
             DRAM(address) <- elem;
             mark_log(5, log_w_dram (address, elem))
@@ -774,7 +793,6 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
 
     -- Various Prefecth Flavors --
     ------------------------------
-    var el::bits(257);
     when (prefetchDepth < l2PrefetchDepth) do match l2Prefetcher
     {
         -- Cap Prefetch - first --
@@ -792,7 +810,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
                         {
                             _ = L2ServeMiss(cacheType, paddr<39:5>, Cons(paddr<39:5>, past_addr));
                             memStats.l2_prefetch <- memStats.l2_prefetch + 1;
-                            mark_log(4, log_l2_prefetch (cacheType, paddr<39:5>))
+                            mark_log(4, log_l2_prefetch (cacheType, paddr<39:5>, prefetchDepth, past_addr))
                         }
                         case _ => nothing
                     }
@@ -814,7 +832,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
                     {
                         _ = L2ServeMiss(cacheType, ptr<39:5>, Cons(ptr<39:5>, past_addr));
                         memStats.l2_prefetch <- memStats.l2_prefetch + 1;
-                        mark_log(4, log_l2_prefetch (cacheType, ptr<39:5>))
+                        mark_log(4, log_l2_prefetch (cacheType, ptr<39:5>, prefetchDepth, past_addr))
                     }
                     case _ => nothing
                 }
@@ -824,26 +842,28 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
         -- Cap Prefetch - all --
         ------------------------
         case 2 => foreach el2 in caps do
-        { var el::bits(257) = el2;
-        when Capability(el).tag do
-        match tryTranslation (Capability(el).base + Capability(el).offset)
         {
-            case Some(paddr) =>
+            var el::bits(257) = el2;
+            when Capability(el).tag do
+            match tryTranslation (Capability(el).base + Capability(el).offset)
             {
-                memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
-                {-when ! aliasWithAddrList (paddr<39:5>, past_addr) do-} match L2Hit (paddr<39:5>)
+                case Some(paddr) =>
                 {
-                    case None =>
+                    memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+                    when ! aliasWithAddrList (paddr<39:5>, past_addr) do match L2Hit (paddr<39:5>)
                     {
-                        _ = L2ServeMiss(cacheType, paddr<39:5>, Cons(paddr<39:5>, past_addr));
-                        memStats.l2_prefetch <- memStats.l2_prefetch + 1;
-                        mark_log(4, log_l2_prefetch (cacheType, paddr<39:5>))
+                        case None =>
+                        {
+                            _ = L2ServeMiss(cacheType, paddr<39:5>, Cons(paddr<39:5>, past_addr));
+                            memStats.l2_prefetch <- memStats.l2_prefetch + 1;
+                            mark_log(4, log_l2_prefetch (cacheType, paddr<39:5>, prefetchDepth, past_addr))
+                        }
+                        case _ => nothing
                     }
-                    case _ => nothing
                 }
+                case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
             }
-            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
-        }}
+        }
         -- Ptr Prefetch - all --
         ------------------------
         case 3 => foreach elem in dwords do match tryTranslation (elem)
@@ -857,7 +877,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
                     {
                         _ = L2ServeMiss(cacheType, ptr<39:5>, Cons(ptr<39:5>, past_addr));
                         memStats.l2_prefetch <- memStats.l2_prefetch + 1;
-                        mark_log(4, log_l2_prefetch (cacheType, ptr<39:5>))
+                        mark_log(4, log_l2_prefetch (cacheType, ptr<39:5>, prefetchDepth, past_addr))
                     }
                     case _ => nothing
                 }
@@ -891,7 +911,7 @@ L2Entry L2Update (cacheType::L1Type, addr::CapAddr, tag::bool, data::bits(257), 
         {
             memStats.l2_write_miss <- memStats.l2_write_miss + 1;
             mark_log (4, log_l2_write_miss(cacheType, addr));
-            cacheLine = L2ServeMiss (cacheType, addr, Nil);
+            cacheLine = L2ServeMiss (cacheType, addr, list {addr});
             var retEntry;
             match L2Hit (addr)
             {
@@ -932,7 +952,7 @@ bits(257) L2Read (cacheType::L1Type, addr::CapAddr) =
         {
             memStats.l2_read_miss <- memStats.l2_read_miss + 1;
             mark_log (4, log_l2_read_miss(cacheType, addr));
-            cacheLine <- L2ServeMiss(cacheType, addr, Nil)
+            cacheLine <- L2ServeMiss(cacheType, addr, list {addr})
         }
     };
     cacheLine
