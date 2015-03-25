@@ -3,6 +3,12 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+-- helper function
+
+nat log2 (x::nat) = if x == 1 then 0 else 1 + log2 (x div 2)
+
+-- types definitions
+
 register CapCause :: bits (16)
 {
     15-8 : ExcCode  -- 8 bits exception code
@@ -43,10 +49,6 @@ register Capability :: bits (257)
 
 -- Capability API
 
-nat capByteWidth = 32   -- 256bits wide capabilities
-
-bool isCapAligned  (addr::bits(64))  = addr<4:0> == 0
-
 bool     getTag    (cap::Capability) = cap.tag
 bits(24) getType   (cap::Capability) = cap.otype -- 16 bits in 128-bits mode
 Perms    getPerms  (cap::Capability) = Perms(cap.perms) -- 8 bits in 128-bits mode
@@ -62,3 +64,28 @@ Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; n
 Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.offset <- offset; new_cap}
 Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.base   <- base;   new_cap}
 Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.length <- length; new_cap}
+
+nat capByteWidth = 32   -- 256bits wide capabilities
+
+bool isCapAligned  (addr::bits(64))  = addr<4:0> == 0
+
+type CapAddr = bits(35)
+type CapBits = bits(256)
+
+dword readDwordFromRaw (dwordAddr::bits(37), raw::CapBits) =
+match dwordAddr<1:0>
+{
+    case '00' => raw<63:0>
+    case '01' => raw<127:64>
+    case '10' => raw<191:128>
+    case '11' => raw<255:192>
+}
+
+CapBits updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CapBits) =
+match dwordAddr<1:0>
+{
+    case '00' => old_blob<255:64>  : (old_blob<63:0>    && ~mask || data && mask)
+    case '01' => old_blob<255:128> : (old_blob<127:64>  && ~mask || data && mask) : old_blob<63:0>
+    case '10' => old_blob<255:192> : (old_blob<191:128> && ~mask || data && mask) : old_blob<127:0>
+    case '11' => (old_blob<255:192> && ~mask || data && mask) : old_blob<191:0>
+}
