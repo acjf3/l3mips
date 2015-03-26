@@ -60,10 +60,17 @@ and build the MIPS simulator :
 make
 ```
 
-or the [CHERI](http://www.chericpu.org "Capability Hardware Enhanced RISC Instructions (CHERI) ") MIPS simulator :
+To build the [CHERI](http://www.chericpu.org "Capability Hardware Enhanced RISC Instructions (CHERI) ") MIPS simulator,
+you will need the [m4](https://www.gnu.org/software/m4/) macro processor installed:
 
 ```
-make CAP=1
+sudo apt-get install m4
+```
+
+You can then build your CHERI simulator, specifying a value in the CAP variable. At the moment, supported values are `128` for 128-bits wide precise capabilities and `256` for 256-bits wide precise capabilities, although any other value will default to 256:
+
+```
+make CAP=42
 ```
 
 Project hierarchy

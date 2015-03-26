@@ -3,6 +3,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 --------------------------------------------------------------------------------
 
+include(`helpers.m4')dnl
+include(`cap-params.m4')dnl
 -----------------
 -- stats utils --
 -----------------
@@ -38,9 +40,9 @@ string printMemStats =
 -- types and declarations --
 ----------------------------
 
-construct DataType {DataCap :: Capability, DataRaw :: CapBits}
+construct DataType {DataCap :: Capability, DataRaw :: CAPRAWBITS}
 
-declare MEM :: CapAddr -> DataType -- physical memory (35 bits), capability access
+declare MEM :: CAPADDR -> DataType -- physical memory (35 bits), capability access
 
 ---------------------------
 -- memory implementation --
@@ -56,12 +58,12 @@ dword ReadData (dwordAddr::bits(37)) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     var data;
-    match MEM(dwordAddr<36:log2(capByteWidth)-3>)
+    match MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
     {
         case DataCap (cap) =>
         {
             mark_log(5, "!!! normal read in cap !!!"); -- shouldn't be done
-            data <- readDwordFromRaw (dwordAddr, [&cap])
+            data <- readDwordFromRaw (dwordAddr, capToBits(cap))
         }
         case DataRaw (raw) => data <- readDwordFromRaw (dwordAddr, raw)
     };
@@ -73,30 +75,30 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
     var old_blob;
-    match MEM(dwordAddr<36:log2(capByteWidth)-3>)
+    match MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
     {
         case DataCap (cap) =>
         {
             mark_log(5, "!!! normal write in cap !!!");
-            old_blob <- [&cap]
+            old_blob <- capToBits(cap)
         }
         case DataRaw (raw) => old_blob <- raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, mask, old_blob);
     mark_log(5, "write data 0x":[data]:" @ dwordAddr 0x":[dwordAddr]);
-    MEM(dwordAddr<36:log2(capByteWidth)-3>) <- DataRaw(new_blob)
+    MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- DataRaw(new_blob)
 }
 
 word ReadInst (a::pAddr) =
 {
     memStats.inst_reads <- memStats.inst_reads + 1;
     var inst_pair;
-    match MEM(a<39:log2(capByteWidth)>)
+    match MEM(a<39:log2(CAPBYTEWIDTH)>)
     {
         case DataCap (cap) =>
         {
             mark_log(5, "!!! instruction read in cap !!!"); -- shouldn't be done
-            inst_pair <- readDwordFromRaw (a<39:3>, [&cap])
+            inst_pair <- readDwordFromRaw (a<39:3>, capToBits(cap))
         }
         case DataRaw (raw) => inst_pair <- readDwordFromRaw (a<39:3>, raw)
     };
@@ -105,36 +107,21 @@ word ReadInst (a::pAddr) =
     inst
 }
 
-Capability ReadCap (capAddr::CapAddr) =
+Capability ReadCap (capAddr::CAPADDR) =
 {
     memStats.cap_reads <- memStats.cap_reads + 1;
     data = match MEM(capAddr)
     {
         case DataCap (cap) => cap
-        case DataRaw (raw) => Capability(0)
+        case DataRaw (raw) => bitsToCap(raw)
     };
     mark_log(5, "read ":(if getTag(data) then "valid" else "invalid"):" cap from capAddr 0x":[capAddr]);
     data
 }
 
-unit WriteCap (capAddr::CapAddr, cap::Capability) =
+unit WriteCap (capAddr::CAPADDR, cap::Capability) =
 {
     memStats.cap_writes <- memStats.cap_writes + 1;
     MEM(capAddr) <- DataCap (cap);
     mark_log(5, "write ":(if getTag(cap) then "valid" else "invalid"):" cap @ capAddr 0x":[capAddr])
 }
-
--- sml helper function XXX
-unit WriteDWORD (dwordAddr::bits(37), data::dword) =
-{
-    old_blob = match MEM(dwordAddr<36:log2(capByteWidth)-3>)
-    {
-        case DataCap (cap) => [&cap]
-        case DataRaw (raw) => raw
-    };
-    new_blob = updateDwordInRaw (dwordAddr, data, ~0, old_blob);
-    MEM(dwordAddr<36:log2(capByteWidth)-3>) <- DataRaw(new_blob)
-}
-
--- sml helper function XXX
-unit Write256 (addr::bits(35), data::bits(256)) = MEM(addr) <- DataRaw (data)

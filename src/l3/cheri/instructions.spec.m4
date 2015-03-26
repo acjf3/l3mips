@@ -3,6 +3,7 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+include(`cap-params.m4')dnl
 -------------------
 -- Helper functions
 -------------------
@@ -488,7 +489,7 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if ('0':GPR(rt)) + SignExtend(offset) + [capByteWidth] >+ ('0':getLength(CAPR(cb))) then
+        if ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
@@ -522,7 +523,7 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if ('0':GPR(rt)) + SignExtend(offset) + [capByteWidth] >+ ('0':getLength(CAPR(cb))) then
+        if ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)

@@ -1,11 +1,10 @@
 ---------------------------------------------------------------------------
--- CHERI types
+-- CHERI types for 128-bits precice capability
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
-
--- helper function
-
-nat log2 (x::nat) = if x == 1 then 0 else 1 + log2 (x div 2)
+dnl
+include(`helpers.m4')dnl
+include(`cap-params.m4')dnl
 
 -- types definitions
 
@@ -65,27 +64,38 @@ Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; n
 Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.base   <- base;   new_cap}
 Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.length <- length; new_cap}
 
-nat capByteWidth = 32   -- 256bits wide capabilities
-
 bool isCapAligned  (addr::bits(64))  = addr<4:0> == 0
 
-type CapAddr = bits(35)
-type CapBits = bits(256)
+CAPRAWBITS capToBits (cap :: Capability) =
+    0xF000000D_FEEEEEED_F000000D_12345678::CAPRAWBITS
 
-dword readDwordFromRaw (dwordAddr::bits(37), raw::CapBits) =
-match dwordAddr<1:0>
-{
-    case '00' => raw<63:0>
-    case '01' => raw<127:64>
-    case '10' => raw<191:128>
-    case '11' => raw<255:192>
-}
+Capability bitsToCap (raw :: CAPRAWBITS) =
+    Capability('0' : 0xFEEDF00D_DEADBABE::bits(64) : raw : 0xFEEDBABE_DEADF00D::bits(64))
 
-CapBits updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CapBits) =
-match dwordAddr<1:0>
-{
-    case '00' => old_blob<255:64>  : (old_blob<63:0>    && ~mask || data && mask)
-    case '01' => old_blob<255:128> : (old_blob<127:64>  && ~mask || data && mask) : old_blob<63:0>
-    case '10' => old_blob<255:192> : (old_blob<191:128> && ~mask || data && mask) : old_blob<127:0>
-    case '11' => (old_blob<255:192> && ~mask || data && mask) : old_blob<191:0>
-}
+dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
+if dwordAddr<0> then raw<127:64> else raw<63:0>
+
+CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
+if dwordAddr<0> then
+    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
+else
+    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
+
+-- log utils --
+
+string hex24 (x::bits(24)) = PadLeft (#"0", 6, [x])
+string hex31 (x::bits(31)) = PadLeft (#"0", 8, [x])
+string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
+
+string log_cap_write (cap::Capability) =
+    "u:":(if getSealed(cap) then "1" else "0"):
+    " perms:0x":hex31(&getPerms(cap)):
+    " type:0x":hex24(getType(cap)):
+    " offset:0x":hex64(getOffset(cap)):
+    " base:0x":hex64(getBase(cap)):
+    " length:0x":hex64(getLength(cap))
+
+string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
+string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
+string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":log_cap_write(cap)
+string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[0x":hex40(pAddr):"]"
