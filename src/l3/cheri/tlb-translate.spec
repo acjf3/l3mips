@@ -63,7 +63,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
         }
     else
     {
-        CP0.BadVAddr <- PCC.base + vAddr;
+        CP0.BadVAddr <- getBase(PCC) + vAddr;
         SignalException (if AccessType == LOAD then AdEL else AdES);
         UNKNOWN
     }

@@ -16,6 +16,8 @@ L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 ifeq ($(CAP), 128)
 L3SRCBASE+=cheri/cap128-types.spec
+else ifeq ($(CAP), c128)
+L3SRCBASE+=cheri/cap128-compressed-types.spec
 else
 L3SRCBASE+=cheri/cap256-types.spec
 endif

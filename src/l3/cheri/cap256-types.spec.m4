@@ -8,12 +8,6 @@ include(`cap-params.m4')dnl
 
 -- types definitions
 
-register CapCause :: bits (16)
-{
-    15-8 : ExcCode  -- 8 bits exception code
-     7-0 : RegNum   -- 8 bits register number
-}
-
 register Perms :: bits (31)
 {
     30-15 : soft
@@ -88,6 +82,20 @@ match dwordAddr<1:0>
     case '01' => old_blob<255:128> : (old_blob<127:64>  && ~mask || data && mask) : old_blob<63:0>
     case '10' => old_blob<255:192> : (old_blob<191:128> && ~mask || data && mask) : old_blob<127:0>
     case '11' => (old_blob<255:192> && ~mask || data && mask) : old_blob<191:0>
+}
+
+Capability defaultCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- true;
+    new_cap.sealed <- false;
+    new_cap.offset <- 0;
+    new_cap.base <- 0;
+    new_cap.length <- ~0;
+    new_cap.otype <- 0;
+    new_cap.perms <- ~0;
+    new_cap.reserved <- 0;
+    new_cap
 }
 
 -- log utils --

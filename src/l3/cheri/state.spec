@@ -3,6 +3,12 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+register CapCause :: bits (16)
+{
+    15-8 : ExcCode  -- 8 bits exception code
+     7-0 : RegNum   -- 8 bits register number
+}
+
 declare
 {
     c_BranchDelayPCC    :: id -> (bits(64) * Capability) option

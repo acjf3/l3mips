@@ -96,10 +96,7 @@ define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-    {
-        GPR(rd)<30:0> <- &getPerms(CAPR(cb))::bits(31); -- XXX width of the perm feild is hardcoded
-        GPR(rd)<63:31> <- 0
-    }
+        GPR(rd) <- ZeroExtend(&getPerms(CAPR(cb)))
 
 -----------------------------------
 -- CGetType rd, cb
@@ -110,10 +107,7 @@ define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-    {
-        GPR(rd)<23:0> <- getType(CAPR(cb)); -- XXX width of the otype feild is hardcoded
-        GPR(rd)<63:24> <- 0
-    }
+        GPR(rd) <- ZeroExtend(getType(CAPR(cb)))
 
 -----------------------------------
 -- CGetPCC cd
@@ -226,6 +220,33 @@ define COP2 > CHERICOP2 > CSet > CSetLen (cd::reg, cb::reg, rt::reg) =
     }
 
 -----------------------------------
+-- CSetBounds
+-----------------------------------
+define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if (getBase(CAPR(cb)) + getOffset(CAPR(cb))) < getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if GPR(rt) >+ (getLength(CAPR(cb)) - getOffset(CAPR(cb))) then
+        SignalCapException(capExcLength,cb)
+    else
+    {
+        var new_cap = CAPR(cb);
+        new_cap <- setBase(new_cap, getBase(CAPR(cb))+getOffset(CAPR(cb)));
+        new_cap <- setLength(new_cap, GPR(rt)-getOffset(CAPR(cb)));
+        new_cap <- setOffset(new_cap, 0);
+        CAPR(cd) <- new_cap
+    }
+
+-----------------------------------
 -- CClearTag
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
@@ -259,7 +280,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else
     {
         var new_cap = CAPR(cb);
-        new_cap <- setPerms(new_cap, Perms(&getPerms(CAPR(cb)) && GPR(rt)<30:0>)); -- XXX perms
+        new_cap <- setPerms(new_cap, Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>));
         CAPR(cd) <- new_cap
     }
 
@@ -292,7 +313,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
         SignalCapException_v(cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
-    else if &getPerms(CAPR(cs)) && GPR(rt)<30:0> <> GPR(rt)<30:0> then -- XXX perms
+    else if &getPerms(CAPR(cs)) && GPR(rt)<eval(NBPERMS-1):0> <> GPR(rt)<eval(NBPERMS-1):0> then
         SignalCapException(capExcUser,cs)
     else
         nothing
@@ -835,7 +856,7 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
     {
         var new_cap = CAPR(cs);
         new_cap <- setSealed(new_cap, true);
-        new_cap <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<23:0>); -- XXX type
+        new_cap <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0>);
         CAPR(cd) <- new_cap
     }
 
@@ -859,7 +880,7 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcSeal,cs)
     else if getSealed(CAPR(ct)) then
         SignalCapException(capExcSeal,ct)
-    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<23:0> <> getType(CAPR(cs)) then -- XXX type
+    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0> <> getType(CAPR(cs)) then
         SignalCapException(capExcType,ct)
     else if not getPerms(CAPR(ct)).Permit_Seal then
         SignalCapException(capExcPermSeal,ct)
@@ -869,9 +890,9 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
     {
         var new_cap = CAPR(cs);
         new_cap <- setSealed(new_cap, false);
-        new_cap <- setType(new_cap, 0); -- XXX type
+        new_cap <- setType(new_cap, 0);
         var p::Perms = getPerms(new_cap);
-        p.Global <- getPerms(CAPR(cs)).Global and getPerms(CAPR(ct)).Global; -- XXX perms
+        p.Global <- getPerms(CAPR(cs)).Global and getPerms(CAPR(ct)).Global;
         new_cap <- setPerms(new_cap, p);
         CAPR(cd) <- new_cap
     }

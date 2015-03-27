@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
--- CHERI types for 128-bits precice capability
+-- CHERI types for 128-bits precise capability
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 dnl
@@ -7,12 +7,6 @@ include(`helpers.m4')dnl
 include(`cap-params.m4')dnl
 
 -- types definitions
-
-register CapCause :: bits (16)
-{
-    15-8 : ExcCode  -- 8 bits exception code
-     7-0 : RegNum   -- 8 bits register number
-}
 
 register Perms :: bits (31)
 {
@@ -64,7 +58,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; n
 Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.base   <- base;   new_cap}
 Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.length <- length; new_cap}
 
-bool isCapAligned  (addr::bits(64))  = addr<4:0> == 0
+bool isCapAligned  (addr::bits(64))  = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) =
     0xF000000D_FEEEEEED_F000000D_12345678::CAPRAWBITS
@@ -80,6 +74,20 @@ if dwordAddr<0> then
     (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
 else
     old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
+
+Capability defaultCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- true;
+    new_cap.sealed <- false;
+    new_cap.offset <- 0;
+    new_cap.base <- 0;
+    new_cap.length <- ~0;
+    new_cap.otype <- 0;
+    new_cap.perms <- ~0;
+    new_cap.reserved <- 0;
+    new_cap
+}
 
 -- log utils --
 
