@@ -105,13 +105,47 @@ bits(64) getLength (cap::Capability) =
 -- setters --
 -------------
 
+nat innerZeroCount (data::bool list, acc::nat) =
+if Head (data) == true then acc else innerZeroCount (Tail (data), acc + 1)
+nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
+
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag      <- tag; new_cap}
 Capability setType   (cap::Capability, otype::OType)     = {var new_cap = cap; new_cap.pointer<60:45> <- otype;  new_cap}
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
-Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.pointer  <- [offset]; new_cap} -- TODO
-Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.toBottom <- [base];   new_cap} -- TODO
-Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.toTop    <- [length]; new_cap} -- TODO
+Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.pointer  <- offset; new_cap}
+Capability setBase   (cap::Capability, base::bits(64)) =
+{
+    var new_cap = cap;
+    when not getPerms(cap).base_eq_pointer or cap.pointer <> base do
+    {
+        dist   = cap.pointer - base;
+        zeros  = countLeadingZeros (dist);
+        var newExp = if (zeros > 48) then 0 else 48 - zeros;
+        if newExp < [cap.exp] then newExp <- [cap.exp]
+        else
+            new_cap.toTop <- cap.toTop >> [newExp - [cap.exp]];
+        new_cap.exp      <- [newExp];
+        new_cap.toBottom <- -dist<63-zeros:63-zeros-17>;
+        new_cap.perms<9> <- dist == 0 -- reset base_eq_pointer bit
+    };
+    new_cap
+}
+Capability setLength (cap::Capability, length::bits(64)) =
+{
+    var new_cap = cap;
+    if (getPerms(cap).base_eq_pointer) then -- Normalise if the base is precise
+    {
+        zeros  = countLeadingZeros (length);
+        newExp = if (zeros > 48) then 0 else 48 - zeros;
+        new_cap.exp      <- [newExp];
+        new_cap.toBottom <- 0;
+        new_cap.toTop    <- (length >> newExp)<16:0>
+    }
+    else -- Otherwise, don't normalise
+        new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<16:0>;
+    new_cap
+}
 
 bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
 
