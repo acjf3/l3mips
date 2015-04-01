@@ -87,17 +87,18 @@ bits(64) getBase (cap::Capability) =
     var ret = getPtr(cap);
     when not getPerms(cap).base_eq_pointer do
     {
-        mask = (-1) << [cap.exp]::nat;
-        ret <- ret + (SignExtend(cap.toBottom) << [cap.exp]::nat);
+        mask = (-1) << [cap.exp];
+        ret <- ret + (SignExtend(cap.toBottom) << [cap.exp]);
         ret <- ret && mask -- Ensure the base is aligned
     };
     ret
 }
 bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
+
 bits(64) getLength (cap::Capability) =
 {
     var ret = ZeroExtend(cap.toTop - cap.toBottom) + 1;
-    ret <- (ret << [cap.exp]::nat) - 1;
+    ret <- (ret << [cap.exp]) - 1;
     ret
 }
 
@@ -113,7 +114,22 @@ Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; n
 Capability setType   (cap::Capability, otype::OType)     = {var new_cap = cap; new_cap.pointer<60:45> <- otype;  new_cap}
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
-Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.pointer  <- offset; new_cap}
+Capability setOffset (cap::Capability, offset::bits(64)) =
+{
+    var new_cap = cap;
+    newPtr      = getBase(cap) + offset;
+    ptrDiff     = ((newPtr - getPtr(cap)) >> [cap.exp])<16:0>;
+    newToTop    = cap.toTop - ptrDiff;
+    newToBottom = cap.toBottom - ptrDiff;
+
+    new_cap.toTop    <- newToTop;
+    new_cap.toBottom <- newToBottom;
+    new_cap.pointer  <- newPtr;
+
+    Perms(new_cap.perms).base_eq_pointer <- false;
+    new_cap
+}
+
 Capability setBase   (cap::Capability, base::bits(64)) =
 {
     var new_cap = cap;
@@ -131,6 +147,7 @@ Capability setBase   (cap::Capability, base::bits(64)) =
     };
     new_cap
 }
+
 Capability setLength (cap::Capability, length::bits(64)) =
 {
     var new_cap = cap;
