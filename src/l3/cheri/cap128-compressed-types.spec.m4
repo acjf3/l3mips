@@ -133,9 +133,15 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 Capability setBase   (cap::Capability, base::bits(64)) =
 {
     var new_cap = cap;
-    newToBottom = ((base - getBase(cap)) >> [cap.exp])<16:0> + cap.toBottom;
-    new_cap.toBottom <- newToBottom;
-    when getPtr(cap) <> base do Perms(new_cap.perms).base_eq_pointer <- false;
+    if Perms(new_cap.perms).base_eq_pointer then
+    {
+        new_cap.pointer <- base
+    }
+    else
+    {
+        newToBottom = ((base - getBase(cap)) >> [cap.exp])<16:0> + cap.toBottom;
+        new_cap.toBottom <- newToBottom
+    };
     new_cap
 }
 
