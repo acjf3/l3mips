@@ -133,18 +133,9 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 Capability setBase   (cap::Capability, base::bits(64)) =
 {
     var new_cap = cap;
-    when not getPerms(cap).base_eq_pointer or cap.pointer <> base do
-    {
-        dist   = cap.pointer - base;
-        zeros  = countLeadingZeros (dist);
-        var newExp = if (zeros > 48) then 0 else 48 - zeros;
-        if newExp < [cap.exp] then newExp <- [cap.exp]
-        else
-            new_cap.toTop <- cap.toTop >> [newExp - [cap.exp]];
-        new_cap.exp      <- [newExp];
-        new_cap.toBottom <- -dist<63-zeros:63-zeros-17>;
-        new_cap.perms<9> <- dist == 0 -- reset base_eq_pointer bit
-    };
+    newToBottom = ((base - getBase(cap)) >> [cap.exp])<16:0> + cap.toBottom;
+    new_cap.toBottom <- newToBottom;
+    when getPtr(cap) <> base do Perms(new_cap.perms).base_eq_pointer <- false;
     new_cap
 }
 
