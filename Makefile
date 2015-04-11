@@ -103,10 +103,7 @@ SIM_PROFILE ?= l3mips_prof
 
 M4_OUT_FILES = $(basename $(wildcard src/l3/cheri/*.spec.m4))
 
-all: ${SIM}
-
-all: l3mips
-
+all: $(SIM)
 
 hol: ${L3SRC}
 	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
