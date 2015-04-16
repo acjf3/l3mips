@@ -108,6 +108,9 @@ all: $(SIM)
 hol: ${L3SRC}
 	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
 
+count: ${L3SRC}
+	@wc -l ${L3SRC}
+
 %.spec: %.spec.m4
 	m4 -I src/l3/cheri/ -D CAP=$(CAP) $^ > $@
 
