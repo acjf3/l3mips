@@ -93,12 +93,10 @@ bits(65) innerGetBase (cap::Capability) =
         ret <- (ret + (SignExtend(cap.toBottom) << [cap.exp])) && (~0<<[cap.exp]);
     ret
 }
-bits(64) getBase (cap::Capability) = if innerGetBase(cap)<64> then ~0 else innerGetBase(cap)<63:0>
+bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
 bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
 bits(64) getLength (cap::Capability) =
 {
-    mark_log(3, "getLen...(base_eq_ptr,ptr=":[getPtr(cap)]:") exp=0x":[cap.exp]:" toBot=0x":[cap.toBottom]:" toTop=0x":[cap.toTop]);
-    mark_log(3, "getLen...innerTop=0x":[innerGetTop(cap)]:" innerBase=0x":[innerGetBase(cap)]);
     len = innerGetTop(cap) - innerGetBase(cap);
     if len<64> then ~0 else len<63:0>
 }
@@ -119,8 +117,8 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 {
     var new_cap = cap;
     newPtr      = getBase(cap) + offset;
-    ptrDiff     = ((newPtr - getPtr(cap)) >> [cap.exp])<15:0>;
-    newToTop    = cap.toTop - ptrDiff;
+    ptrDiff     = ((newPtr >> [cap.exp]) - (getPtr(cap) >> [cap.exp]))<15:0>;
+    newToTop    = cap.toTop    - ptrDiff;
     newToBottom = cap.toBottom - ptrDiff;
 
     new_cap.toTop    <- newToTop;
@@ -155,13 +153,11 @@ Capability setLength (cap::Capability, length::bits(64)) =
         newExp = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
         new_cap.exp      <- [newExp];
         new_cap.toBottom <- 0;
-        new_cap.toTop    <- ZeroExtend((length >> newExp)<14:0>);
-        mark_log(3, "setLen...(base_eq_ptr,ptr=":[getPtr(new_cap)]:") newExp=0x":[new_cap.exp]:" newToBot=0x":[new_cap.toBottom]:" newToTop=0x":[new_cap.toTop])
+        new_cap.toTop    <- ZeroExtend((length >> newExp)<14:0>)
     }
     else -- Otherwise, don't normalise
     {
-        new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<15:0>;
-        mark_log(3, "setLen...(NOT base_eq_ptr,ptr=":[getPtr(new_cap)]:") newExp=0x":[new_cap.exp]:" newToBot=0x":[new_cap.toBottom]:" newToTop=0x":[new_cap.toTop])
+        new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<15:0>
     };
     new_cap
 }
@@ -201,6 +197,18 @@ Capability defaultCap =
 string hex16 (x::bits(16)) = PadLeft (#"0", 4, [x])
 string hex23 (x::bits(23)) = PadLeft (#"0", 6, [x])
 string hex40 (x::bits(40)) = PadLeft (#"0", 10, [x])
+
+{-
+string cap_inner_rep (cap::Capability) =
+    "u:":(if cap.tag then "1" else "0"):
+    " perms:0x":hex23(cap.perms):
+    " base_eq_ptr:":(if cap.base_eq_pointer then "1" else "0"):
+    " exp:":[[cap.exp]::nat]:
+    " toTop:0x":hex16(cap.toTop):
+    " toBottom:0x":hex16(cap.toBottom):
+    " sealed:":(if cap.sealed then "1" else "0"):
+    " pointer:0x":hex64(cap.pointer)
+-}
 
 string log_cap_write (cap::Capability) =
     "u:":(if getSealed(cap) then "1" else "0"):
