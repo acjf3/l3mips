@@ -37,6 +37,7 @@ string COP2InstructionToString (i::instruction) =
                 case CGet(CGetPCC(cd))            => op_cr("cgetpcc",cd)
                 case CGet(CGetCause(rd))          => op_gr("cgetcause",rd)
                 case CSet(CSetCause(rt))          => op_gr("csetcause",rt)
+                case CSet(CSetBounds(cd, cb, rt)) => op_cr_cr_gr("csetbounds",cd,cb,rt)
                 case CSet(CIncBase(cd, cb, rt))   => op_cr_cr_gr("cincbase",cd,cb,rt)
                 case CSet(CIncOffset(cd, cb, rt)) => op_cr_cr_gr("cincoffset",cd,cb,rt)
                 case CSet(CSetLen(cd, cb, rt))    => op_cr_cr_gr("csetlen",cd,cb,rt)

@@ -18,6 +18,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000 _`5 cd _ 111'         => CGet(CGetPCC(cd))
            case '00000 rd 00000 _ 100'       => CGet(CGetCause(rd))
            case '00100 00000 00000 rt _ 100' => CSet(CSetCause(rt))
+           case '00001 cd cb rt _'           => CSet(CSetBounds(cd, cb, rt))
            case '00100 cd cb rt _ 010'       => CSet(CIncBase(cd, cb, rt))
            case '01101 cd cb rt _ 000'       => CSet(CIncOffset(cd, cb, rt))
            case '00100 cd cb rt _ 011'       => CSet(CSetLen(cd, cb, rt))
