@@ -61,7 +61,8 @@ Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; n
 bool isCapAligned  (addr::bits(64))  = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) =
-    0xF000000D_FEEEEEED_F000000D_12345678::CAPRAWBITS
+  &cap<191:64>
+--    0xF000000D_FEEEEEED_F000000D_12345678::CAPRAWBITS
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
     Capability('0' : 0xFEEDF00D_DEADBABE::bits(64) : raw : 0xFEEDBABE_DEADF00D::bits(64))
