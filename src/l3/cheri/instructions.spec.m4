@@ -172,8 +172,10 @@ define COP2 > CHERICOP2 > CSet > CIncBase (cd::reg, cb::reg, rt::reg) =
     else
     {
         var new_cap     = CAPR(cb);
-        new_cap <- setBase(new_cap, getBase(CAPR(cb)) + GPR(rt));
-        new_cap <- setLength(new_cap, getLength(CAPR(cb)) - GPR(rt));
+        when GPR(rt) <> 0 do {
+          new_cap <- setBase(new_cap, getBase(CAPR(cb)) + GPR(rt));
+          new_cap <- setLength(new_cap, getLength(CAPR(cb)) - GPR(rt))
+        };
         CAPR(cd) <- new_cap
     }
 
