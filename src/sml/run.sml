@@ -387,7 +387,7 @@ fun printUsage () =
       \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
       \Arguments:\n\
       \  --cycles <number>          upper bound on instruction cycles\n\
-      \  --trace <level>           verbosity level (0 default, 2 maximum)\n\
+      \  --trace <level>           verbosity level (0 default, 5 maximum)\n\
       \  --pc <address>            initial program counter value and\n\
       \                            start address for main Intel Hex file\n\
       \  --at <address> <file>     load extra Intel Hex <file> into physical\n\
