@@ -712,8 +712,16 @@ pAddr option firstptr (dwords::dword list) = match dwords
     case Nil    => None
     case y @ ys => match tryTranslation (y)
     {
-        case Some(paddr) => Some(paddr)
-        case _ => firstptr (ys)
+        case Some(paddr) =>
+        {
+            memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+            Some(paddr)
+        }
+        case _ =>
+        {
+            memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1;
+            firstptr (ys)
+        }
     }
 }
 
@@ -825,7 +833,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
         {
             case Some(ptr) =>
             {
-                memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+                -- memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1; --> taken care of in firstptr
                 when ! aliasWithAddrList (ptr<39:5>, past_addr) do match L2Hit (ptr<39:5>)
                 {
                     case None =>
@@ -837,7 +845,7 @@ bits(257) L2ServeMiss (cacheType::L1Type, addr::CapAddr, past_addr::CapAddr list
                     case _ => nothing
                 }
             }
-            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
+            case _ => nothing -- memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1 --> taken care of in firstptr
         }
         -- Cap Prefetch - all --
         ------------------------
