@@ -8,6 +8,28 @@
 word flip_endian_word (w::word) =
    match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
 
+-----------------
+-- stats utils --
+-----------------
+
+record MemAccessStats
+{
+    bytes_read    :: nat
+    bytes_written :: nat
+}
+
+declare memAccessStats :: MemAccessStats
+
+unit initMemAccessStats =
+{
+    memAccessStats.bytes_read    <- 0;
+    memAccessStats.bytes_written <- 0
+}
+
+string printMemAccessStats =
+    PadRight (#" ", 16, "bytes_read")    : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_read::nat])  : "\\n" :
+    PadRight (#" ", 16, "bytes_written") : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_written::nat]) : "\\n"
+
 -- watch paddr
 
 declare watchPaddr::bits(40) option
@@ -78,6 +100,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
         when found == false do
             ret <- ReadData (a);
 
+        memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
         mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
 
         watchForLoad(pAddr, ret);
@@ -146,6 +169,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                         c_LLbit([core]) <- Some (false);
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
+        memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
         mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)");
         watchForStore(pAddr, MemElem, mask)
     };

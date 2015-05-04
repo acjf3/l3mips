@@ -12,6 +12,28 @@ changequote(!,!)dnl
    match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
 changequote(`,')dnl
 
+-----------------
+-- stats utils --
+-----------------
+
+record MemAccessStats
+{
+    bytes_read    :: nat
+    bytes_written :: nat
+}
+
+declare memAccessStats :: MemAccessStats
+
+unit initMemAccessStats =
+{
+    memAccessStats.bytes_read    <- 0;
+    memAccessStats.bytes_written <- 0
+}
+
+string printMemAccessStats =
+    PadRight (#" ", 16, "bytes_read")    : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_read::nat])  : "\\n" :
+    PadRight (#" ", 16, "bytes_written") : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_written::nat]) : "\\n"
+
 -- watch paddr
 
 declare watchPaddr::bits(40) option
@@ -101,6 +123,7 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
         when found == false do
             ret <- ReadData (a);
 
+        memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
         mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
 
         watchForLoad(pAddr, ret);
@@ -144,6 +167,7 @@ Capability LoadCap (vAddr::vAddr) =
 
         LLbit <- None;
 
+        memAccessStats.bytes_read <- memAccessStats.bytes_read + CAPBYTEWIDTH;
         mark_log (2, "Load cap: " : log_load_cap (pAddr, cap));
 
         watchForCapLoad(pAddr, cap);
@@ -211,6 +235,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             when not cond or sc_success do
                 WriteData(a, MemElem, mask)
         };
+        memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
         mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)");
         watchForStore(pAddr, MemElem, mask)
     };
@@ -258,6 +283,7 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
                     c_CP0([core]).LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
                         c_LLbit([core]) <- Some (false);
 
+            memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;
             mark_log (2, "Store cap: " : log_store_cap (pAddr, cap));
 
             watchForCapStore(pAddr, cap);

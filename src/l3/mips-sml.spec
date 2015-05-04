@@ -16,6 +16,7 @@ declare done :: bool   -- Flag to request termination
 unit resetStats =
 {
     initCoreStats;
+    initMemAccessStats;
     initMemStats
 }
 
@@ -23,6 +24,7 @@ string dumpStats =
 {
     var out = "";
     for i in 0 .. totalCore-1 do out <- out : "-- Core " : [i::nat] : " stats --\\n" : printCoreStats : "\\n";
+    out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
     out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
     out
 }
