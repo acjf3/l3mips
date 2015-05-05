@@ -852,7 +852,7 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcPermSeal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
-    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ 0x0000000001000000 then
+    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ eval(2**OTYPEWIDTH) then
         SignalCapException(capExcLength,ct)
     else
     {
