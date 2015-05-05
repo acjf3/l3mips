@@ -28,23 +28,15 @@ register Perms :: bits (23)
         0 : Global
 }
 
-register VirtAddress :: bits (45)
-{
-    44-40 : seg
-     39-0 : address
-}
-
 type OType = bits(16)
 
 register TypedPointer :: bits (64)
 {
-    63-61 : reserved    -- XXX what's going on here ? wasted bits ? (from CapCop128.bsv)
-    60-45 : otype       -- the type of the sealed object
-     44-0 : shortAddr   -- of type VirtAddr
+    63-59 : seg         -- top 5 bits of virtual address
+    58-43 : otype       -- the type of the sealed object
+    42-40 : reserved    -- unused
+     39-0 : vaddr       -- the 40 bits of the virtual address
 }
-
--- conceptually, sealed + pointer is equivalent to :
--- construct PointerType {Full :: bits(64), Typed :: TypedPointer}
 
 -- in memory representation of compressed 128 bits capabilities
 register Capability :: bits (129)
@@ -62,8 +54,6 @@ register Capability :: bits (129)
 
 -- Capability API
 
--- XXX implemented according to CapCop128.bsv
-
 -------------
 -- getters --
 -------------
@@ -77,11 +67,8 @@ if not cap.sealed then
     cap.pointer
 else
 {
-    var addr = 0;
-    vaddr = VirtAddress(TypedPointer(cap.pointer).shortAddr);
-    addr<57:0> <- SignExtend(vaddr.address); -- XXX help ? SignExtend an address ?
-    -- XXX bit 58 always 0 ?
-    addr<63:59> <- vaddr.seg;
+    var addr = cap.pointer;
+    addr<58:0> <- SignExtend(TypedPointer(cap.pointer).vaddr); -- XXX help ? SignExtend an address ?
     addr
 }
 bits(65) innerGetTop (cap::Capability) =
@@ -110,7 +97,7 @@ if Head (data) == true then acc else innerZeroCount (Tail (data), acc + 1)
 nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
 
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag      <- tag; new_cap}
-Capability setType   (cap::Capability, otype::OType)     = {var new_cap = cap; new_cap.pointer<60:45> <- otype; new_cap}
+Capability setType   (cap::Capability, otype::OType)     = {var new_cap = cap; TypedPointer(new_cap.pointer).otype <- otype; new_cap}
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
 Capability setOffset (cap::Capability, offset::bits(64)) =
