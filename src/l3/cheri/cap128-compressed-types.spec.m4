@@ -92,8 +92,11 @@ bits(64) getLength (cap::Capability) =
 -- setters --
 -------------
 
-nat innerZeroCount (data::bool list, acc::nat) =
-if Head (data) == true then acc else innerZeroCount (Tail (data), acc + 1)
+nat innerZeroCount (data::bool list, acc::nat) = match data
+{
+    case Nil => acc
+    case Cons(hd, tl) => if hd then acc else innerZeroCount (tl, acc + 1)
+}
 nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
 
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag      <- tag; new_cap}
