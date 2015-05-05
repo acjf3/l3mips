@@ -888,6 +888,8 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcPermSeal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
+    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ eval(2**OTYPEWIDTH) then -- XXX probably redundant with the inequality test up there
+        SignalCapException(capExcLength,ct)
     else
     {
         var new_cap = CAPR(cs);
