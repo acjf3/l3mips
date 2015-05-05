@@ -144,7 +144,17 @@ Capability setLength (cap::Capability, length::bits(64)) =
     }
     else -- Otherwise, don't normalise
     {
-        new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<15:0>
+        -- new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<15:0>
+        base           = getBase(cap);
+        newToTop       = (base + length) - getPtr(cap);
+        newToBottom    = base - getPtr(cap);
+
+        zeros  = countLeadingZeros (length);
+        newExp = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
+
+        new_cap.exp      <- [newExp];
+        new_cap.toTop    <- (newToTop >> newExp)<15:0>;
+        new_cap.toBottom <- (newToBottom >> newExp)<15:0>
     };
     new_cap
 }
