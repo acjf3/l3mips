@@ -243,7 +243,7 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
     {
         var new_cap = CAPR(cb);
         new_cap <- setBase(new_cap, getBase(CAPR(cb))+getOffset(CAPR(cb)));
-        new_cap <- setLength(new_cap, GPR(rt)-getOffset(CAPR(cb)));
+        new_cap <- setLength(new_cap, GPR(rt));
         new_cap <- setOffset(new_cap, 0);
         CAPR(cd) <- new_cap
     }
