@@ -36,4 +36,4 @@ record TLBEntry
 }
 
 construct IorD { INSTRUCTION, DATA }
-construct AccessType { LOAD, STORE, CLOAD, CSTORE }
+construct AccessType { LOAD, STORE }

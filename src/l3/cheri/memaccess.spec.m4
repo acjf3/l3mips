@@ -146,7 +146,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 
 Capability LoadCap (vAddr::vAddr) =
 {
-    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, CLOAD);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
     if not exceptionSignalled then
     {
         a = pAddr<39:log2(CAPBYTEWIDTH)>;
@@ -256,7 +256,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
 
 unit StoreCap (vAddr::vAddr, cap::Capability) =
 {
-    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, CSTORE);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
     when not exceptionSignalled do
     {
         a = pAddr<39:log2(CAPBYTEWIDTH)>;
