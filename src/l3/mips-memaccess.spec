@@ -101,7 +101,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
             ret <- ReadData (a);
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s)");
+        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s) from vAddr 0x":PadLeft(#"0", 16, [vAddr]));
 
         watchForLoad(pAddr, ret);
         return ret
@@ -170,7 +170,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
         memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s)");
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s) at vAddr 0x":PadLeft(#"0", 16, [vAddr]));
         watchForStore(pAddr, MemElem, mask)
     };
     sc_success
