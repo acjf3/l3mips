@@ -15,7 +15,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
                 {
                     case Nil =>
                     {
-                        exc = if  AccessType == LOAD then XTLBRefillL
+                        exc = if  AccessType == LOAD or AccessType == CLOAD then XTLBRefillL
                               else XTLBRefillS;
                         _ = SignalTLBException (exc, CP0.EntryHi.ASID, vAddr);
                         UNKNOWN
@@ -53,7 +53,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
                             }
                         else
                         {
-                            exc = if AccessType == LOAD then TLBL else TLBS;
+                            exc = if AccessType == LOAD or AccessType == CLOAD then TLBL else TLBS;
                             _ = SignalTLBException (exc, e.ASID, vAddr);
                             UNKNOWN
                         }
@@ -64,7 +64,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
     else
     {
         CP0.BadVAddr <- getBase(PCC) + vAddr;
-        SignalException (if AccessType == LOAD then AdEL else AdES);
+        SignalException (if AccessType == LOAD or AccessType == CLOAD then AdEL else AdES);
         UNKNOWN
     }
 }
