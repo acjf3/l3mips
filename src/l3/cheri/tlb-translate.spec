@@ -41,7 +41,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
                             e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
 
                         if V then
-                            if not D and AccessType == STORE then
+                            if not D and (AccessType == STORE or AccessType == CSTORE) then
                                 { _ = SignalTLBException (Mod, e.ASID, vAddr); UNKNOWN }
                             else
                             {
