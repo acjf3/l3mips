@@ -92,8 +92,8 @@ Capability defaultCap =
 
 -- log utils --
 
-string hex24 (x::bits(24)) = strToLower (PadLeft (#"0", 6, [x]))
-string hex31 (x::bits(31)) = strToLower (PadLeft (#"0", 8, [x]))
+string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
+string hex31 (x::bits(31)) = ToLower (PadLeft (#"0", 8, [x]))
 
 string log_cap_write (cap::Capability) =
     "u:":(if getSealed(cap) then "1" else "0"):

@@ -45,11 +45,11 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
-string hex32 (x::bits(32)) = strToLower(PadLeft (#"0", 8, [x]))
-string hex40 (x::bits(40)) = strToLower(PadLeft (#"0", 10, [x]))
-string hex64 (x::bits(64)) = strToLower(PadLeft (#"0", 16, [x]))
+string hex32 (x::bits(32)) = ToLower(PadLeft (#"0", 8, [x]))
+string hex40 (x::bits(40)) = ToLower(PadLeft (#"0", 10, [x]))
+string hex64 (x::bits(64)) = ToLower(PadLeft (#"0", 16, [x]))
 
-string log_sig_exception (ExceptionCode::bits(5)) = "MIPS exception 0x" : strToLower (PadLeft (#"0", 2, [ExceptionCode]))
+string log_sig_exception (ExceptionCode::bits(5)) = "MIPS exception 0x" : ToLower (PadLeft (#"0", 2, [ExceptionCode]))
 string log_w_gpr (r::reg, data::dword) = "Reg " : [[r]::nat] : " <- 0x" : hex64(data)
 string log_w_hi (data::dword) = "HI <- 0x" : hex64(data)
 string log_w_lo (data::dword) = "LO <- 0x" : hex64(data)

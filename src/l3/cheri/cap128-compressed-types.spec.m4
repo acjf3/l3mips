@@ -206,8 +206,8 @@ Capability defaultCap =
 
 -- log utils --
 
-string hex16 (x::bits(16)) = strToLower (PadLeft (#"0", 4, [x]))
-string hex23 (x::bits(23)) = strToLower (PadLeft (#"0", 6, [x]))
+string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
+string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 
 {-
 string cap_inner_rep (cap::Capability) =
