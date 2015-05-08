@@ -142,7 +142,7 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcAccKR2C           => 0x1e
     };
     capcause.RegNum  <- regNum;
-    mark_log (2, "Cap exception - cause: 0x" : [capcause.ExcCode] : ", reg: 0x" : [capcause.RegNum]);
+    mark_log (2, "Cap exception - cause: 0x" : strToLower ([capcause.ExcCode]) : ", reg: 0x" : strToLower ([capcause.RegNum]));
     SignalException(C2E)
 }
 

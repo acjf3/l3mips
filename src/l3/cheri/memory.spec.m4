@@ -67,7 +67,7 @@ dword ReadData (dwordAddr::bits(37)) =
         }
         case DataRaw (raw) => data <- readDwordFromRaw (dwordAddr, raw)
     };
-    mark_log(3, "read data 0x":[data]:" from dwordAddr 0x":[dwordAddr]);
+    mark_log(3, "read data 0x":strToLower([data]):" from dwordAddr 0x":strToLower([dwordAddr]));
     data
 }
 
@@ -85,7 +85,7 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
         case DataRaw (raw) => old_blob <- raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, mask, old_blob);
-    mark_log(3, "write data 0x":[data]:" @ dwordAddr 0x":[dwordAddr]);
+    mark_log(3, "write data 0x":strToLower([data]):" @ dwordAddr 0x":strToLower([dwordAddr]));
     MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- DataRaw(new_blob)
 }
 
@@ -103,7 +103,7 @@ word ReadInst (a::pAddr) =
         case DataRaw (raw) => inst_pair <- readDwordFromRaw (a<39:3>, raw)
     };
     inst = if a<2> then inst_pair<31:0> else inst_pair<63:32>;
-    mark_log(3, "read instruction 0x":[inst]:" @0x":[a<39:2>]);
+    mark_log(3, "read instruction 0x":strToLower([inst]):" @0x":strToLower([a<39:2>]));
     inst
 }
 
@@ -115,7 +115,7 @@ Capability ReadCap (capAddr::CAPADDR) =
         case DataCap (cap) => cap
         case DataRaw (raw) => bitsToCap(raw)
     };
-    mark_log(4, "read ":(if getTag(data) then "valid" else "invalid"):" cap from capAddr 0x":[capAddr]);
+    mark_log(4, "read ":(if getTag(data) then "valid" else "invalid"):" cap from capAddr 0x":strToLower([capAddr]));
     data
 }
 
@@ -123,5 +123,5 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
 {
     memStats.cap_writes <- memStats.cap_writes + 1;
     MEM(capAddr) <- DataCap (cap);
-    mark_log(4, "write ":(if getTag(cap) then "valid" else "invalid"):" cap @ capAddr 0x":[capAddr])
+    mark_log(4, "write ":(if getTag(cap) then "valid" else "invalid"):" cap @ capAddr 0x":strToLower([capAddr]))
 }

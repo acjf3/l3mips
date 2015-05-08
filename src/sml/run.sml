@@ -355,6 +355,7 @@ in
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
+      ; mips.strToLower := (fn x => String.map Char.toLower x)
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app

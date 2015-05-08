@@ -39,7 +39,7 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:3> == watch_paddr<39:3> do
-            println ("watching --> load 0x" : PadLeft (#"0", 16, [data]) : " from 0x" : PadLeft (#"0", 10, [addr]))
+            println ("watching --> load 0x" : hex64(data) : " from 0x" : hex40(addr))
     }
     case None => nothing
 }
@@ -47,7 +47,7 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
 unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 {
     case Some(watch_paddr) => when addr<39:3> == watch_paddr<39:3> do
-        println ("watching --> Store 0x" : PadLeft (#"0", 16, [data]) : "(mask:" : PadLeft (#"0", 16, [mask]) : ") at 0x" : PadLeft (#"0", 10, [addr]))
+        println ("watching --> Store 0x" : hex64(data) : "(mask:" : hex64(mask) : ") at 0x" : hex40(addr))
     case None => nothing
 }
 
@@ -101,7 +101,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
             ret <- ReadData (a);
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s) from vAddr 0x":PadLeft(#"0", 16, [vAddr]));
+        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s) from vAddr 0x":hex64(vAddr));
 
         watchForLoad(pAddr, ret);
         return ret
@@ -170,7 +170,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
         memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s) at vAddr 0x":PadLeft(#"0", 16, [vAddr]));
+        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s) at vAddr 0x":hex64(vAddr));
         watchForStore(pAddr, MemElem, mask)
     };
     sc_success
