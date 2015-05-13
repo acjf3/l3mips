@@ -170,7 +170,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
         memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        mark_log (2, "Store of ":[[AccessLength]::nat+1]:" byte(s) at vAddr 0x":hex64(vAddr));
+        mark_log (2, "Store 0x":hex64(MemElem):", mask 0x":hex64(mask):" (":[[AccessLength]::nat+1]:" byte(s)) at vAddr 0x":hex64(vAddr));
         watchForStore(pAddr, MemElem, mask)
     };
     sc_success
