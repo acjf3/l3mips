@@ -320,8 +320,11 @@ word option Fetch =
         vAddr = PC + getBase(PCC);
         if not getTag(PCC) then {SignalCapException_noReg(capExcTag); None}
         else if getSealed(PCC) then {SignalCapException_noReg(capExcSeal); None}
-        else if (vAddr >+ getBase(PCC) + getLength(PCC)) then {SignalCapException_noReg(capExcLength); None}
         else if (vAddr <+ getBase(PCC)) then {SignalCapException_noReg(capExcLength); None}
+        -- TODO need to take care of the 65 bit check (base+length overflows) everywhere else
+        -- TODO and the +4 for instruction bounds check and the +access size on data bounds check
+        -- TODO and whether inequalities are large or strict in all bounds checks
+        else if (('0':vAddr)+4 >+ [getBase(PCC)] + [getLength(PCC)]) then {SignalCapException_noReg(capExcLength); None}
         else if not getPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
         else {
             pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);

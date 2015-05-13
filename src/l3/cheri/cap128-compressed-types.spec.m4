@@ -72,7 +72,10 @@ else
     addr
 }
 bits(65) innerGetTop (cap::Capability) =
-    (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp])
+{
+    top = (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp]);
+    if top <64> then '1':0`64 else top
+}
 bits(65) innerGetBase (cap::Capability) =
 {
     var ret = ZeroExtend(getPtr(cap));
