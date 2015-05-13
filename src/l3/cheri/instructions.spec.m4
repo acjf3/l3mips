@@ -187,7 +187,7 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cd)
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
-    else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
+    else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) and GPR(rt) <> 0 then
         SignalCapException(capExcSeal,cb)
     else
     {
