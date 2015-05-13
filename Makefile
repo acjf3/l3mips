@@ -51,7 +51,11 @@ L3SRCBASE+=tlb/base.spec
 L3SRCBASE+=tlb/translate.spec
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
+ifdef CACHE
+L3SRCBASE+=mips-memory-caches.spec
+else
 L3SRCBASE+=mips-memory.spec
+endif
 L3SRCBASE+=mips-memaccess.spec
 L3SRCBASE+=mips-sml.spec
 L3SRCBASE+=cp2-null/instructions.spec
@@ -94,14 +98,23 @@ SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 # make targets
 #######################################
 ifdef CAP
-SIM ?= l3mips-cheri$(CAP)
+	ifdef CACHE
+		SIM ?= l3mips-cheri$(CAP)-caches
+	else
+		SIM ?= l3mips-cheri$(CAP)
+	endif
 else
-SIM ?= l3mips
+	ifdef CACHE
+		SIM ?= l3mips-caches
+	else
+		SIM ?= l3mips
+	endif
 endif
 
 SIM_PROFILE ?= l3mips_prof
 
-M4_OUT_FILES = $(basename $(wildcard src/l3/cheri/*.spec.m4))
+M4_CHERI_FILES = $(basename $(wildcard ${L3SRCDIR}/cheri/*.spec.m4))
+M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
 
 all: $(SIM)
 
@@ -111,8 +124,11 @@ hol: ${L3SRC}
 count: ${L3SRC}
 	@wc -l ${L3SRC}
 
-%.spec: %.spec.m4
-	m4 -I src/l3/cheri/ -D CAP=$(CAP) $^ > $@
+${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
+	m4 -D CAP=$(CAP) $^ > $@
+
+${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri%.spec.m4
+	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) $^ > $@
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
@@ -125,4 +141,5 @@ ${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
-	rm -f $(M4_OUT_FILES)
+	rm -f $(M4_CHERI_FILES)
+	rm -f $(M4_FILES)

@@ -21,6 +21,7 @@ val nb_core = ref 1
 val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
+val l2_replace_policy = ref 0
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -355,6 +356,7 @@ in
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
+      ; mips.l2ReplacePolicy := !l2_replace_policy
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app
@@ -386,26 +388,29 @@ fun printUsage () =
       \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
       \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
       \Arguments:\n\
-      \  --cycles <number>          upper bound on instruction cycles\n\
-      \  --trace <level>           verbosity level (0 default, 5 maximum)\n\
-      \  --pc <address>            initial program counter value and\n\
-      \                            start address for main Intel Hex file\n\
-      \  --at <address> <file>     load extra Intel Hex <file> into physical\n\
-      \                            memory at location <address>\n\
-      \  --watch-paddr <address>   specify a physical address to monitor accesses\n\
-      \  --nbcore <number>         number of core(s) (default is 1)\n\
-      \  --uart <address>          base physical address for UART memory-map\n\
-      \  --uart-delay <number>     UART cycle delay (determines baud rate)\n\
-      \  --uart-in <file>          UART input file (stdin if omitted)\n\
-      \  --uart-out <file>         UART output file (stdout if omitted)\n\
-      \  --format <format>         'raw' or 'hex' file format \n\
-      \  --non-block <on|off>      non-blocking UART input 'on' or 'off' \n\
-      \  --dump-stats <on|off>     display statistics, 'on' or 'off' \n\
-      \  --rdhwr-extra <on|off>    enable simulator control features through rdhwr inst, 'on' or 'off' \n\
-      \  --schedule <file>         file of core ids indicating schedule\n\
-      \  --ignore <string>         UNPREDICTABLE#(<string>) behaviour is \n\
-      \                            ignored (currently <string> must be \n\
-      \                            'HI' or 'LO')                       \n\
+      \  --cycles <number>              upper bound on instruction cycles\n\
+      \  --trace <level>                verbosity level (0 default, 5 maximum)\n\
+      \  --pc <address>                 initial program counter value and\n\
+      \                                 start address for main Intel Hex file\n\
+      \  --at <address> <file>          load extra Intel Hex <file> into physical\n\
+      \                                 memory at location <address>\n\
+      \  --watch-paddr <address>        specify a physical address to monitor accesses\n\
+      \  --nbcore <number>              number of core(s) (default is 1)\n\
+      \  --uart <address>               base physical address for UART memory-map\n\
+      \  --uart-delay <number>          UART cycle delay (determines baud rate)\n\
+      \  --uart-in <file>               UART input file (stdin if omitted)\n\
+      \  --uart-out <file>              UART output file (stdout if omitted)\n\
+      \  --format <format>              'raw' or 'hex' file format \n\
+      \  --non-block <on|off>           non-blocking UART input 'on' or 'off' \n\
+      \  --dump-stats <on|off>          display statistics, 'on' or 'off' \n\
+      \  --rdhwr-extra <on|off>         enable simulator control features through rdhwr inst, 'on' or 'off' \n\
+      \  --schedule <file>              file of core ids indicating schedule\n\
+      \  --ignore <string>              UNPREDICTABLE#(<string>) behaviour is \n\
+      \                                 ignored (currently <string> must be \n\
+      \                                 'HI' or 'LO')                       \n\
+      \  --l2-replace-policy <number>   Replace policy for the l2\n\
+      \                                   *  0: naive(pseudo-random)\n\
+      \                                   *  1: LRU\n\
       \  -h or --help              print this message\n\n")
 
 fun getNumber s =
@@ -507,6 +512,8 @@ val () =
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, t)
+          val (n, l) = processOption "--l2-replace-policy" l
+          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)
           val (d, l) = processOption "--uart-delay" l
           val () =
              uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)

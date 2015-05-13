@@ -36,6 +36,23 @@ type dwordAddr = bits(37)
 
 declare MEM :: dwordAddr -> dword -- physical memory (37 bits), doubleword access
 
+-- mem log utils --
+
+string MemAddr_str (addr::dwordAddr) =
+    "0x" : hex40(addr:'000')
+
+string MemData_str (data::dword) = "0x" : hex64(data)
+
+string log_mem_write (addr::dwordAddr, data::dword) =
+    "write MEM[" : MemAddr_str (addr) :
+    "] <- " : MemData_str (data)
+
+string log_mem_read (addr::dwordAddr, data::dword) =
+    "read MEM[" : MemAddr_str (addr) :
+    "]: " : MemData_str (data)
+
+-- mem API --
+
 unit InitMEM =
 {
     initMemStats;
@@ -46,13 +63,15 @@ dword ReadData (pAddr::dwordAddr) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     data = MEM(pAddr);
+    mark_log (4, log_mem_read (pAddr, data));
     data
 }
 
 unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
-    MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask
+    MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
+    mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
 }
 
 word ReadInst (a::pAddr) =
