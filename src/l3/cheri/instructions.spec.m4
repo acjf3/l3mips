@@ -233,7 +233,7 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if (getBase(CAPR(cb)) + getOffset(CAPR(cb))) < getBase(CAPR(cb)) then
+    else if (getBase(CAPR(cb)) + getOffset(CAPR(cb))) <+ getBase(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
     else if GPR(rt) >+ (getLength(CAPR(cb)) - getOffset(CAPR(cb))) then
         SignalCapException(capExcLength,cb)
