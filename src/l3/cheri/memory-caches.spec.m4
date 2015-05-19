@@ -26,11 +26,25 @@ type MemAddr = capAddr
 string MemAddr_str (addr::MemAddr) =
     "0x" : hex40(ZeroExtend(addr)<<log2(L2LINESIZE))
 
+string RawMemData_str (data::CAPRAWBITS) =
+{
+    var ret = "[";
+    for i in eval((CAPBYTEWIDTH*8)/32) .. 1 do
+    {
+        tmp::bits(32) = data<(i*32)-1:(i-1)*32>;
+        ret <- ret : ToLower ([tmp]);
+        when i > 1 do ret <- ret : ":"
+    };
+    ret <- ret : "]";
+    ret
+}
+
 string MemData_str (data::MemData) = match data
 {
-    case Cap (cap) => if getTag(cap) then "cap " : log_cap_write(cap) else "0x" : ToLower ([&cap])
-    case Raw (raw) => "0x" : ToLower([raw])
+    case Cap (cap) => if getTag(cap) then "cap " : log_cap_write(cap) else RawMemData_str (capToBits(cap))
+    case Raw (raw) => RawMemData_str(raw)
 }
+
 string log_mem_write (addr::MemAddr, data::MemData) =
     "write MEM[" : MemAddr_str (addr) :
     "] <- " : MemData_str (data)
@@ -239,17 +253,16 @@ string l1idx_str (idx::L1Index) =
 
 string l1data_str (data::L1Data) =
 {
-    var str = "{";
+    var ret = "{";
     var i::nat = 0;
-    dword_list = L1DataToDwordList (data);
-    foreach elem in dword_list do
+    foreach elem in data do
     {
-        when i > 0 do
-            str <- str : ",";
-        str <- str : [i::nat] :":0x" : hex64(elem);
-        i <- i + 1
+        when i > 0 do ret <- ret : ", ";
+        ret <- ret : [i] : ":" : MemData_str(elem);
+        i <- i+1
     };
-    return str : "}"
+    ret <- ret : "}";
+    ret
 }
 
 -- general l2 utils --
@@ -338,7 +351,7 @@ string l2data_str (data::L2Data) =
     foreach elem in data do
     {
         when i > 0 do ret <- ret : ", ";
-        ret <- ret : MemData_str(elem);
+        ret <- ret : [i] : ":" : MemData_str(elem);
         i <- i+1
     };
     ret <- ret : "}";
@@ -374,7 +387,7 @@ string log_l2_read_hit (addr::L2Addr, way::nat, entry::L2Entry) =
     l2entry_str(entry)
 
 string log_l2_read_miss (addr::L2Addr) =
-    l2prefix_str(addr) : " - read miss - "
+    l2prefix_str(addr) : " - read miss"
 
 string log_l2_fill (addr::L2Addr, way::nat, old::L2Entry, new::L2Entry) =
     l2prefix_str(addr) : " - fill - way " : [way::nat] : " - " :
@@ -397,9 +410,9 @@ string log_l2_updt_sharers (addr::L2Addr, old::L1Id list, new::L1Id list) =
     l2prefix_str(addr) : " - update sharers - " :
     sharers_str (old) : " <- " : sharers_str (new)
 
-string log_l2_inval_l1 (l1id::nat, addr::L2Addr) =
-    "L2 inval L1 " : [l1id::nat] : " @" : l2addr_str(addr) :
-    " L2idx:" : l2addr_idx_str(addr) : ",L1idx:" : l1addr_idx_str(addr)
+string log_inval_l1 (l1id::nat, addr::L1LineNumber) =
+    "inval L1 " : [l1id::nat] : " @" : l1line_str(addr) :
+    " ,L1idx:" : l1addr_idx_str(addr:0)
 
 -- l2 API --
 
@@ -418,6 +431,7 @@ when totalCore > 1 do
     foreach sharer in sharers do
     when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
     {
+        mark_log ( 4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
         current_l1_type <- if (sharer mod 2) == 0 then Inst else Data;
         entry = L1Cache(L1IdxFromLineNumber(addr));
@@ -499,6 +513,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
 
     when old_entry.valid do
     {
+        mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         var tmp_data = old_entry.data;
         for i in 0 .. eval((L2LINESIZE/CAPBYTEWIDTH) - 1) do
         {
@@ -513,6 +528,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
     };
 
     -- update cache --
+    mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
 
     -- return data --
@@ -609,6 +625,11 @@ string log_l1_read_hit (addr::L1Addr, data::L1Data) =
 string log_l1_read_miss (addr::L1Addr) =
     l1prefix_str (addr) : " - read miss"
 
+string log_l1_fill (addr::L1Addr, old::L1Entry, new::L1Entry) =
+    l1prefix_str(addr) : " - fill - " :
+    "old@" : l1line_str(old.tag:L1Idx(addr)) : l1entry_str(old) : " - " :
+    "new@" : l1line_str(new.tag:L1Idx(addr)) : l1entry_str(new)
+
 string log_l1_evict (addr::L1Addr, old::L1Entry, new::L1Entry) =
     l1prefix_str (addr) : " - evict - " :
     "old@line " : l1line_str([old.tag:L1Idx(addr)]) : l1entry_str(old) : " - " :
@@ -638,13 +659,15 @@ L1Data L1ServeMiss (addr::L1Addr) =
 {
     l2data = L2Read (L2AddrFromL1Addr(addr));
 define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
-    var data = Drop(OFFSET,l2data);
+    offset::nat = OFFSET;
+    var data = Drop(offset*eval(L1LINESIZE/CAPBYTEWIDTH),l2data);
 undefine(`OFFSET')dnl
-    data <- Take(eval(L1LINESIZE/CAPBYTEWIDTH),l2data);
+    data <- Take(eval(L1LINESIZE/CAPBYTEWIDTH),data);
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
     when old_entry.valid do
         mark_log (3, log_l1_evict(addr, old_entry, new_entry));
+    mark_log (3, log_l1_fill(addr, old_entry, new_entry));
     L1Cache(L1Idx(addr)) <- new_entry;
     data
 }
@@ -672,8 +695,8 @@ L1Data L1Read (addr::L1Addr) =
     {
         case Some (cacheEntry) =>
         {
-            mark_log (3, log_l1_read_hit (addr, cacheLine));
-            cacheLine <- cacheEntry.data
+            cacheLine <- cacheEntry.data;
+            mark_log (3, log_l1_read_hit (addr, cacheLine))
         }
         case None =>
         {
