@@ -27,7 +27,11 @@ L3SRCBASE+=tlb/base.spec
 L3SRCBASE+=cheri/tlb-translate.spec
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
+ifdef CACHE
+L3SRCBASE+=cheri/memory-caches.spec
+else
 L3SRCBASE+=cheri/memory.spec
+endif
 L3SRCBASE+=cheri/memory-sml-helpers.spec
 L3SRCBASE+=cheri/memaccess.spec
 L3SRCBASE+=mips-sml.spec
@@ -98,18 +102,26 @@ SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 # make targets
 #######################################
 ifdef CAP
-	ifdef CACHE
-		SIM ?= l3mips-cheri$(CAP)-caches
-	else
-		SIM ?= l3mips-cheri$(CAP)
-	endif
+ifdef CACHE
+	SIM ?= l3mips-cheri$(CAP)-caches
 else
-	ifdef CACHE
-		SIM ?= l3mips-caches
-	else
-		SIM ?= l3mips
-	endif
+	SIM ?= l3mips-cheri$(CAP)
 endif
+else
+ifdef CACHE
+	SIM ?= l3mips-caches
+else
+	SIM ?= l3mips
+endif
+endif
+
+# memory subsystem params
+L1SIZE ?= 16384
+L1WAYS ?= 1
+L1LINESIZE ?= 32
+L2SIZE ?= 65536
+L2WAYS ?= 2
+L2LINESIZE ?= 64
 
 SIM_PROFILE ?= l3mips_prof
 
@@ -124,10 +136,10 @@ hol: ${L3SRC}
 count: ${L3SRC}
 	@wc -l ${L3SRC}
 
-${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
-	m4 -D CAP=$(CAP) $^ > $@
+$(L3SRCDIR)/cheri/memory-caches.spec: $(L3SRCDIR)/cheri/memory-caches.spec.m4
+	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
-${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri%.spec.m4
+${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) $^ > $@
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
