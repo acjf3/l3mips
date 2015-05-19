@@ -585,7 +585,7 @@ L1Entry option L1Hit (addr::L1Addr) =
 
 L1Data L1ServeMiss (addr::L1Addr) =
 {
-    data = L2Read (addr); -- XXX l1 addr to l2 addr conversion needed
+    data = L2Read (addr);
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
     when old_entry.valid do
@@ -618,8 +618,8 @@ L1Data L1Read (addr::L1Addr) =
     {
         case Some (cacheEntry) =>
         {
-            mark_log (3, log_l1_read_hit (addr, cacheLine));
-            cacheLine <- cacheEntry.data
+            cacheLine <- cacheEntry.data;
+            mark_log (3, log_l1_read_hit (addr, cacheLine))
         }
         case None =>
         {
@@ -712,11 +712,11 @@ word ReadInst (a::pAddr) =
 -- sml helper function
 unit WriteDWORD (pAddr::dwordAddr, data::dword) =
 {
-    var l1_data = L1DataToDwordList(0);
+    var l1_data = L1DataToDwordList(MEM(MemAddrFromDwordAddr(pAddr)));
     l1_data <- Replace(L1LineDwordIdx (pAddr), data, l1_data);
     MEM(MemAddrFromDwordAddr(pAddr)) <- DwordListToL1Data(l1_data)
 }
 
 -- sml helper function
 unit Write256 (pAddr::bits(35), data::bits(256)) =
-    MEM(pAddr) <- data
+    for i in 4 .. 1 do WriteDWORD (pAddr:[i], data<(i*64)-1:(i-1)*64>)
