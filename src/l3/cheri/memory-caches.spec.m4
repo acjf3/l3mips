@@ -24,7 +24,7 @@ type MemAddr = capAddr
 -- mem log utils --
 
 string MemAddr_str (addr::MemAddr) =
-    "0x" : hex40(ZeroExtend(addr)<<log2(L2LINESIZE))
+    "0x" : hex40(addr:0)
 
 string RawMemData_str (data::CAPRAWBITS) =
 {
@@ -83,6 +83,7 @@ string l1type_str (cacheType::L1Type) = match cacheType
     case Data => "DCache"
     case Inst => "ICache"
 }
+
 dnl -- L2 compile time values
 define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
 define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
@@ -431,7 +432,7 @@ when totalCore > 1 do
     foreach sharer in sharers do
     when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
     {
-        mark_log ( 4, log_inval_l1 (sharer, addr));
+        mark_log (4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
         current_l1_type <- if (sharer mod 2) == 0 then Inst else Data;
         entry = L1Cache(L1IdxFromLineNumber(addr));
@@ -565,7 +566,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-for i in 0 .. eval((L2LINESIZE/CAPBYTEWIDTH) - 1) do
+for i in 0 .. eval((L2LINESIZE/L1LINESIZE) - 1) do
 {
     mem_addr = MemAddrFromL2Addr(addr) + [i];
     invalL1(L1LineNumberFromMemAddr(mem_addr), entry.sharers, false)
