@@ -143,8 +143,8 @@ Capability setBase   (cap::Capability, base::bits(64)) =
     }
     else
     {
-        newToBottom = ((base - getBase(cap)) >> [cap.exp])<15:0> + cap.toBottom;
-        new_cap.toBottom <- newToBottom
+        newPtr = getOffset(cap) + base;
+        new_cap <- updatePtr(new_cap, newPtr)
     };
     new_cap
 }
