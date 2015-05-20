@@ -199,6 +199,33 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     data
 }
 
+L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
+{
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
+    offset::nat = OFFSET;
+    var inpt = data;
+    var out = Nil;
+    for i in 1 .. eval(L2LINESIZE/CAPBYTEWIDTH) do
+        if i == offset then
+            for j in 1 .. eval(L1LINESIZE/CAPBYTEWIDTH) do
+            {
+                out <- Cons(Head(inpt), out);
+                inpt <- Drop(1,inpt)
+            }
+        else out <- Cons(Raw(0), out);
+    out
+undefine(`OFFSET')dnl
+}
+
+L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
+{
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
+    offset::nat = OFFSET;
+    var out = Drop(offset*eval(L1LINESIZE/CAPBYTEWIDTH),data);
+    Take(eval(L1LINESIZE/CAPBYTEWIDTH),out)
+undefine(`OFFSET')dnl
+}
+
 L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) =
 {
     var tmp_old = old;
@@ -658,12 +685,7 @@ L1Entry option L1Hit (addr::L1Addr) =
 
 L1Data L1ServeMiss (addr::L1Addr) =
 {
-    l2data = L2Read (L2AddrFromL1Addr(addr));
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
-    offset::nat = OFFSET;
-    var data = Drop(offset*eval(L1LINESIZE/CAPBYTEWIDTH),l2data);
-undefine(`OFFSET')dnl
-    data <- Take(eval(L1LINESIZE/CAPBYTEWIDTH),data);
+    data = L2DataToL1Data (addr, L2Read (L2AddrFromL1Addr(addr)));
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
     when old_entry.valid do
@@ -686,8 +708,7 @@ match L1Hit (addr)
 }
 
 unit L1ServeWrite (addr::L1Addr, data::L1Data, mask::L1Data) =
-    -- XXX l1 addr/data/mask to l2 addr/data/mask conversion needed
-    L2Write(addr, data, mask)
+    L2Write(addr, L1DataToL2Data(addr, data), L1DataToL2Data(addr, mask))
 
 L1Data L1Read (addr::L1Addr) =
 {

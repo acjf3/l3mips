@@ -11,7 +11,6 @@ define(`Replace', `Take($1,$3):Cons($2,Drop($1+1, $3))')dnl -- Replace(i,val,lis
 dnl -- L1 compile time values (direct mapped L1)
 define(`L1SIZE', ifdef(`L1SIZE', L1SIZE, 16384))dnl -- L1 cache size in bytes (default 16KB)
 define(`L1LINESIZE', ifdef(`L1LINESIZE', L1LINESIZE, 32))dnl -- L1 line size in bytes (default 32B)
-define(`L1CAPPERLINE', eval(L1LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L1 line
 define(`L1ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
 define(`L1OFFSETWIDTH', log2(L1LINESIZE))dnl -- size of offset feild in bits
 define(`L1INDEXWIDTH', eval(log2(eval(L1SIZE/L1LINESIZE))))dnl -- size of index feild in bits
@@ -22,7 +21,6 @@ dnl -- L2 compile time values
 define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
 define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
 define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
-define(`L2CAPPERLINE', eval(L2LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L2 line
 define(`L2ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
 define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
 define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
@@ -154,7 +152,7 @@ L1Tag L1Tag(addr::L1Addr) = l1_tag_default(addr)
 L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
 
-L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = addr
+L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = ifelse(eval(L2LINESIZE>L1LINESIZE), 0, `addr',`addr:0')
 
 L1LineNumber L1LineNumberFromDwordAddr (addr::dwordAddr) = addr<36:eval(37-L1LINENUMBERWIDTH)>
 
@@ -178,6 +176,21 @@ L1Data DwordListToL1Data (dword_list::dword list) =
         tmp_list <- Drop(1, tmp_list)
     };
     data
+}
+
+L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
+{
+    var out::L2Data = 0;
+    offset::nat = [addr<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>];
+    out<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)> <- data;
+    out
+}
+
+L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
+{
+    offset::nat = [addr<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>];
+    out = data<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)>;
+    out
 }
 
 L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) = old && ~mask || new && mask
@@ -236,6 +249,28 @@ L2Tag L2Tag(addr::L2Addr) = l2_tag_default(addr)
 MemAddr MemAddrFromL2Addr (addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(log2(L2LINESIZE))>
 
 L2Data L2MergeData (old::L2Data, new::L2Data, mask::L2Data) = old && ~mask || new && mask
+
+nat L2LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L2LINESIZE/8)-1):0>]
+
+dword list L2DataToDwordList (data::L2Data) =
+{
+    var dword_list = Nil;
+    for i in eval(L2LINESIZE/8) .. 1 do
+        dword_list <- Cons (data<(i*64)-1:(i-1)*64>, dword_list);
+    dword_list
+}
+
+L2Data DwordListToL2Data (dword_list::dword list) =
+{
+    var data;
+    var tmp_list = dword_list;
+    for i in 1 .. eval(L2LINESIZE/8) do
+    {
+        data<(i*64)-1:(i-1)*64> <- Head(tmp_list);
+        tmp_list <- Drop(1, tmp_list)
+    };
+    data
+}
 
 L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, sharers::L1Id list, data::L2Data) =
 {
@@ -585,7 +620,7 @@ L1Entry option L1Hit (addr::L1Addr) =
 
 L1Data L1ServeMiss (addr::L1Addr) =
 {
-    data = L2Read (addr);
+    data = L2DataToL1Data(addr, L2Read (addr));
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
     when old_entry.valid do
@@ -608,8 +643,7 @@ match L1Hit (addr)
 }
 
 unit L1ServeWrite (addr::L1Addr, data::L1Data, mask::L1Data) =
-    -- XXX l1 addr/data/mask to l2 addr/data/mask conversion needed
-    L2Write(addr, data, mask)
+    L2Write(addr, L1DataToL2Data(addr, data), L1DataToL2Data(addr, mask))
 
 L1Data L1Read (addr::L1Addr) =
 {
@@ -712,9 +746,9 @@ word ReadInst (a::pAddr) =
 -- sml helper function
 unit WriteDWORD (pAddr::dwordAddr, data::dword) =
 {
-    var l1_data = L1DataToDwordList(MEM(MemAddrFromDwordAddr(pAddr)));
-    l1_data <- Replace(L1LineDwordIdx (pAddr), data, l1_data);
-    MEM(MemAddrFromDwordAddr(pAddr)) <- DwordListToL1Data(l1_data)
+    var l2_data = L2DataToDwordList(MEM(MemAddrFromDwordAddr(pAddr)));
+    l2_data <- Replace(L2LineDwordIdx (pAddr), data, l2_data);
+    MEM(MemAddrFromDwordAddr(pAddr)) <- DwordListToL2Data(l2_data)
 }
 
 -- sml helper function
