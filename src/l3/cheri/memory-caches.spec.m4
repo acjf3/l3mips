@@ -201,7 +201,7 @@ L1Data DwordListToL1Data (dword_list::dword list) =
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     var inpt = data;
     var out = Nil;
@@ -219,7 +219,7 @@ undefine(`OFFSET')dnl
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>]')')dnl
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     var out = Drop(offset*eval(L1LINESIZE/CAPBYTEWIDTH),data);
     Take(eval(L1LINESIZE/CAPBYTEWIDTH),out)

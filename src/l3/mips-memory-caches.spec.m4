@@ -158,6 +158,14 @@ L1LineNumber L1LineNumberFromDwordAddr (addr::dwordAddr) = addr<36:eval(37-L1LIN
 
 nat L1LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L1LINESIZE/8)-1):0>]
 
+word list L1DataToWordList (data::L1Data) =
+{
+    var word_list = Nil;
+    for i in eval(L1LINESIZE/4) .. 1 do
+        word_list <- Cons (data<(i*32)-1:(i-1)*32>, word_list);
+    word_list
+}
+
 dword list L1DataToDwordList (data::L1Data) =
 {
     var dword_list = Nil;
@@ -180,17 +188,21 @@ L1Data DwordListToL1Data (dword_list::dword list) =
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[addr<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     var out::L2Data = 0;
-    offset::nat = [addr<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>];
+    offset::nat = OFFSET;
     out<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)> <- data;
     out
+undefine(`OFFSET')dnl
 }
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-    offset::nat = [addr<eval(log2(L2LINESIZE/L1LINESIZE)-1):0>];
+define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[addr<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+    offset::nat = OFFSET;
     out = data<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)>;
     out
+undefine(`OFFSET')dnl
 }
 
 L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) = old && ~mask || new && mask
@@ -225,17 +237,17 @@ string l1idx_str (idx::L1Index) =
 
 string l1data_str (data::L1Data) =
 {
-    var str = "{";
+    var str = "0x[";
     var i::nat = 0;
-    dword_list = L1DataToDwordList (data);
-    foreach elem in dword_list do
+    word_list = L1DataToWordList (data);
+    foreach elem in word_list do
     {
         when i > 0 do
-            str <- str : ",";
-        str <- str : [i::nat] :":0x" : hex64(elem);
+            str <- str : ":";
+        str <- str : hex32(elem);
         i <- i + 1
     };
-    return str : "}"
+    return str : "]"
 }
 
 -- general l2 utils --
@@ -318,9 +330,9 @@ string sharers_str (sharers::L1Id list) =
 string l2data_str (data::L2Data) =
 {
     var ret = "{";
-    for i in eval(L2LINESIZE/8) .. 1 do
+    for i in eval(L2LINESIZE/L1LINESIZE) .. 1 do
     {
-        ret <- ret : [i] : ":" : MemData_str(data<(i*64)-1:(i-1)*64>);
+        ret <- ret : [i] : "." : l1data_str(data<(i*eval(L1LINESIZE*8))-1:(i-1)*eval(L1LINESIZE*8)>);
         when i > 1 do ret <- ret : ", "
     };
     ret <- ret : "}";
