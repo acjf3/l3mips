@@ -32,10 +32,24 @@ string RawMemData_str (data::CAPRAWBITS) =
     for i in eval((CAPBYTEWIDTH*8)/32) .. 1 do
     {
         tmp::bits(32) = data<(i*32)-1:(i-1)*32>;
-        ret <- ret : ToLower ([tmp]);
+        ret <- ret : hex32 (tmp);
         when i > 1 do ret <- ret : ":"
     };
     ret <- ret : "]";
+    ret
+}
+
+string dword_list_str (dword_list::dword list) =
+{
+    var ret = "{";
+    var i::nat = 0;
+    foreach dw in dword_list do
+    {
+        when i > 0 do ret <- ret : ", ";
+        ret <- ret : [i] :".[":hex32(dw<63:32>):":":hex32(dw<31:0>):"]";
+        i <- i + 1
+    };
+    ret <- ret : "}";
     ret
 }
 
@@ -162,7 +176,7 @@ declare MEM :: MemAddr -> MemData -- physical memory
 
 -- general l1 utils --
 
-L1Index l1_hash_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1-L1TAGWIDTH):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
+L1Index l1_hash_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-L1TAGWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
 L1Tag l1_tag_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH)>
 
 L1Index L1Idx(addr::L1Addr) = l1_hash_default(addr)
@@ -173,7 +187,6 @@ L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
 
 L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = addr<eval(40-log2(CAPBYTEWIDTH)-1):eval(40-log2(CAPBYTEWIDTH)-L1LINENUMBERWIDTH)>
-L1LineNumber L1LineNumberFromL1Addr(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1LINENUMBERWIDTH)>
 
 nat L1LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L1LINESIZE/8)-1):0>]
 
@@ -183,8 +196,11 @@ dword list L1DataToDwordList (data::L1Data) =
 {
     var dword_list = Nil;
     foreach elem in Reverse (data) do
+    {
+        raw = RawMemData(elem);
         for i in eval(CAPBYTEWIDTH/8) .. 1 do
-            dword_list <- Cons (RawMemData(elem)<(i*64)-1:(i-1)*64>, dword_list);
+            dword_list <- Cons (raw<(i*64)-1:(i-1)*64>, dword_list)
+    };
     dword_list
 }
 
@@ -194,38 +210,40 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     var tmp_list::dword list = Reverse (dword_list);
     var tmp_elem::CAPRAWBITS;
     for i in CAPPERL1LINE .. 1 do
+    {
         for j in eval(CAPBYTEWIDTH/8) .. 1 do
         {
             tmp_elem<(j*64)-1:(j-1)*64> <- Head(tmp_list);
             tmp_list <- Drop(1, tmp_list)
         };
-        data <- Cons (Raw(tmp_elem), data);
+        data <- Cons (Raw(tmp_elem), data)
+    };
     data
 }
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
-    var inpt = data;
+    var inpt = Reverse(data);
     var out = Nil;
-    for i in 1 .. CAPPERL2LINE do
-        if i == offset then
-            for j in 1 .. CAPPERL1LINE do
-            {
-                out <- Cons(Head(inpt), out);
-                inpt <- Drop(1,inpt)
-            }
-        else out <- Cons(Raw(0), out);
+    for i in eval(L1LINEPERL2LINE-1) .. 0 do
+        if i == offset then for j in 1 .. CAPPERL1LINE do
+        {
+            out <- Cons(Head(inpt), out);
+            inpt <- Drop(1,inpt)
+        }
+        else for j in 1 .. CAPPERL1LINE do
+            out <- Cons(Raw(0), out);
     out
 undefine(`OFFSET')dnl
 }
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
-    var out = Drop(offset*CAPPERL1LINE, data);
+    out = Drop(offset*CAPPERL1LINE, data);
     Take(CAPPERL1LINE, out)
 undefine(`OFFSET')dnl
 }
@@ -379,12 +397,12 @@ string sharers_str (sharers::L1Id list) =
 string l2data_str (data::L2Data) =
 {
     var ret = "{";
-    var i::nat = eval(CAPPERL2LINE-1);
+    var i::nat = 0;
     foreach elem in data do
     {
-        when i < CAPPERL2LINE do ret <- ret : ", ";
+        when i > 0 do ret <- ret : ", ";
         ret <- ret : [i] : ":" : MemData_str(elem);
-        i <- i-1
+        i <- i+1
     };
     ret <- ret : "}";
     ret
@@ -531,7 +549,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
     var data = Nil;
     for i in eval(CAPPERL2LINE - 1) .. 0 do
     {
-        chunck_addr = MemAddrFromL2Addr(addr) + [i];
+        chunck_addr = MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-1):eval(log2(CAPPERL2LINE))> : [i];
         data <- Cons(MEM(chunck_addr), data)
     };
 
