@@ -5,8 +5,6 @@
 
 dnl -- math utils
 define(`log2', `ifelse($1, 1, 0, `eval(1 + log2(eval($1 / 2)))')')dnl -- compute log2
-dnl -- generic utils
-define(`Replace', `Take($1,$3):Cons($2,Drop($1+1, $3))')dnl -- Replace(i,val,list) replaces ith element of a list
 
 dnl -- L1 compile time values (direct mapped L1)
 define(`L1SIZE', ifdef(`L1SIZE', L1SIZE, 16384))dnl -- L1 cache size in bytes (default 16KB)
@@ -21,6 +19,7 @@ dnl -- L2 compile time values
 define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
 define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
 define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
+define(`L1LINEPERL2LINE', eval(L2LINESIZE/L1LINESIZE))dnl -- number of L1 line(s) per L2 line
 define(`L2ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
 define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
 define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
@@ -148,6 +147,7 @@ L1Tag l1_tag_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L
 
 L1Index L1Idx(addr::L1Addr) = l1_hash_default(addr)
 L1Tag L1Tag(addr::L1Addr) = l1_tag_default(addr)
+L1LineNumber L1LineNumber(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
 
 L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
@@ -186,9 +186,11 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     data
 }
 
+L1Addr L1AddrFromL2Addr(addr::L2Addr) = addr
+
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[addr<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     var out::L2Data = 0;
     offset::nat = OFFSET;
     out<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)> <- data;
@@ -198,7 +200,7 @@ undefine(`OFFSET')dnl
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[addr<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     out = data<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)>;
     out
@@ -257,8 +259,9 @@ L2Tag l2_tag_default(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L
 
 L2Index L2Idx(addr::L2Addr) = l2_hash_default(addr)
 L2Tag L2Tag(addr::L2Addr) = l2_tag_default(addr)
+L2LineNumber L2LineNumber(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH)>
 
-MemAddr MemAddrFromL2Addr (addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(log2(L2LINESIZE))>
+MemAddr MemAddrFromL2Addr (addr::L2Addr) = L2LineNumber(addr)
 
 L2Data L2MergeData (old::L2Data, new::L2Data, mask::L2Data) = old && ~mask || new && mask
 
@@ -330,9 +333,9 @@ string sharers_str (sharers::L1Id list) =
 string l2data_str (data::L2Data) =
 {
     var ret = "{";
-    for i in eval(L2LINESIZE/L1LINESIZE) .. 1 do
+    for i in L1LINEPERL2LINE .. 1 do
     {
-        ret <- ret : [i] : "." : l1data_str(data<(i*eval(L1LINESIZE*8))-1:(i-1)*eval(L1LINESIZE*8)>);
+        ret <- ret : [i-1] : "." : l1data_str(data<(i*eval(L1LINESIZE*8))-1:(i-1)*eval(L1LINESIZE*8)>);
         when i > 1 do ret <- ret : ", "
     };
     ret <- ret : "}";
@@ -404,13 +407,13 @@ L1Id list L2UpdateSharers (l1id::L1Id, val::bool, sharers::L1Id list) = match va
 }
 
 unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
-when totalCore > 1 do
 {
     -- backup current procID / current_l1_type --
     currentProc = procID;
     currentL1   = current_l1_type;
+    currentL1Id = if current_l1_type == Inst then (procID * 2) else (procID * 2) + 1;
     foreach sharer in sharers do
-    when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
+    when (invalCurrent or [sharer] <> currentL1Id) do
     {
         mark_log (4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
@@ -428,12 +431,18 @@ when totalCore > 1 do
 (L2Entry * nat) option L2Hit (addr::L2Addr) =
 {
     var ret = None;
+    var found::nat = 0;
     for i in L2WAYS .. 1 do
     {
         cacheEntry = L2Cache(i, L2Idx(addr));
         when (cacheEntry.valid and cacheEntry.tag == L2Tag(addr)) do
+        {
+            found <- found + 1;
             ret <- Some (cacheEntry, i)
+        }
     };
+    when found > 1 do
+        #UNPREDICTABLE ("Found ":[found]:" duplicates for @ 0x":hex40(addr):" in L2 cache");
     ret
 }
 
@@ -485,7 +494,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
 
     -- take care of replacement --
     victimWay = L2ReplacePolicy (addr);
-    old_entry = L2Cache (victimWay,L2Idx(addr));
+    old_entry = L2Cache (victimWay, L2Idx(addr));
 
     when old_entry.valid do
     {
@@ -495,11 +504,8 @@ L2Data L2ServeMiss (addr::L2Addr) =
         mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         MEM(mem_addr) <- old_entry.data;
         -- take care of coherence --
-        for i in 0 .. eval((L2LINESIZE/L1LINESIZE) - 1) do
-        {
-            mem_addr = MemAddrFromL2Addr(addr) + [i];
-            invalL1(L1LineNumberFromMemAddr(mem_addr), old_entry.sharers, true)
-        }
+        for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+            invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], old_entry.sharers, true)
     };
 
     -- update cache --
@@ -540,11 +546,8 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-for i in 0 .. eval((L2LINESIZE/L1LINESIZE) - 1) do
-{
-    mem_addr = MemAddrFromL2Addr(addr) + [i];
-    invalL1(L1LineNumberFromMemAddr(mem_addr), entry.sharers, false)
-}
+for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+    invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], entry.sharers, false)
 
 L2Data L2Read (addr::L2Addr) =
 {
@@ -715,7 +718,7 @@ unit InitMEM =
 {
     initMemStats;
     MEM <- InitMap (UNKNOWN);
-    l2LastVictimWay <- L2WAYS;
+    l2LastVictimWay <- 0;
     for i in L2WAYS .. 1 do
         c_l2(i) <- DirectMappedL2Init ();
     for i in 0 .. totalCore-1 do
@@ -740,8 +743,8 @@ unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
     var l1_data = L1DataToDwordList(0);
     var l1_mask = L1DataToDwordList(0);
     l1_dword_idx = L1LineDwordIdx (pAddr);
-    l1_data <- Replace(l1_dword_idx, data, l1_data);
-    l1_mask <- Replace(l1_dword_idx, mask, l1_mask);
+    l1_data <- Update(data, l1_dword_idx, l1_data);
+    l1_mask <- Update(mask, l1_dword_idx, l1_mask);
     current_l1_type <- Data;
     L1Write(pAddr:0, DwordListToL1Data(l1_data), DwordListToL1Data(l1_mask))
 }
@@ -759,7 +762,7 @@ word ReadInst (a::pAddr) =
 unit WriteDWORD (pAddr::dwordAddr, data::dword) =
 {
     var l2_data = L2DataToDwordList(MEM(MemAddrFromDwordAddr(pAddr)));
-    l2_data <- Replace(L2LineDwordIdx (pAddr), data, l2_data);
+    l2_data <- Update(data, L2LineDwordIdx (pAddr), l2_data);
     MEM(MemAddrFromDwordAddr(pAddr)) <- DwordListToL2Data(l2_data)
 }
 

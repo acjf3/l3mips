@@ -56,7 +56,7 @@ string log_mem_read (addr::MemAddr, data::MemData) =
 dnl -- L1 compile time values (direct mapped L1)
 define(`L1SIZE', ifdef(`L1SIZE', L1SIZE, 16384))dnl -- L1 cache size in bytes (default 16KB)
 define(`L1LINESIZE', ifdef(`L1LINESIZE', L1LINESIZE, 32))dnl -- L1 line size in bytes (default 32B)
-define(`L1CAPPERLINE', eval(L1LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L1 line
+define(`CAPPERL1LINE', eval(L1LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L1 line
 define(`L1ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
 define(`L1OFFSETWIDTH', log2(L1LINESIZE))dnl -- size of offset feild in bits
 define(`L1INDEXWIDTH', eval(log2(eval(L1SIZE/L1LINESIZE))))dnl -- size of index feild in bits
@@ -88,7 +88,8 @@ dnl -- L2 compile time values
 define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
 define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
 define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
-define(`L2CAPPERLINE', eval(L2LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L2 line
+define(`CAPPERL2LINE', eval(L2LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L2 line
+define(`L1LINEPERL2LINE', eval(L2LINESIZE/L1LINESIZE))dnl -- number of L1 line per L2 line
 define(`L2ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
 define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
 define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
@@ -166,6 +167,7 @@ L1Tag l1_tag_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L
 
 L1Index L1Idx(addr::L1Addr) = l1_hash_default(addr)
 L1Tag L1Tag(addr::L1Addr) = l1_tag_default(addr)
+L1LineNumber L1LineNumber(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
 
 L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
@@ -174,6 +176,8 @@ L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = addr<eval(40-log2(CAPBYTE
 L1LineNumber L1LineNumberFromL1Addr(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1LINENUMBERWIDTH)>
 
 nat L1LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L1LINESIZE/8)-1):0>]
+
+L1Addr L1AddrFromL2Addr(addr::L2Addr) = addr
 
 dword list L1DataToDwordList (data::L1Data) =
 {
@@ -189,7 +193,7 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     var data::L1Data = Nil;
     var tmp_list::dword list = Reverse (dword_list);
     var tmp_elem::CAPRAWBITS;
-    for i in eval(L1LINESIZE/CAPBYTEWIDTH) .. 1 do
+    for i in CAPPERL1LINE .. 1 do
         for j in eval(CAPBYTEWIDTH/8) .. 1 do
         {
             tmp_elem<(j*64)-1:(j-1)*64> <- Head(tmp_list);
@@ -201,13 +205,13 @@ L1Data DwordListToL1Data (dword_list::dword list) =
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     var inpt = data;
     var out = Nil;
-    for i in 1 .. eval(L2LINESIZE/CAPBYTEWIDTH) do
+    for i in 1 .. CAPPERL2LINE do
         if i == offset then
-            for j in 1 .. eval(L1LINESIZE/CAPBYTEWIDTH) do
+            for j in 1 .. CAPPERL1LINE do
             {
                 out <- Cons(Head(inpt), out);
                 inpt <- Drop(1,inpt)
@@ -219,10 +223,10 @@ undefine(`OFFSET')dnl
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(`eval(L2LINESIZE/L1LINESIZE)',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L2LINESIZE/L1LINESIZE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[L1LineNumberFromL1Addr(addr)<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
-    var out = Drop(offset*eval(L1LINESIZE/CAPBYTEWIDTH),data);
-    Take(eval(L1LINESIZE/CAPBYTEWIDTH),out)
+    var out = Drop(offset*CAPPERL1LINE, data);
+    Take(CAPPERL1LINE, out)
 undefine(`OFFSET')dnl
 }
 
@@ -232,7 +236,7 @@ L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) =
     var tmp_new = new;
     var tmp_mask = mask;
     var tmp = Nil;
-    for i in eval(L1LINESIZE/CAPBYTEWIDTH) .. 1 do
+    for i in CAPPERL1LINE .. 1 do
     {
         o = Head(tmp_old);
         n = Head(tmp_new);
@@ -310,7 +314,7 @@ L2Data L2MergeData (old::L2Data, new::L2Data, mask::L2Data) =
     var tmp_new = new;
     var tmp_mask = mask;
     var tmp = Nil;
-    for i in eval(L2LINESIZE/CAPBYTEWIDTH) .. 1 do
+    for i in CAPPERL2LINE .. 1 do
     {
         o = Head(tmp_old);
         n = Head(tmp_new);
@@ -375,12 +379,12 @@ string sharers_str (sharers::L1Id list) =
 string l2data_str (data::L2Data) =
 {
     var ret = "{";
-    var i::nat = 0;
+    var i::nat = eval(CAPPERL2LINE-1);
     foreach elem in data do
     {
-        when i > 0 do ret <- ret : ", ";
+        when i < CAPPERL2LINE do ret <- ret : ", ";
         ret <- ret : [i] : ":" : MemData_str(elem);
-        i <- i+1
+        i <- i-1
     };
     ret <- ret : "}";
     ret
@@ -451,13 +455,13 @@ L1Id list L2UpdateSharers (l1id::L1Id, val::bool, sharers::L1Id list) = match va
 }
 
 unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
-when totalCore > 1 do
 {
     -- backup current procID / current_l1_type --
     currentProc = procID;
     currentL1   = current_l1_type;
+    currentL1Id = if current_l1_type == Inst then (procID * 2) else (procID * 2) + 1;
     foreach sharer in sharers do
-    when (invalCurrent or ([sharer::nat div 2] <> currentProc)) do
+    when (invalCurrent or [sharer] <> currentL1Id) do
     {
         mark_log (4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
@@ -525,7 +529,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
 {
     -- read data from memory --
     var data = Nil;
-    for i in eval((L2LINESIZE/CAPBYTEWIDTH) - 1) .. 0 do
+    for i in eval(CAPPERL2LINE - 1) .. 0 do
     {
         chunck_addr = MemAddrFromL2Addr(addr) + [i];
         data <- Cons(MEM(chunck_addr), data)
@@ -543,7 +547,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
     {
         mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         var tmp_data = old_entry.data;
-        for i in 0 .. eval((L2LINESIZE/CAPBYTEWIDTH) - 1) do
+        for i in 0 .. eval(CAPPERL2LINE - 1) do
         {
             -- write cache line back to memory --
             -- when old_entry.dirty do
@@ -551,7 +555,7 @@ L2Data L2ServeMiss (addr::L2Addr) =
             MEM(mem_addr) <- Head(tmp_data);
             tmp_data <- Drop(1, tmp_data);
             -- take care of coherence --
-            invalL1(L1LineNumberFromMemAddr(mem_addr), old_entry.sharers, true)
+            invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], old_entry.sharers, true)
         }
     };
 
@@ -593,11 +597,8 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-for i in 0 .. eval((L2LINESIZE/L1LINESIZE) - 1) do
-{
-    mem_addr = MemAddrFromL2Addr(addr) + [i];
-    invalL1(L1LineNumberFromMemAddr(mem_addr), entry.sharers, false)
-}
+for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+    invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], entry.sharers, false)
 
 L2Data L2Read (addr::L2Addr) =
 {
@@ -774,7 +775,7 @@ unit InitMEM =
 {
     initMemStats;
     MEM <- InitMap (UNKNOWN);
-    l2LastVictimWay <- L2WAYS;
+    l2LastVictimWay <- 0;
     for i in L2WAYS .. 1 do
         c_l2(i) <- DirectMappedL2Init ();
     for i in 0 .. totalCore-1 do
@@ -797,7 +798,7 @@ unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
     memStats.data_writes <- memStats.data_writes + 1;
 
     var zeros = Nil;
-    for i in 1 .. eval(L1LINESIZE/CAPBYTEWIDTH) do zeros <- Cons (Raw(0), zeros);
+    for i in 1 .. CAPPERL1LINE do zeros <- Cons (Raw(0), zeros);
     var l1_data = L1DataToDwordList(zeros);
     var l1_mask = L1DataToDwordList(zeros);
     l1_dword_idx = L1LineDwordIdx (pAddr);
@@ -820,9 +821,9 @@ Capability ReadCap (capAddr::CAPADDR) =
 {
     memStats.cap_reads <- memStats.cap_reads + 1;
     current_l1_type <- Data;
-define(`ELEM', `ifelse(`eval(L1LINESIZE/CAPBYTEWIDTH)',1,
+define(`ELEM', `ifelse(CAPPERL1LINE,1,
 `Head(L1Read(capAddr:0))',dnl
-`Element([capAddr<eval(log2(L1LINESIZE/CAPBYTEWIDTH)-1):0>],L1Read(capAddr:0))')')dnl
+`Element([capAddr<eval(log2(CAPPERL1LINE)-1):0>],L1Read(capAddr:0))')')dnl
     data = match ELEM
     {
         case Cap (cap) => cap
@@ -837,10 +838,10 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
 {
     memStats.cap_writes <- memStats.cap_writes + 1;
     var zeros = Nil;
-    for i in 1 .. eval(L1LINESIZE/CAPBYTEWIDTH) do zeros <- Cons (Raw(0), zeros);
+    for i in 1 .. CAPPERL1LINE do zeros <- Cons (Raw(0), zeros);
     var l1_data = zeros;
     var l1_mask = zeros;
-define(`OFFSET', `ifelse(`eval(L1LINESIZE/CAPBYTEWIDTH)',1,0,`[capAddr<eval(log2(L1LINESIZE/CAPBYTEWIDTH)-1):0>]')')dnl
+define(`OFFSET', `ifelse(CAPPERL1LINE,1,0,`[capAddr<eval(log2(CAPPERL1LINE)-1):0>]')')dnl
     l1_data <- Update(Cap(cap), OFFSET, l1_data);
     l1_mask <- Update(Raw(~0), OFFSET, l1_mask);
 undefine(`OFFSET')dnl
