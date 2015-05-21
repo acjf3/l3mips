@@ -145,6 +145,13 @@ $(L3SRCDIR)/mips-memory-caches.spec: $(L3SRCDIR)/mips-memory-caches.spec.m4
 ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) $^ > $@
 
+${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
+ifdef CACHE
+	m4 -D CACHE $^ > $@
+else
+	m4 $^ > $@
+endif
+
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
@@ -158,3 +165,4 @@ clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
 	rm -f $(M4_CHERI_FILES)
 	rm -f $(M4_FILES)
+	rm -f ${SMLSRCDIR}/run.sml

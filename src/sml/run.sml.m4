@@ -21,7 +21,7 @@ val nb_core = ref 1
 val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
-val l2_replace_policy = ref 0
+ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -356,7 +356,7 @@ in
                  mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
-      ; mips.l2ReplacePolicy := !l2_replace_policy
+      ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app
@@ -408,10 +408,12 @@ fun printUsage () =
       \  --ignore <string>              UNPREDICTABLE#(<string>) behaviour is \n\
       \                                 ignored (currently <string> must be \n\
       \                                 'HI' or 'LO')                       \n\
+ifdef(`CACHE', `dnl
       \  --l2-replace-policy <number>   Replace policy for the l2\n\
       \                                   *  0: naive(pseudo-random)\n\
-      \                                   *  1: LRU\n\
-      \  -h or --help              print this message\n\n")
+      \                                   *  1: LRU\n\dnl'
+,`dnl')
+      \  -h or --help                   print this message\n\n")
 
 fun getNumber s =
    case IntExtra.fromString s of
@@ -512,8 +514,10 @@ val () =
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
           val () = trace_level := Int.max (0, t)
+ifdef(`CACHE', `dnl
           val (n, l) = processOption "--l2-replace-policy" l
-          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)
+          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)dnl'
+,`dnl')
           val (d, l) = processOption "--uart-delay" l
           val () =
              uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
