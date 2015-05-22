@@ -121,11 +121,16 @@ match current_l1_type
 
 -- instanciate l2 cache --
 
+-- replacement policy --
 declare l2ReplacePolicy :: nat
 -- naive replace policy
 declare l2LastVictimWay::nat
 -- LRU replace policy
 declare l2LRUBits::L2Index -> nat list
+
+-- prefetching --
+declare l2PrefetchDepth :: nat
+declare l2Prefetcher :: nat
 
 declare c_l2 :: nat -> DirectMappedL2
 component L2Cache (way::nat, idx::L2Index) :: L2Entry
@@ -483,7 +488,50 @@ nat L2ReplacePolicy (addr::L2Addr) =
     else ret
 }
 
-L2Data L2ServeMiss (addr::L2Addr) =
+-- Prefetcher helpers --
+
+pAddr option firstptr (data::dword list) = match data
+{
+    case Nil    => None
+    case y @ ys => match tlbTryTranslation (y)
+    {
+        case Some (paddr) => Some (paddr)
+        case _            => firstptr (ys)
+    }
+}
+
+bool aliasWithAddrList (addr::L2Addr, addr_list::L2Addr list) =
+{
+    var alias = false;
+    foreach a in addr_list do when L2Idx(a) == L2Idx(addr) do
+        alias <- true;
+    alias
+}
+
+dnl-- l2 prefetchers --
+define(`MACRO_PftchFirstPtr',`dnl
+match firstptr (L2DataToDwordList (data))
+        {
+            case Some (ptr) => match L2Hit (ptr)
+            {
+                case None => { _ = L2ServeMiss (ptr, Cons (ptr, past_addr)); nothing }
+                case _    => nothing
+            }
+            case _ => nothing
+        }')dnl
+dnl
+define(`MACRO_PftchAllPtr',`dnl
+foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
+        {
+            case Some(ptr) => match L2Hit (ptr)
+            {
+                case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
+                case _ => nothing
+            }
+            case _ => nothing
+        }')dnl
+dnl
+L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
 {
     -- read data from memory --
     data = MEM(MemAddrFromL2Addr(addr));
@@ -508,6 +556,19 @@ L2Data L2ServeMiss (addr::L2Addr) =
             invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], old_entry.sharers, true)
     };
 
+    -- prefecth --
+    prefetchDepth = Length (past_addr) - 1;
+    when (! aliasWithAddrList (addr, past_addr) and
+          (prefetchDepth < l2PrefetchDepth)) do match l2Prefetcher
+    {
+        -- First-Ptr prefetch --
+        case 0 => MACRO_PftchFirstPtr
+        -- All-Ptr prefetch --
+        case 1 => MACRO_PftchAllPtr
+        -- no prefetch --
+        case _ => nothing
+    };
+
     -- update cache --
     mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
@@ -529,7 +590,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
         case None =>
         {
             mark_log (4, log_l2_write_miss (addr));
-            cacheLine = L2ServeMiss (addr);
+            cacheLine = L2ServeMiss (addr, list{addr});
             var retEntry;
             match L2Hit (addr)
             {
@@ -566,7 +627,7 @@ L2Data L2Read (addr::L2Addr) =
         case None =>
         {
             mark_log (4, log_l2_read_miss(addr));
-            cacheLine <- L2ServeMiss (addr)
+            cacheLine <- L2ServeMiss (addr, list{addr})
         }
     };
     cacheLine

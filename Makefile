@@ -147,9 +147,17 @@ ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 
 ${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
 ifdef CACHE
+ifdef CAP
+	m4 -D CAP -D CACHE $^ > $@
+else
 	m4 -D CACHE $^ > $@
+endif
+else
+ifdef CAP
+	m4 -D CAP $^ > $@
 else
 	m4 $^ > $@
+endif
 endif
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}

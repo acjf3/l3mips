@@ -22,6 +22,8 @@ val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
+ifdef(`CACHE', `val l2_prefetch_depth = ref 0', `dnl')
+ifdef(`CACHE', `val l2_prefetcher = ref 0', `dnl')
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -357,6 +359,8 @@ in
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
       ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
+      ifdef(`CACHE', `; mips.l2PrefetchDepth := !l2_prefetch_depth', `dnl')
+      ifdef(`CACHE', `; mips.l2Prefetcher := !l2_prefetcher', `dnl')
       ; mips.print := debug_print
       ; mips.println := debug_println
       ; List.app
@@ -412,6 +416,18 @@ ifdef(`CACHE', `dnl
       \  --l2-replace-policy <number>   Replace policy for the l2\n\
       \                                   *  0: naive(pseudo-random)\n\
       \                                   *  1: LRU\n\dnl'
+,`dnl')
+ifdef(`CACHE', `dnl
+      \  --l2-prefetch-depth <number>   L2 prefetcher depth (level of nesting)\n\
+      \                                 (default to 0 = inactive prefetcher)\n\dnl'
+,`dnl')
+ifdef(`CACHE', `dnl
+      \  --l2-prefetcher     <number>   L2 prefetcher \n\
+      \                                   *  0: FirstPtr (default)\n\
+      \                                   *  1: AllPtr\n\dnl'
+ifdef(`CAP', `
+      \                                   *  2: FirstCap\n\
+      \                                   *  3: AllCap\n\dnl',`dnl')
 ,`dnl')
       \  -h or --help                   print this message\n\n")
 
@@ -517,6 +533,14 @@ val () =
 ifdef(`CACHE', `dnl
           val (n, l) = processOption "--l2-replace-policy" l
           val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)dnl'
+,`dnl')
+ifdef(`CACHE', `dnl
+          val (n, l) = processOption "--l2-prefetch-depth" l
+          val () = l2_prefetch_depth := Option.getOpt (Option.map getNumber n, 0)dnl'
+,`dnl')
+ifdef(`CACHE', `dnl
+          val (n, l) = processOption "--l2-prefetcher" l
+          val () = l2_prefetcher := Option.getOpt (Option.map getNumber n, 0)dnl'
 ,`dnl')
           val (d, l) = processOption "--uart-delay" l
           val () =
