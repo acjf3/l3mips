@@ -73,15 +73,16 @@ else
 }
 bits(65) innerGetTop (cap::Capability) =
 {
-    top = (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp]);
-    if top <64> then '1':0`64 else top
+    top::bits(66) = (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp]);
+    zero::bits(64) = 0;
+    if top <64> then '1':zero else top<64:0>
 }
 bits(65) innerGetBase (cap::Capability) =
 {
-    var ret = ZeroExtend(getPtr(cap));
+    var ret::bits(66) = ZeroExtend(getPtr(cap));
     when not cap.base_eq_pointer do
         ret <- (ret + (SignExtend(cap.toBottom) << [cap.exp])) && (~0<<[cap.exp]);
-    ret
+    (ret<64:0>)
 }
 bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
 bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
@@ -230,7 +231,7 @@ string log_cap_write (cap::Capability) =
     " type:0x":hex16(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
     " base:0x":hex64(getBase(cap)):
-    " length:0x":hex64(getLength(cap))
+    " length:0x":hex64(getLength(cap))--:"\\n(":cap_inner_rep(cap):")"
 
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
