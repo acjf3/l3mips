@@ -373,10 +373,16 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     else
     {
         var new_cap = CAPR(cb);
-        -- XXX This will change to only set the offset and not touch the bounds
-        new_cap <- setOffset(new_cap, 0); -- XXX NOT IN THE SPEC !!!
+
+        {- implem test 1, XXX not in spec !!!
+        new_cap <- setOffset(new_cap, 0);
         new_cap <- setBase(new_cap, getBase(CAPR(cb)) + GPR(rt));
         new_cap <- setLength(new_cap, getLength(CAPR(cb)) - GPR(rt));
+        -}
+
+        -- implem test 2, XXX not in spec !!!
+        new_cap <- setOffset(new_cap, GPR(rt));
+
         CAPR(cd) <- new_cap
     }
 
