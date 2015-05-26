@@ -57,6 +57,14 @@ Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; n
 Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.offset <- offset; new_cap}
 Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.base   <- base;   new_cap}
 Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.length <- length; new_cap}
+Capability setBounds (cap::Capability, length::bits(64)) =
+{
+    var new_cap = cap;
+    new_cap.base   <- cap.base + cap.offset;
+    new_cap.length <- length;
+    new_cap.offset <- 0;
+    new_cap
+}
 
 bool isCapAligned  (addr::bits(64))  = addr<3:0> == 0
 

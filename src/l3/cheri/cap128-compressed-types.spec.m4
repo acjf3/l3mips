@@ -178,6 +178,21 @@ Capability setLength (cap::Capability, length::bits(64)) =
     new_cap
 }
 
+Capability setBounds (cap::Capability, length::bits(64)) =
+{
+    var new_cap = cap;
+    -- set length (pick best representation)
+    zeros  = countLeadingZeros (length);
+    newExp::nat = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
+    new_cap.exp <- [newExp];
+    new_cap.toTop <- ZeroExtend((length >> newExp)<14:0>);
+    when length && ~(~0 << newExp) <> 0 do new_cap.toTop <- new_cap.toTop + 1;
+    -- set base (and offset of 0)
+    new_cap.toBottom <- 0;
+    -- return initialized capability
+    new_cap
+}
+
 bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) = &cap<127:0> -- XXX might want to reverse the 2 dwords to be consistent with the 256 bits implementation
