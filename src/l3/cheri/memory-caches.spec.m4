@@ -228,7 +228,7 @@ L1Data DwordListToL1Data (dword_list::dword list) =
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     var inpt = Reverse(data);
     var out = Nil;
@@ -246,7 +246,7 @@ undefine(`OFFSET')dnl
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(`L1LINEPERL2LINE',1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
+define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     offset::nat = OFFSET;
     out = Drop(offset*CAPPERL1LINE, data);
     Take(CAPPERL1LINE, out)
@@ -648,7 +648,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     var data = Nil;
     for i in eval(CAPPERL2LINE - 1) .. 0 do
     {
-        chunck_addr = MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-1):eval(log2(CAPPERL2LINE))> : [i];
+        chunck_addr = MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-1):eval(log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
         data <- Cons(MEM(chunck_addr), data)
     };
 
