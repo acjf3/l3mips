@@ -5,6 +5,92 @@
 
 include(`helpers.m4')dnl
 include(`cap-params.m4')dnl
+
+-----------------
+-- stats utils --
+-----------------
+
+record MemStats
+{
+    -- data / inst / cap measures
+    data_reads                     :: nat
+    data_writes                    :: nat
+    inst_reads                     :: nat
+    cap_reads                      :: nat
+    cap_writes                     :: nat
+    -- hit / miss measures
+    l2_read                        :: nat
+    l2_read_hit                    :: nat
+    l2_read_miss                   :: nat
+    l2_write                       :: nat
+    l2_write_hit                   :: nat
+    l2_write_miss                  :: nat
+    -- prefetch measures
+    l2_mandatory_fetch             :: nat
+    l2_prefetch                    :: nat
+    l2_tlb_hit                     :: nat
+    l2_tlb_miss                    :: nat
+    l2_prefetch_alias              :: nat
+    -- eviction measures
+    l2_evict                       :: nat
+    l2_mandatory_evict             :: nat
+    l2_prefetch_evict              :: nat
+}
+
+declare memStats :: MemStats
+
+unit initMemStats =
+{
+    -- data / inst / cap measures
+	memStats.data_reads                    <- 0;
+	memStats.data_writes                   <- 0;
+	memStats.inst_reads                    <- 0;
+	memStats.cap_reads                     <- 0;
+	memStats.cap_writes                    <- 0;
+    -- hit / miss measures
+	memStats.l2_read                       <- 0;
+	memStats.l2_read_hit                   <- 0;
+	memStats.l2_read_miss                  <- 0;
+	memStats.l2_write                      <- 0;
+	memStats.l2_write_hit                  <- 0;
+	memStats.l2_write_miss                 <- 0;
+    -- prefetch measures
+	memStats.l2_mandatory_fetch            <- 0;
+	memStats.l2_prefetch                   <- 0;
+	memStats.l2_tlb_hit                    <- 0;
+	memStats.l2_tlb_miss                   <- 0;
+	memStats.l2_prefetch_alias             <- 0;
+    -- eviction measures
+	memStats.l2_evict                      <- 0;
+	memStats.l2_mandatory_evict            <- 0;
+	memStats.l2_prefetch_evict             <- 0
+}
+
+string printMemStats =
+    -- data / inst / cap measures
+	PadRight (#" ", 35, "data_reads")                    : " = " : PadLeft (#" ", 9, [memStats.data_reads                    :: nat]) : "\\n" :
+	PadRight (#" ", 35, "data_writes")                   : " = " : PadLeft (#" ", 9, [memStats.data_writes                   :: nat]) : "\\n" :
+	PadRight (#" ", 35, "inst_reads")                    : " = " : PadLeft (#" ", 9, [memStats.inst_reads                    :: nat]) : "\\n" :
+	PadRight (#" ", 35, "cap_reads")                     : " = " : PadLeft (#" ", 9, [memStats.cap_reads                     :: nat]) : "\\n" :
+	PadRight (#" ", 35, "cap_writes")                    : " = " : PadLeft (#" ", 9, [memStats.cap_writes                    :: nat]) : "\\n" :
+    -- hit / miss measures
+	PadRight (#" ", 35, "l2_read")                       : " = " : PadLeft (#" ", 9, [memStats.l2_read                       :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_read_hit")                   : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit                   :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_read_miss")                  : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss                  :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_write")                      : " = " : PadLeft (#" ", 9, [memStats.l2_write                      :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_write_hit")                  : " = " : PadLeft (#" ", 9, [memStats.l2_write_hit                  :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_write_miss")                 : " = " : PadLeft (#" ", 9, [memStats.l2_write_miss                 :: nat]) : "\\n" :
+	-- prefetch measures
+	PadRight (#" ", 35, "l2_mandatory_fetch")            : " = " : PadLeft (#" ", 9, [memStats.l2_mandatory_fetch            :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_prefetch")                   : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch                   :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_tlb_hit")                    : " = " : PadLeft (#" ", 9, [memStats.l2_tlb_hit                    :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_tlb_miss")                   : " = " : PadLeft (#" ", 9, [memStats.l2_tlb_miss                   :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_prefetch_alias")             : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch_alias             :: nat]) : "\\n" :
+	-- eviction measures
+	PadRight (#" ", 35, "l2_evict")                      : " = " : PadLeft (#" ", 9, [memStats.l2_evict                      :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_mandatory_evict")            : " = " : PadLeft (#" ", 9, [memStats.l2_mandatory_evict            :: nat]) : "\\n" :
+	PadRight (#" ", 35, "l2_prefetch_evict")             : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch_evict             :: nat]) : "\\n"
+
 -----------------
 -- basic types --
 -----------------
@@ -574,8 +660,16 @@ pAddr option firstptr (data::dword list) = match data
     case Nil    => None
     case y @ ys => match tlbTryTranslation (y)
     {
-        case Some (paddr) => Some (paddr)
-        case _            => firstptr (ys)
+        case Some (paddr) =>
+        {
+            memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+            Some (paddr)
+        }
+        case _ =>
+        {
+            memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1;
+            firstptr (ys)
+        }
     }
 }
 
@@ -583,7 +677,10 @@ bool aliasWithAddrList (addr::L2Addr, addr_list::L2Addr list) =
 {
     var alias = false;
     foreach a in addr_list do when L2Idx(a) == L2Idx(addr) do
-        alias <- true;
+    {
+        memStats.l2_prefetch_alias <- memStats.l2_prefetch_alias + 1;
+        alias <- true
+    };
     alias
 }
 
@@ -602,12 +699,16 @@ dnl
 define(`MACRO_PftchAllPtr',`dnl
 foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
         {
-            case Some(ptr) => match L2Hit (ptr)
+            case Some(ptr) =>
             {
-                case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
-                case _ => nothing
+                memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+                match L2Hit (ptr)
+                {
+                    case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
+                    case _ => nothing
+                }
             }
-            case _ => nothing
+            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
         }')dnl
 dnl
 define(`MACRO_PftchFirstCap',`dnl
@@ -615,14 +716,18 @@ match firstcap (data)
         {
             case Some(cap) => match tlbTryTranslation (getBase(cap) + getOffset(cap))
             {
-                case Some(paddr) => match L2Hit (paddr)
+                case Some(paddr) =>
                 {
-                    case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
-                    case _ => nothing
+                    memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+                    match L2Hit (paddr)
+                    {
+                        case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
+                        case _ => nothing
+                    }
                 }
                 case _ => nothing
             }
-            case _ => nothing
+            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
         }')dnl
 dnl
 define(`MACRO_PftchAllCap',`dnl
@@ -631,14 +736,18 @@ foreach elem in data do match elem
             case Cap (cap) =>
             when getTag(cap) do match tlbTryTranslation (getBase(cap) + getOffset(cap))
             {
-                case Some(paddr) => match L2Hit (paddr)
+                case Some(paddr) =>
                 {
-                    case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
-                    case _ => nothing
+                    memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
+                    match L2Hit (paddr)
+                    {
+                        case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
+                        case _ => nothing
+                    }
                 }
                 case _ => nothing
             }
-            case _ => nothing
+            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
         }
 ')dnl
 dnl
@@ -656,12 +765,22 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     var new_entry;
     new_entry <- mkL2CacheEntry(true, L2Tag(addr), L2UpdateSharers (L1ID, true, Nil), data);
 
+    -- get current prefetch depth --
+    prefetchDepth = Length (past_addr) - 1;
+
     -- take care of replacement --
     victimWay = L2ReplacePolicy (addr);
     old_entry = L2Cache (victimWay,L2Idx(addr));
 
     when old_entry.valid do
     {
+        -- stats --
+        memStats.l2_evict <- memStats.l2_evict + 1;
+        if (prefetchDepth == 0) then
+            memStats.l2_mandatory_evict <- memStats.l2_mandatory_evict + 1
+        else
+            memStats.l2_prefetch_evict <- memStats.l2_prefetch_evict + 1;
+        -- implementation --
         mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         var tmp_data = old_entry.data;
         for i in 0 .. eval(CAPPERL2LINE - 1) do
@@ -676,8 +795,12 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         }
     };
 
+    -- prefetch stats --
+    if (prefetchDepth == 0) then
+        memStats.l2_mandatory_fetch <- memStats.l2_mandatory_fetch + 1
+    else
+        memStats.l2_prefetch <- memStats.l2_prefetch + 1;
     -- prefecth --
-    prefetchDepth = Length (past_addr) - 1;
     when (! aliasWithAddrList (addr, past_addr) and
           (prefetchDepth < l2PrefetchDepth)) do match l2Prefetcher
     {
@@ -706,6 +829,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     {
         case Some (cacheEntry, way) =>
         {
+            memStats.l2_write_hit <- memStats.l2_write_hit + 1;
             var new_data = L2MergeData (cacheEntry.data, data, mask);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
             mark_log (4, log_l2_write_hit (addr, way, new_data));
@@ -713,6 +837,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
         }
         case None =>
         {
+            memStats.l2_write_miss <- memStats.l2_write_miss + 1;
             mark_log (4, log_l2_write_miss (addr));
             cacheLine = L2ServeMiss (addr, list{addr});
             var retEntry;
@@ -736,11 +861,13 @@ for i in 0 .. eval(L1LINEPERL2LINE - 1) do
 
 L2Data L2Read (addr::L2Addr) =
 {
+    memStats.l2_read <- memStats.l2_read + 1;
     var cacheLine;
     match L2Hit (addr)
     {
         case Some (cacheEntry, way) =>
         {
+            memStats.l2_read_hit <- memStats.l2_read_hit + 1;
             new_sharers = L2UpdateSharers(L1ID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, new_sharers, cacheEntry.data);
             mark_log (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
@@ -750,6 +877,7 @@ L2Data L2Read (addr::L2Addr) =
         }
         case None =>
         {
+            memStats.l2_read_miss <- memStats.l2_read_miss + 1;
             mark_log (4, log_l2_read_miss(addr));
             cacheLine <- L2ServeMiss (addr, list{addr})
         }
@@ -759,6 +887,7 @@ L2Data L2Read (addr::L2Addr) =
 
 unit L2Write (addr::L2Addr, data::L2Data, mask::L2Data) =
 {
+    memStats.l2_write <- memStats.l2_write + 1;
     cacheEntry = L2Update(addr, data, mask);
     L2HandleCoherence(addr, data, mask, cacheEntry)
 }
@@ -869,37 +998,6 @@ unit L1Write (addr::L1Addr, data::L1Data, mask::L1Data) =
     L1Update (addr, data, mask);
     L1ServeWrite (addr, data, mask)
 }
-
------------------
--- stats utils --
------------------
-
-record MemStats
-{
-    data_reads  :: nat
-    data_writes :: nat
-    inst_reads  :: nat
-    cap_reads   :: nat
-    cap_writes  :: nat
-}
-
-declare memStats :: MemStats
-
-unit initMemStats =
-{
-    memStats.data_reads  <- 0;
-    memStats.data_writes <- 0;
-    memStats.inst_reads  <- 0;
-    memStats.cap_reads   <- 0;
-    memStats.cap_writes  <- 0
-}
-
-string printMemStats =
-    PadRight (#" ", 16, "data_reads")  : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat])  : "\\n" :
-    PadRight (#" ", 16, "data_writes") : " = " : PadLeft (#" ", 9, [memStats.data_writes::nat]) : "\\n" :
-    PadRight (#" ", 16, "inst_reads")  : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])  : "\\n" :
-    PadRight (#" ", 16, "cap_reads")   : " = " : PadLeft (#" ", 9, [memStats.cap_reads::nat])   : "\\n" :
-    PadRight (#" ", 16, "cap_writes")  : " = " : PadLeft (#" ", 9, [memStats.cap_writes::nat])
 
 --------------------
 -- mips interface --

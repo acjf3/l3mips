@@ -160,14 +160,16 @@ else
 endif
 endif
 
+MLTON ?= mlton
+
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
 ${SIM}: ${SMLLIB} ${SMLSRC}
-	mlton -inline 1000 -default-type intinf -verbose 1 -output ${SIM} ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -inline 1000 -default-type intinf -verbose 1 -output ${SIM} ${SMLSRCDIR}/$(MLBFILE)
 
 ${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
-	mlton -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} ${SMLSRCDIR}/$(MLBFILE)
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
