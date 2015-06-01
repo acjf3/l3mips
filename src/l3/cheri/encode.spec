@@ -6,7 +6,7 @@
 string pad (s::string) = PadRight (#" ", 12, s)
 string gr (n::reg) = "$" : [[n]::nat]
 string cr (n::reg) = "c" : [[n]::nat]
-string imm (n::bits(N)) = if n <+ 10 then [n] else "0x":[n]
+string imm (n::bits(N)) = if n <+ 10 then [n] else "0x":ToLower([n])
 
 string op_cr(op::string, cr1::reg) = pad(op):cr(cr1)
 string op_gr(op::string, r1::reg) = pad(op):gr(r1)

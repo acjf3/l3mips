@@ -1,9 +1,9 @@
 string r (n::reg) = "$" : [[n]::nat]
 string c (n::reg) = ", " : r(n)
-string i (n::bits(N)) = ", " : (if n <+ 10 then "" else "0x") : [n]
+string i (n::bits(N)) = ", " : (if n <+ 10 then "" else "0x") : ToLower([n])
 string oi (n::bits(N)) = if n == 0 then "" else i(n)
 
-string op1i (s::string, n::bits(N)) = PadRight (#" ", 12, s) : "0x" : [n]
+string op1i (s::string, n::bits(N)) = PadRight (#" ", 12, s) : "0x" : ToLower([n])
 string op1r (s::string, n::reg) = PadRight (#" ", 12, s) : r(n)
 string op1ri (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : i(n)
 string op2r (s::string, r1::reg, r2::reg) = op1r(s,r1) : c(r2)
