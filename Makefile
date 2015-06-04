@@ -99,11 +99,17 @@ SMLSRCBASE+=l3mips.mlb
 MLBFILE=l3mips.mlb
 SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 
-# make targets
-#######################################
+# memory subsystem params
+L1SIZE ?= 16384
+L1WAYS ?= 1
+L1LINESIZE ?= 32
+L2SIZE ?= 65536
+L2WAYS ?= 2
+L2LINESIZE ?= 64
+
 ifdef CAP
 ifdef CACHE
-	SIM ?= l3mips-cheri$(CAP)-caches
+	SIM ?= l3mips-cheri$(CAP)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
 else
 	SIM ?= l3mips-cheri$(CAP)
 endif
@@ -115,18 +121,13 @@ else
 endif
 endif
 
-# memory subsystem params
-L1SIZE ?= 16384
-L1WAYS ?= 1
-L1LINESIZE ?= 32
-L2SIZE ?= 65536
-L2WAYS ?= 2
-L2LINESIZE ?= 64
-
 SIM_PROFILE ?= l3mips_prof
 
 M4_CHERI_FILES = $(basename $(wildcard ${L3SRCDIR}/cheri/*.spec.m4))
 M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
+
+# make targets
+#######################################
 
 all: $(SIM)
 

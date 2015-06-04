@@ -372,23 +372,8 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if GPR(rt) >+ getLength(CAPR(cb)) then
-        SignalCapException(capExcLength,cb)
     else
-    {
-        var new_cap = CAPR(cb);
-
-        {- implem test 1, XXX not in spec !!!
-        new_cap <- setOffset(new_cap, 0);
-        new_cap <- setBase(new_cap, getBase(CAPR(cb)) + GPR(rt));
-        new_cap <- setLength(new_cap, getLength(CAPR(cb)) - GPR(rt));
-        -}
-
-        -- implem test 2, XXX not in spec !!!
-        new_cap <- setOffset(new_cap, GPR(rt));
-
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
 
 -----------------------------------
 -- CToPtr
