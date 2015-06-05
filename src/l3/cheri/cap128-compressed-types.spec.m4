@@ -121,6 +121,11 @@ Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; n
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
 Capability setOffset (cap::Capability, offset::bits(64)) =
 {
+    -- XXX experimental :
+    oldbase = innerGetBase(cap);
+    oldtop = innerGetTop(cap);
+    ---------------------
+
     var new_cap = cap;
     newPtr      = getBase(cap) + offset;
     ptrDiff     = ((newPtr >> [cap.exp]) - (getPtr(cap) >> [cap.exp]))<15:0>;
@@ -132,6 +137,13 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
     new_cap <- updatePtr(new_cap, newPtr);
 
     new_cap.base_eq_pointer <- if offset == 0 then true else false;
+
+    -- XXX experimental :
+    newbase = innerGetBase(new_cap);
+    newtop = innerGetTop(new_cap);
+    when (oldbase <> newbase) or (oldtop <> newtop) do new_cap.tag <- false;
+    ---------------------
+
     new_cap
 }
 
