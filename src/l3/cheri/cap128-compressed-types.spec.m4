@@ -185,7 +185,7 @@ Capability setBounds (cap::Capability, length::bits(64)) =
     zeros  = countLeadingZeros (length);
     newExp::nat = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
     new_cap.exp <- [newExp];
-    new_cap.toTop <- ZeroExtend((length >> newExp)<14:0>);
+    new_cap.toTop <- ZeroExtend((length >>+ newExp)<14:0>);
     when length && ~(~0 << newExp) <> 0 do new_cap.toTop <- new_cap.toTop + 1;
     -- set base (and offset of 0)
     new_cap.toBottom <- 0;
