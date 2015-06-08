@@ -128,7 +128,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 
     var new_cap = cap;
     newPtr      = getBase(cap) + offset;
-    ptrDiff     = ((newPtr >> [cap.exp]) - (getPtr(cap) >> [cap.exp]))<15:0>;
+    ptrDiff     = ((newPtr >>+ [cap.exp]) - (getPtr(cap) >>+ [cap.exp]))<15:0>;
     newToTop    = cap.toTop    - ptrDiff;
     newToBottom = cap.toBottom - ptrDiff;
 
