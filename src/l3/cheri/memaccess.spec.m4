@@ -227,11 +227,14 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         when not found do
         {
             for core in 0 .. totalCore - 1 do
+            {
+                st = all_state([core]);
                 when core <> [procID] and
                      (not cond or sc_success) and
-                     c_LLbit([core]) == Some (true) and
-                     c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
-                        c_LLbit([core]) <- Some (false);
+                     st.c_LLbit == Some (true) and
+                     st.c_CP0.LLAddr<39:5> == pAddr<39:5> do
+                        all_state([core]).c_LLbit <- Some (false)
+            };
             when not cond or sc_success do
                 WriteData(a, MemElem, mask)
         };
@@ -278,10 +281,13 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
         else
         {
             for core in 0 .. (totalCore - 1) do
+            {
+                st = all_state([core]);
                 when core <> [procID] and
-                    c_LLbit([core]) == Some (true) and
-                    c_CP0([core]).LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
-                        c_LLbit([core]) <- Some (false);
+                    st.c_LLbit == Some (true) and
+                    st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
+                        all_state([core]).c_LLbit <- Some (false)
+            };
 
             memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;
             mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) : " at vAddr 0x":hex64(vAddr));
