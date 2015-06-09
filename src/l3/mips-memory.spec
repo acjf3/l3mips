@@ -24,9 +24,12 @@ unit initMemStats =
 }
 
 string printMemStats =
-    PadRight (#" ", 16, "data_reads")  : " = " : PadLeft (#" ", 9, [memStats.data_reads::nat])  : "\\n" :
-    PadRight (#" ", 16, "data_writes") : " = " : PadLeft (#" ", 9, [memStats.data_writes::nat]) : "\\n" :
-    PadRight (#" ", 16, "inst_reads")  : " = " : PadLeft (#" ", 9, [memStats.inst_reads::nat])
+    PadRight (#" ", 16, "data_reads")  : " = " :
+    PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
+    PadRight (#" ", 16, "data_writes") : " = " :
+    PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
+    PadRight (#" ", 16, "inst_reads")  : " = " :
+    PadLeft (#" ", 9, [memStats.inst_reads])
 
 ---------------------------
 -- memory implementation --
@@ -63,7 +66,7 @@ dword ReadData (pAddr::dwordAddr) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     data = MEM(pAddr);
-    mark_log (4, log_mem_read (pAddr, data));
+    when 4 <= trace_level do mark_log (4, log_mem_read (pAddr, data));
     data
 }
 
@@ -71,7 +74,7 @@ unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
     MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
-    mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
+    when 4 <= trace_level do mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
 }
 
 word ReadInst (a::pAddr) =

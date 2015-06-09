@@ -59,28 +59,31 @@ unit initMemStats =
 	memStats.l2_prefetch_evict             <- 0
 }
 
+string MemStateLine (s::string, n::nat) =
+   PadRight (#" ", 35, s) : " = " : PadLeft (#" ", 9, [n]) : "\\n"
+
 string printMemStats =
     -- data / inst measures
-	PadRight (#" ", 35, "data_reads")                    : " = " : PadLeft (#" ", 9, [memStats.data_reads                    :: nat]) : "\\n" :
-	PadRight (#" ", 35, "data_writes")                   : " = " : PadLeft (#" ", 9, [memStats.data_writes                   :: nat]) : "\\n" :
-	PadRight (#" ", 35, "inst_reads")                    : " = " : PadLeft (#" ", 9, [memStats.inst_reads                    :: nat]) : "\\n" :
+       MemStateLine ("data_reads",  memStats.data_reads) :
+       MemStateLine ("data_writes", memStats.data_writes) :
+       MemStateLine ("inst_reads",  memStats.inst_reads) :
     -- hit / miss measures
-	PadRight (#" ", 35, "l2_read")                       : " = " : PadLeft (#" ", 9, [memStats.l2_read                       :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_read_hit")                   : " = " : PadLeft (#" ", 9, [memStats.l2_read_hit                   :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_read_miss")                  : " = " : PadLeft (#" ", 9, [memStats.l2_read_miss                  :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_write")                      : " = " : PadLeft (#" ", 9, [memStats.l2_write                      :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_write_hit")                  : " = " : PadLeft (#" ", 9, [memStats.l2_write_hit                  :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_write_miss")                 : " = " : PadLeft (#" ", 9, [memStats.l2_write_miss                 :: nat]) : "\\n" :
-	-- prefetch measures
-	PadRight (#" ", 35, "l2_mandatory_fetch")            : " = " : PadLeft (#" ", 9, [memStats.l2_mandatory_fetch            :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_prefetch")                   : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch                   :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_tlb_hit")                    : " = " : PadLeft (#" ", 9, [memStats.l2_tlb_hit                    :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_tlb_miss")                   : " = " : PadLeft (#" ", 9, [memStats.l2_tlb_miss                   :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_prefetch_alias")             : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch_alias             :: nat]) : "\\n" :
-	-- eviction measures
-	PadRight (#" ", 35, "l2_evict")                      : " = " : PadLeft (#" ", 9, [memStats.l2_evict                      :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_mandatory_evict")            : " = " : PadLeft (#" ", 9, [memStats.l2_mandatory_evict            :: nat]) : "\\n" :
-	PadRight (#" ", 35, "l2_prefetch_evict")             : " = " : PadLeft (#" ", 9, [memStats.l2_prefetch_evict             :: nat]) : "\\n"
+       MemStateLine ("l2_read",       memStats.l2_read) :
+       MemStateLine ("l2_read_hit",   memStats.l2_read_hit) :
+       MemStateLine ("l2_read_miss",  memStats.l2_read_miss) :
+       MemStateLine ("l2_write",      memStats.l2_write) :
+       MemStateLine ("l2_write_hit",  memStats.l2_write_hit) :
+       MemStateLine ("l2_write_miss", memStats.l2_write_miss) :
+    -- prefetch measures
+       MemStateLine ("l2_mandatory_fetch", memStats.l2_mandatory_fetch) :
+       MemStateLine ("l2_prefetch",        memStats.l2_prefetch) :
+       MemStateLine ("l2_tlb_hit",         memStats.l2_tlb_hit) :
+       MemStateLine ("l2_tlb_miss",        memStats.l2_tlb_miss) :
+       MemStateLine ("l2_prefetch_alias",  memStats.l2_prefetch_alias) :
+    -- eviction measures
+       MemStateLine ("l2_evict",           memStats.l2_evict) :
+       MemStateLine ("l2_mandatory_evict", memStats.l2_mandatory_evict) :
+       MemStateLine ("l2_prefetch_evict",  memStats.l2_prefetch_evict)
 
 dnl -- math utils
 define(`log2', `ifelse($1, 1, 0, `eval(1 + log2(eval($1 / 2)))')')dnl -- compute log2
@@ -127,12 +130,10 @@ string MemAddr_str (addr::MemAddr) =
 string MemData_str (data::MemData) = "0x" : ToLower([data])
 
 string log_mem_write (addr::MemAddr, data::MemData) =
-    "write MEM[" : MemAddr_str (addr) :
-    "] <- " : MemData_str (data)
+    "write MEM[" : MemAddr_str (addr) : "] <- " : MemData_str (data)
 
 string log_mem_read (addr::MemAddr, data::MemData) =
-    "read MEM[" : MemAddr_str (addr) :
-    "]: " : MemData_str (data)
+    "read MEM[" : MemAddr_str (addr) : "]: " : MemData_str (data)
 
 -- l1 types --
 
@@ -191,7 +192,7 @@ component L1Cache (idx::L1Index) :: L1Entry
     }
 }
 
-L1Id L1ID = 
+L1Id L1ID =
 match current_l1_type
 {
     case Inst => (2 * [procID])
@@ -408,7 +409,7 @@ string sharers_str (sharers::L1Id list) =
     {
         when i > 0 do
             str <- str : ",";
-        str <- str : [sharer::nat];
+        str <- str : [sharer];
         i <- i + 1
     };
     return str : "}"
@@ -451,24 +452,24 @@ string log_l2_read (addr::L2Addr) =
     l2prefix_str(addr) : " - read"
 
 string log_l2_read_hit (addr::L2Addr, way::nat, entry::L2Entry) =
-    l2prefix_str(addr) : " - read hit - way " : [way::nat] : " - " :
+    l2prefix_str(addr) : " - read hit - way " : [way] : " - " :
     l2entry_str(entry)
 
 string log_l2_read_miss (addr::L2Addr) =
     l2prefix_str(addr) : " - read miss"
 
 string log_l2_fill (addr::L2Addr, way::nat, old::L2Entry, new::L2Entry) =
-    l2prefix_str(addr) : " - fill - way " : [way::nat] : " - " :
+    l2prefix_str(addr) : " - fill - way " : [way] : " - " :
     "old@" : l2line_str(old.tag:L2Idx(addr)) : l2entry_str(old) : " - " :
     "new@" : l2line_str(new.tag:L2Idx(addr)) : l2entry_str(new)
 
 string log_l2_evict (addr::L2Addr, way::nat, old::L2Entry, new::L2Entry) =
-    l2prefix_str(addr) : " - evict - way " : [way::nat] : " - " :
+    l2prefix_str(addr) : " - evict - way " : [way] : " - " :
     "old@" : l2line_str(old.tag:L2Idx(addr)) : l2entry_str(old) : " - " :
     "new@" : l2line_str(new.tag:L2Idx(addr)) : l2entry_str(new)
 
 string log_l2_write_hit (addr::L2Addr, way::nat, data::L2Data) =
-    l2prefix_str(addr) : " - write hit - way " : [way::nat] : " - " :
+    l2prefix_str(addr) : " - write hit - way " : [way] : " - " :
     l2data_str(data)
 
 string log_l2_write_miss (addr::L2Addr) =
@@ -479,7 +480,7 @@ string log_l2_updt_sharers (addr::L2Addr, old::L1Id list, new::L1Id list) =
     sharers_str (old) : " <- " : sharers_str (new)
 
 string log_inval_l1 (l1id::nat, addr::L1LineNumber) =
-    "inval L1 " : [l1id::nat] : " @" : l1line_str(addr) :
+    "inval L1 " : [l1id] : " @" : l1line_str(addr) :
     " ,L1idx:" : l1addr_idx_str(addr:0)
 
 -- l2 API --
@@ -499,7 +500,7 @@ unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
     foreach sharer in sharers do
     when (invalCurrent or [sharer] <> currentL1Id) do
     {
-        mark_log (4, log_inval_l1 (sharer, addr));
+        when 4 <= trace_level do mark_log (4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
         current_l1_type <- if (sharer mod 2) == 0 then Inst else Data;
         entry = L1Cache(L1IdxFromLineNumber(addr));
@@ -653,7 +654,8 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         mem_addr = old_entry.tag : L2Idx(addr);
         -- write cache line back to memory --
         -- when old_entry.dirty do
-        mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
+        when 4 <= trace_level do
+           mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         MEM(mem_addr) <- old_entry.data;
         -- take care of coherence --
         for i in 0 .. eval(L1LINEPERL2LINE - 1) do
@@ -678,7 +680,8 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     };
 
     -- update cache --
-    mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
+    when 4 <= trace_level do
+       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
 
     -- return data --
@@ -693,13 +696,14 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
             memStats.l2_write_hit <- memStats.l2_write_hit + 1;
             var new_data = L2MergeData (cacheEntry.data, data, mask);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
-            mark_log (4, log_l2_write_hit (addr, way, new_data));
+            when 4 <= trace_level do
+               mark_log (4, log_l2_write_hit (addr, way, new_data));
             L2Cache(way,L2Idx(addr))
         }
         case None =>
         {
             memStats.l2_write_miss <- memStats.l2_write_miss + 1;
-            mark_log (4, log_l2_write_miss (addr));
+            when 4 <= trace_level do mark_log (4, log_l2_write_miss (addr));
             cacheLine = L2ServeMiss (addr, list{addr});
             var retEntry;
             match L2Hit (addr)
@@ -717,7 +721,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+  for i in 0 .. eval(L1LINEPERL2LINE - 1) do
     invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], entry.sharers, false)
 
 L2Data L2Read (addr::L2Addr) =
@@ -731,15 +735,20 @@ L2Data L2Read (addr::L2Addr) =
             memStats.l2_read_hit <- memStats.l2_read_hit + 1;
             new_sharers = L2UpdateSharers(L1ID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, new_sharers, cacheEntry.data);
-            mark_log (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
-            mark_log (4, log_l2_updt_sharers(addr, cacheEntry.sharers, new_sharers));
+            when 4 <= trace_level do
+            {
+               mark_log
+                 (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
+               mark_log
+                 (4, log_l2_updt_sharers(addr, cacheEntry.sharers, new_sharers))
+            };
             l2LRUBits(L2Idx(addr)) <- way @ l2LRUBits(L2Idx(addr));
             cacheLine <- cacheEntry.data
         }
         case None =>
         {
             memStats.l2_read_miss <- memStats.l2_read_miss + 1;
-            mark_log (4, log_l2_read_miss(addr));
+            when 4 <= trace_level do mark_log (4, log_l2_read_miss(addr));
             cacheLine <- L2ServeMiss (addr, list{addr})
         }
     };
@@ -813,9 +822,12 @@ L1Data L1ServeMiss (addr::L1Addr) =
     data = L2DataToL1Data(addr, L2Read (addr));
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
-    when old_entry.valid do
-        mark_log (3, log_l1_evict(addr, old_entry, new_entry));
-    mark_log (3, log_l1_fill(addr, old_entry, new_entry));
+    when 3 <= trace_level do
+    {
+       when old_entry.valid do
+         mark_log (3, log_l1_evict(addr, old_entry, new_entry));
+       mark_log (3, log_l1_fill(addr, old_entry, new_entry))
+    };
     L1Cache(L1Idx(addr)) <- new_entry;
     data
 }
@@ -827,9 +839,9 @@ match L1Hit (addr)
     {
         var new_data = L1MergeData (cacheEntry.data, data, mask);
         L1Cache(L1Idx(addr)) <- mkL1CacheEntry(true, cacheEntry.tag, new_data);
-        mark_log (3, log_l1_write_hit(addr, new_data))
+        when 3 <= trace_level do mark_log (3, log_l1_write_hit(addr, new_data))
     }
-    case None => mark_log (3, log_l1_write_miss(addr))
+    case None => when 3 <= trace_level do mark_log (3, log_l1_write_miss(addr))
 }
 
 unit L1ServeWrite (addr::L1Addr, data::L1Data, mask::L1Data) =
@@ -843,7 +855,8 @@ L1Data L1Read (addr::L1Addr) =
         case Some (cacheEntry) =>
         {
             cacheLine <- cacheEntry.data;
-            mark_log (3, log_l1_read_hit (addr, cacheLine))
+            when 3 <= trace_level do
+               mark_log (3, log_l1_read_hit (addr, cacheLine))
         }
         case None =>
         {

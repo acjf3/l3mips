@@ -23,7 +23,8 @@ unit resetStats =
 string dumpStats =
 {
     var out = "";
-    for i in 0 .. totalCore-1 do out <- out : "-- Core " : [i::nat] : " stats --\\n" : printCoreStats : "\\n";
+    for i in 0 .. totalCore-1 do
+       out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
     out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
     out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
     out
@@ -44,7 +45,9 @@ component HI :: dword
    value = match hi { case Some (v) => v
                       case None => { UNPREDICTABLE_HI (); UNKNOWN }
                     }
-   assign value = { hi <- Some (value); mark_log (2, log_w_hi (value)) }
+   assign value = { hi <- Some (value);
+                    when 2 <= trace_level do mark_log (2, log_w_hi (value))
+                  }
 }
 
 component LO :: dword
@@ -52,7 +55,9 @@ component LO :: dword
    value = match lo { case Some (v) => v
                       case None => { UNPREDICTABLE_LO (); UNKNOWN }
                     }
-   assign value = { lo <- Some (value); mark_log (2, log_w_lo (value)) }
+   assign value = { lo <- Some (value);
+                    when 2 <= trace_level do mark_log (2, log_w_lo (value))
+                  }
 }
 
 --------------------------------------------------
@@ -105,7 +110,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       }
    assign value =
    {
-      mark_log (2, log_w_c0 (reg, value));
+      when 2 <= trace_level do mark_log (2, log_w_c0 (reg, value));
       match n, reg, sel
       {
          case 0,  0, 0 => CP0.Index.Index <- value<7:0>

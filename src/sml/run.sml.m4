@@ -7,7 +7,7 @@
    -------------------------------------------------------------------------- *)
 
 val be = ref true (* big-endian *)
-val trace_level = ref 0
+val trace_level = mips.trace_level
 val time_run = ref true
 val uart_delay = ref 5000
 val uart_countdown = ref (!uart_delay)
@@ -16,7 +16,6 @@ val uart_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
 val dump_stats = ref false
 val rdhwr_extra = ref false
-val current_core_id = ref 0
 val nb_core = ref 1
 val watch_paddr = ref NONE (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
@@ -148,12 +147,11 @@ fun storeArrayInMem (base, marray) =
    Loading code into memory from raw file
    -------------------------------------------------------------------------- *)
 
-fun word8ToBits8 word8 =
-  BitsN.B (Word8.toInt word8, 8)
+fun word8ToBits8 word8 = BitsN.B (Word8.toInt word8, 8)
 
 fun getByte v i =
-  if   i < Word8Vector.length v
-  then word8ToBits8 (Word8Vector.sub (v, i))
+  if i < Word8Vector.length v
+    then word8ToBits8 (Word8Vector.sub (v, i))
   else BitsN.zero 8
 
 fun storeVecInMemHelper vec base i =
@@ -171,7 +169,7 @@ fun storeVecInMemHelper vec base i =
     else print (Int.toString (Word8Vector.length vec) ^ " words.\n")
   end
 
-fun storeVecInMem (base, vec) = 
+fun storeVecInMem (base, vec) =
   let
     val b = IntInf.andb (base div 32, 0x7ffffffff)
   in
@@ -187,27 +185,25 @@ fun readRaw filename =
     vec
   end
 
-fun printLog (n) = List.app (fn e => print(e ^ "\n"))
-                            (List.rev(mips.Map.lookup(!mips.log, n)))
+fun printLog n = List.app (fn e => print (e ^ "\n"))
+                          (List.rev (mips.Map.lookup (!mips.log, n)))
 
 local
    fun readReg i = hex64 (mips.GPR (BitsN.fromNat (i, 5)))
 in
-   fun dumpRegisters (core) =
+   fun dumpRegisters core =
      let
-       val savedProcID = !mips.procID
-       val pc = mips.Map.lookup(!mips.c_PC, 0)
-       val () = mips.procID := BitsN.B(core, BitsN.size (!mips.procID))
+       val savedProcID = mips.switchCore core
      in
         print "======   Registers   ======\n"
-      ; print ("Core = " ^ Int.toString(core) ^ "\n")
-      ; print ("PC     " ^ hex64 pc ^ "\n")
+      ; print ("Core = " ^ Int.toString core ^ "\n")
+      ; print ("PC     " ^ hex64 (mips.PC ()) ^ "\n")
       ; L3.for
           (0, 31,
            fn i =>
               print ("Reg " ^ (if i < 10 then " " else "") ^
                      Int.toString i ^ " " ^ readReg i ^ "\n"))
-      ; mips.procID := savedProcID
+      ; mips.switchCore savedProcID
     end
 end
 
@@ -261,7 +257,7 @@ fun uart () =
    else uart_countdown := !uart_countdown - 1
 
 (* ------------------------------------------------------------------------
-   Schedule (denoting order in which cores are interleaved)  
+   Schedule (denoting order in which cores are interleaved)
    ------------------------------------------------------------------------ *)
 
 (* Returns next core id from given text stream *)
@@ -270,7 +266,7 @@ fun readNextCoreId stream =
     NONE => failExit ("Reached end of schedule\n")
   | SOME line =>
         if line = "" then failExit ("Reached end of schedule\n")
-        else 
+        else
           case IntExtra.fromString (String.extract(line, 0,
                  SOME (String.size(line)-1))) of
               NONE   => failExit ("Bad core id in schedule: " ^ line)
@@ -279,71 +275,62 @@ fun readNextCoreId stream =
                         ) else i
 
 (* Returns id of next core to run *)
-fun scheduleNext () = 
+fun scheduleNext () =
   case !schedule of
-    NONE        => (!current_core_id+1) mod !nb_core
-  | SOME stream => readNextCoreId stream
+     NONE        => (BitsN.toNat (!mips.procID) + 1) mod !nb_core
+   | SOME stream => readNextCoreId stream
 
 (* ------------------------------------------------------------------------
    Define UNPREDICTABLE "LO" and UNPREDICTABLE "HI" behaviour
    ------------------------------------------------------------------------ *)
 
-val () = mips.UNPREDICTABLE_LO :=
-  (fn _ => raise mips.UNPREDICTABLE "LO")
-
-val () = mips.UNPREDICTABLE_HI :=
-  (fn _ => raise mips.UNPREDICTABLE "HI")
+val () = mips.UNPREDICTABLE_LO := (fn _ => raise mips.UNPREDICTABLE "LO")
+val () = mips.UNPREDICTABLE_HI := (fn _ => raise mips.UNPREDICTABLE "HI")
 
 (* ------------------------------------------------------------------------
    Run code
    ------------------------------------------------------------------------ *)
 
 fun end_sim i =
-   let val t = Timer.checkCPUTimer(!cpu_time) in
-     ( if !dump_stats then print(mips.dumpStats()) else ()
-     ; print ("Completed " ^ Int.toString (i + 1) ^ " instructions in " ^ Time.toString(#usr(t)) ^ " seconds ")
-     ; print ("(" ^ Real.toString (real (i + 1) / Time.toReal (#usr(t))) ^ " inst/sec)\n")
-     )
+   let
+      val t = Timer.checkCPUTimer(!cpu_time)
+   in
+      if !dump_stats then print(mips.dumpStats()) else ()
+    ; print ("Completed " ^ Int.toString (i + 1) ^ " instructions in " ^
+             Time.toString(#usr(t)) ^ " seconds ")
+    ; print ("(" ^ Real.toString (real (i + 1) / Time.toReal (#usr(t))) ^
+             " inst/sec)\n")
    end
 
 fun loop mx i =
    let
-      val () = current_core_id := scheduleNext ()
-      val () = mips.procID := BitsN.B(!current_core_id,
-                                      BitsN.size(!mips.procID))
-      val coreId = !current_core_id
-      val exl0 = #EXL (#Status (mips.Map.lookup(!mips.c_CP0, coreId)))
-      val pc = mips.Map.lookup(!mips.c_PC, coreId)
+      val _ =  mips.switchCore (scheduleNext ())
+      val exl0 = #EXL (#Status (mips.CP0 ()))
+      val pc = mips.PC ()
    in
     uart ()
     ; mips.instCnt := i
     ; mips.Next ()
-    ; printLog(0)
-    ; if 1 <= !trace_level then printLog(1) else ()
-    ; if 2 <= !trace_level then printLog(2) else ()
-    ; if 3 <= !trace_level then printLog(3) else ()
-    ; if 4 <= !trace_level then printLog(4) else ()
-    ; if 5 <= !trace_level then printLog(5) else ()
+    ; printLog 0
+    ; if 1 <= !trace_level then printLog 1 else ()
+    ; if 2 <= !trace_level then printLog 2 else ()
+    ; if 3 <= !trace_level then printLog 3 else ()
+    ; if 4 <= !trace_level then printLog 4 else ()
+    ; if 5 <= !trace_level then printLog 5 else ()
     ; if !mips.done orelse i = mx then end_sim i
-      else 
-        let val exl1 = #EXL (#Status (
-                         mips.Map.lookup(!mips.c_CP0, coreId)))
-        in loop mx (if not exl0 andalso exl1
+      else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
                        then (print "exception\n"; i)
                     else i + 1)
-        end
    end
 
 fun decr i = if i <= 0 then i else i - 1
 
 fun pureLoop mx i =
-   ( current_core_id := scheduleNext ()
-   ; mips.procID := BitsN.B(!current_core_id,
-                            BitsN.size(!mips.procID))
+   ( mips.switchCore (scheduleNext ())
    ; uart ()
    ; mips.Next ()
-   ; printLog(0)
-   ; if !mips.done orelse (mx = 1) then end_sim i
+   ; printLog 0
+   ; if !mips.done orelse mx = 1 then end_sim i
      else pureLoop (decr mx) (i + 1)
    )
 
@@ -354,8 +341,8 @@ in
       if 1 <= !trace_level then t (loop mx) 0 else t (pureLoop mx) 0
    fun run pc_uart mx code raw =
       ( List.tabulate(!nb_core,
-        fn x => (mips.procID := BitsN.B(x, BitsN.size(!mips.procID));
-                 mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
+          fn x => (mips.switchCore x;
+                   mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
       ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
@@ -366,10 +353,10 @@ in
       ; List.app
           (fn (a, s) =>
              ( print ("Loading " ^ s ^ "... ")
-             ; if   raw
-               then storeVecInMem (a, readRaw s)
+             ; if raw
+                 then storeVecInMem (a, readRaw s)
                else storeArrayInMem (a, loadIntelHex s)
-             )) code 
+             )) code
       ; uart_countdown := !uart_delay
       ; if 0 < !uart_delay then uart_input () else ()
       ; cpu_time := Timer.startCPUTimer()
@@ -377,7 +364,7 @@ in
       ; if 0 < !uart_delay then uart_output () else ()
       )
       handle mips.UNPREDICTABLE s =>
-        ( List.tabulate(!nb_core, dumpRegisters)
+        ( List.tabulate (!nb_core, dumpRegisters)
         ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
         )
 end

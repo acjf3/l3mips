@@ -27,8 +27,10 @@ unit initMemAccessStats =
 }
 
 string printMemAccessStats =
-    PadRight (#" ", 16, "bytes_read")    : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_read::nat])  : "\\n" :
-    PadRight (#" ", 16, "bytes_written") : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_written::nat]) : "\\n"
+    PadRight (#" ", 16, "bytes_read")    : " = " :
+    PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\\n" :
+    PadRight (#" ", 16, "bytes_written") : " = " :
+    PadLeft (#" ", 9, [memAccessStats.bytes_written]) : "\\n"
 
 -- watch paddr
 
@@ -39,22 +41,25 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:3> == watch_paddr<39:3> do
-            println ("watching --> load 0x" : hex64(data) : " from 0x" : hex40(addr))
+            println ("watching --> load 0x" : hex64(data) : " from 0x" :
+                     hex40(addr))
     }
     case None => nothing
 }
 
 unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 {
-    case Some(watch_paddr) => when addr<39:3> == watch_paddr<39:3> do
-        println ("watching --> Store 0x" : hex64(data) : "(mask:" : hex64(mask) : ") at 0x" : hex40(addr))
+    case Some(watch_paddr) =>
+       when addr<39:3> == watch_paddr<39:3> do
+         println ("watching --> Store 0x" : hex64(data) : "(mask:" :
+                  hex64(mask) : ") at 0x" : hex40(addr))
     case None => nothing
 }
 
 -- Pimitive memory load (with memory-mapped devices)
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                          IorD::IorD, AccessType::AccessType, link::bool) =
+                  IorD::IorD, AccessType::AccessType, link::bool) =
 {
     var pAddr;
     tmp, CCA = AddressTranslation (vAddr, IorD, AccessType);
@@ -97,11 +102,13 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
         else
             LLbit <- None;
 
-        when found == false do
+        when not found do
             ret <- ReadData (a);
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s) from vAddr 0x":hex64(vAddr));
+        when 2 <= trace_level do
+           mark_log (2, "Load of " : [[MemType]::nat + 1] :
+                        " byte(s) from vAddr 0x" : hex64(vAddr));
 
         watchForLoad(pAddr, ret);
         return ret
@@ -112,7 +119,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 -- Pimitive memory store. Big-endian.
 
 bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+                  vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     var pAddr;
     var sc_success = false;
@@ -154,7 +161,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             case Some (true) =>
                 if CP0.LLAddr<39:5> == pAddr<39:5> then
                     sc_success <- true
-                else #UNPREDICTABLE("conditional store: address does not match previous LL address")
+                else #UNPREDICTABLE ("conditional store: address does not match previous LL address")
         };
 
         LLbit <- None;
@@ -162,15 +169,22 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         when not found do
         {
             for core in 0 .. totalCore - 1 do
-                when core <> [procID] and
+            {   i = [core];
+                st = all_state (i);
+                when i <> procID and
                      (not cond or sc_success) and
-                     c_LLbit([core]) == Some (true) and
-                     c_CP0([core]).LLAddr<39:5> == pAddr<39:5> do
-                        c_LLbit([core]) <- Some (false);
+                     st.c_LLbit == Some (true) and
+                     st.c_CP0.LLAddr<39:5> == pAddr<39:5> do
+                        all_state(i).c_LLbit <- Some (false)
+            };
             when not cond or sc_success do WriteData(a, MemElem, mask)
         };
-        memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        mark_log (2, "Store 0x":hex64(MemElem):", mask 0x":hex64(mask):" (":[[AccessLength]::nat+1]:" byte(s)) at vAddr 0x":hex64(vAddr));
+        memAccessStats.bytes_written <-
+           memAccessStats.bytes_written + [AccessLength] + 0n1;
+        when 2 <= trace_level do
+           mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
+                        hex64(mask) : " (" : [[AccessLength] + 0n1] :
+                        " byte(s)) at vAddr 0x" : hex64(vAddr));
         watchForStore(pAddr, MemElem, mask)
     };
     sc_success

@@ -22,7 +22,7 @@ unit Next =
         case Some (w) =>
         {
             inst = Decode (w);
-            mark_log (1, log_instruction(w,inst));
+            when 1 <= trace_level do mark_log (1, log_instruction(w,inst));
             Run (inst)
         }
         case None => nothing

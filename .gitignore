@@ -2,5 +2,6 @@ l3mips*
 roms/*
 src/hol/*.sig
 src/hol/*.sml
-src/sml/*
-!src/sml/run.sml
+src/sml/mips.sig
+src/sml/mips.sml
+src/sml/run.sml
