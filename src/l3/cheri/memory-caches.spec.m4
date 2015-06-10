@@ -631,7 +631,8 @@ nat LRUReplace (addr::L2Addr) =
 nat innerL2ReplacePolicy (addr::L2Addr) = match l2ReplacePolicy
 {
     case 0 => naiveReplace (addr)
-    case 1 => LRUReplace (addr)
+    case 1 => LRUReplace   (addr)
+    case _ => naiveReplace (addr)
 }
 
 nat L2ReplacePolicy (addr::L2Addr) =
@@ -880,7 +881,7 @@ L2Data L2Read (addr::L2Addr) =
                 (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
                mark_log
                 (4, log_l2_updt_sharers(addr, cacheEntry.sharers, new_sharers))
-            }
+            };
             l2LRUBits(L2Idx(addr)) <- way @ l2LRUBits(L2Idx(addr));
             cacheLine <- cacheEntry.data
         }
@@ -966,7 +967,7 @@ L1Data L1ServeMiss (addr::L1Addr) =
       when old_entry.valid do
           mark_log (3, log_l1_evict(addr, old_entry, new_entry));
       mark_log (3, log_l1_fill(addr, old_entry, new_entry))
-    }
+    };
     L1Cache(L1Idx(addr)) <- new_entry;
     data
 }
