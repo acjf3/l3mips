@@ -148,7 +148,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
          case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
-         case _ => unmark_log(2)
+         case _ => when 2 <= trace_level do unmark_log(2)
       }
    }
 }
