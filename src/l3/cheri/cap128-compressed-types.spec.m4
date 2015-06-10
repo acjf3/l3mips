@@ -161,7 +161,15 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
     -- XXX experimental :
     newbase = innerGetBase(new_cap);
     newtop = innerGetTop(new_cap);
-    when (oldbase <> newbase) or (oldtop <> newtop) do new_cap.tag <- false;
+    when (oldbase <> newbase) or (oldtop <> newtop) do
+    {
+        new_cap.exp <- 0x32; -- exp of 50
+        dist = (offset >>+ 50)<14:0>;
+        new_cap.toBottom <- SignExtend(-dist); -- force base to 0
+        new_cap.toTop <- SignExtend(-(dist-1)); -- force top to 1 (length of 0)
+        new_cap.pointer <- offset; -- force offset to provided offset
+        new_cap.tag <- false
+    };
     ---------------------
 
     new_cap
