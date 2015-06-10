@@ -3,8 +3,10 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-define COP2 (v::bits(26)) = if not CP0.Status.CU2 then SignalCP2UnusableException else nothing
-define LWC2 (v::bits(26)) = if not CP0.Status.CU2 then SignalCP2UnusableException else nothing
-define LDC2 (v::bits(26)) = if not CP0.Status.CU2 then SignalCP2UnusableException else nothing
-define SWC2 (v::bits(26)) = if not CP0.Status.CU2 then SignalCP2UnusableException else nothing
-define SDC2 (v::bits(26)) = if not CP0.Status.CU2 then SignalCP2UnusableException else nothing
+unit CP2Unusable = when not CP0.Status.CU2 do SignalCP2UnusableException
+
+define COP2 () = CP2Unusable
+define LWC2 () = CP2Unusable
+define LDC2 () = CP2Unusable
+define SWC2 () = CP2Unusable
+define SDC2 () = CP2Unusable

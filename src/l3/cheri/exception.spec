@@ -107,7 +107,8 @@ unit SignalException (ExceptionType::ExceptionType) =
     PCC <- KCC;
 
     PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
-    mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
+    when 2 <= trace_level do
+       mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
@@ -142,7 +143,9 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcAccKR2C           => 0x1e
     };
     capcause.RegNum  <- regNum;
-    mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) : ", reg: 0x" : ToLower ([capcause.RegNum]));
+    when 2 <= trace_level do
+       mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) :
+                    ", reg: 0x" : ToLower ([capcause.RegNum]));
     SignalException(C2E)
 }
 

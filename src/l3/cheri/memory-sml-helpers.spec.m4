@@ -9,7 +9,7 @@ ifelse(dnl
 CAPBYTEWIDTH, 16,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
-    var fill = 0; 
+    var fill = 0;
     match MEM(dwordAddr<36:1>)
     {
         case Raw (raw) => fill <- if dwordAddr<0> then raw<63:0> else raw<127:64>

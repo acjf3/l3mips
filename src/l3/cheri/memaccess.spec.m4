@@ -31,8 +31,10 @@ unit initMemAccessStats =
 }
 
 string printMemAccessStats =
-    PadRight (#" ", 16, "bytes_read")    : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_read::nat])  : "\\n" :
-    PadRight (#" ", 16, "bytes_written") : " = " : PadLeft (#" ", 9, [memAccessStats.bytes_written::nat]) : "\\n"
+    PadRight (#" ", 16, "bytes_read")    : " = " :
+    PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\\n" :
+    PadRight (#" ", 16, "bytes_written") : " = " :
+    PadLeft (#" ", 9, [memAccessStats.bytes_written]) : "\\n"
 
 -- watch paddr
 
@@ -43,7 +45,8 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:3> == watch_paddr<39:3> do
-            println ("watching --> load 0x" : hex64 (data) : " from 0x" : hex40 (addr))
+            println ("watching --> load 0x" : hex64 (data) : " from 0x" :
+                     hex40 (addr))
     }
     case None => nothing
 }
@@ -53,22 +56,27 @@ unit watchForCapLoad (addr::bits(40), cap::Capability) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:log2(CAPBYTEWIDTH)> == watch_paddr<39:log2(CAPBYTEWIDTH)> do
-            println ("watching --> load " : log_cap_write (cap) : " from 0x" : hex40 (addr))
+            println ("watching --> load " : log_cap_write (cap) : " from 0x" :
+                     hex40 (addr))
     }
     case None => nothing
 }
 
 unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 {
-    case Some(watch_paddr) => when addr<39:3> == watch_paddr<39:3> do
-        println ("watching --> Store 0x" : hex64 (data) : "(mask: 0x" : hex64 (mask) : ") at 0x" : hex40 (addr))
+    case Some(watch_paddr) =>
+       when addr<39:3> == watch_paddr<39:3> do
+        println ("watching --> Store 0x" : hex64 (data) : "(mask: 0x" :
+                 hex64 (mask) : ") at 0x" : hex40 (addr))
     case None => nothing
 }
 
 unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 {
-    case Some(watch_paddr) => when addr<39:log2(CAPBYTEWIDTH)> == watch_paddr<39:log2(CAPBYTEWIDTH)> do
-        println ("watching --> Store 0x" : log_cap_write (cap) : ") at 0x" : hex40 (addr))
+    case Some(watch_paddr) =>
+       when addr<39:log2(CAPBYTEWIDTH)> == watch_paddr<39:log2(CAPBYTEWIDTH)> do
+        println ("watching --> Store 0x" : log_cap_write (cap) : ") at 0x" :
+                 hex40 (addr))
     case None => nothing
 }
 
@@ -120,11 +128,13 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
         else
             LLbit <- None;
 
-        when found == false do
+        when not found do
             ret <- ReadData (a);
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-        mark_log (2, "Load of ":[[MemType]::nat+1]:" byte(s) from vAddr 0x":hex64(vAddr));
+        when 2 <= trace_level do
+           mark_log (2, "Load of " : [[MemType]::nat+1] :
+                        " byte(s) from vAddr 0x":hex64(vAddr));
 
         watchForLoad(pAddr, ret);
         return ret
@@ -133,14 +143,19 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
 }
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
-                            IorD::IorD, AccessType::AccessType, link::bool) =
+                  IorD::IorD, AccessType::AccessType, link::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
-    if not getTag(CAPR(0)) then {SignalCapException(capExcTag,0); UNKNOWN}
-    else if getSealed(CAPR(0)) then {SignalCapException(capExcSeal,0); UNKNOWN}
-    else if (final_vAddr <+ getBase(CAPR(0))) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0))) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Load then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
+    if not getTag(CAPR(0))
+       then {SignalCapException(capExcTag,0); UNKNOWN}
+    else if getSealed(CAPR(0))
+       then {SignalCapException(capExcSeal,0); UNKNOWN}
+    else if (final_vAddr <+ getBase(CAPR(0)))
+       then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+       then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if not getPerms(CAPR(0)).Permit_Load
+       then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
     else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
 }
 
@@ -168,7 +183,9 @@ Capability LoadCap (vAddr::vAddr) =
         LLbit <- None;
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + CAPBYTEWIDTH;
-        mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) : " from vAddr 0x":hex64(vAddr));
+        when 2 <= trace_level do
+           mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) :
+                        " from vAddr 0x":hex64(vAddr));
 
         watchForCapLoad(pAddr, cap);
         return cap
@@ -227,19 +244,22 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         when not found do
         {
             for core in 0 .. totalCore - 1 do
-            {
-                st = all_state([core]);
-                when core <> [procID] and
+            {   i = [core];
+                st = all_state(i);
+                when i <> procID and
                      (not cond or sc_success) and
                      st.c_LLbit == Some (true) and
                      st.c_CP0.LLAddr<39:5> == pAddr<39:5> do
-                        all_state([core]).c_LLbit <- Some (false)
+                        all_state(i).c_LLbit <- Some (false)
             };
             when not cond or sc_success do
                 WriteData(a, MemElem, mask)
         };
         memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        mark_log (2, "Store 0x":hex64(MemElem):", mask 0x":hex64(mask):" (":[[AccessLength]::nat+1]:" byte(s)) at vAddr 0x":hex64(vAddr));
+        when 2 <= trace_level do
+           mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
+                        hex64(mask) : " (" : [[AccessLength]::nat+1] :
+                        " byte(s)) at vAddr 0x" : hex64(vAddr));
         watchForStore(pAddr, MemElem, mask)
     };
     return sc_success
@@ -249,12 +269,18 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
-    if not getTag(CAPR(0)) then {SignalCapException(capExcTag,0); UNKNOWN}
-    else if getSealed(CAPR(0)) then {SignalCapException(capExcSeal,0); UNKNOWN}
-    else if (final_vAddr <+ getBase(CAPR(0))) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0))) then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Store then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else StoreMemoryCap(MemType, AccessLength, MemElem, final_vAddr, IorD, AccessType, cond)
+    if not getTag(CAPR(0))
+      then {SignalCapException(capExcTag,0); UNKNOWN}
+    else if getSealed(CAPR(0))
+      then {SignalCapException(capExcSeal,0); UNKNOWN}
+    else if (final_vAddr <+ getBase(CAPR(0)))
+      then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+      then {SignalCapException(capExcLength,0); UNKNOWN}
+    else if not getPerms(CAPR(0)).Permit_Store
+      then {SignalCapException(capExcPermStore, 0); UNKNOWN}
+    else StoreMemoryCap (MemType, AccessLength, MemElem, final_vAddr, IorD,
+                         AccessType, cond)
 }
 
 unit StoreCap (vAddr::vAddr, cap::Capability) =
@@ -280,17 +306,20 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
             SignalCapException_noReg (capExcTLBNoStore)
         else
         {
-            for core in 0 .. (totalCore - 1) do
+            for core in 0 .. totalCore - 1 do
             {
-                st = all_state([core]);
-                when core <> [procID] and
+                i = [core];
+                st = all_state(i);
+                when i <> procID and
                     st.c_LLbit == Some (true) and
                     st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
-                        all_state([core]).c_LLbit <- Some (false)
+                        all_state(i).c_LLbit <- Some (false)
             };
 
             memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;
-            mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) : " at vAddr 0x":hex64(vAddr));
+            when 2 <= trace_level do
+               mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) :
+                            " at vAddr 0x":hex64(vAddr));
 
             watchForCapStore(pAddr, cap);
             WriteCap(a, cap)

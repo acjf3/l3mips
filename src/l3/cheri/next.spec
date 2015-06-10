@@ -21,14 +21,15 @@ unit Next =
         case Some (w) =>
         {
             inst = Decode (w);
-            mark_log (1, log_instruction(w,inst));
+            when 1 <= trace_level do mark_log (1, log_instruction (w,inst));
             Run (inst)
         }
         case None => nothing
     };
     match BranchDelay, BranchTo, BranchDelayPCC, BranchToPCC
     {
-        case None, None, None, None => when not exceptionSignalled do PC <- PC + 4
+        case None, None, None, None =>
+            when not exceptionSignalled do PC <- PC + 4
         case Some (addr), None, None, None =>
         {
             BranchDelay <- None;

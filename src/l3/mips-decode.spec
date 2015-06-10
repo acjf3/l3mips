@@ -139,12 +139,17 @@ instruction Decode (w::word) =
       case '101 111 base opn immediate' => CACHE (base, opn, immediate)
       case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
       case '010 000 1000 0000 0000 0000 0000 100000' => WAIT
-      -- Coprocessor 2 instructions
-      case '010 010 v' => COP2Decode (v) -- CP2 instructions (0x12)
-      case '110 010 v' => LWC2Decode (v) -- CP2 load word instructions (0x32)
-      case '110 110 v' => LDC2Decode (v) -- CP2 load double instructions (0x36)
-      case '111 010 v' => SWC2Decode (v) -- CP2 store word instructions (0x3a)
-      case '111 110 v' => SDC2Decode (v) -- CP2 store double instructions (0x3e)
-      -- reserved instructions
+      -- Coprocessor 2 and reserved instructions
+      case '010 010 v' => COP2Decode (v)
+      case '11 b 010 r cb rt offset v`3' =>
+         if b == '1' then
+            SWC2Decode (r, cb, rt, offset, v)
+         else
+            LWC2Decode (r, cb, rt, offset, v)
+      case '11 b 110 c cb rt offset' =>
+         if b == '1' then
+            SDC2Decode (c, cb, rt, offset)
+         else
+            LDC2Decode (c, cb, rt, offset)
       case _ => ReservedInstruction
    }

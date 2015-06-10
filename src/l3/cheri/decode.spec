@@ -41,33 +41,24 @@ instruction COP2Decode (v::bits(26)) =
            case _                            => UnknownCapInstruction
        }))
 
-instruction LWC2Decode (v::bits(26)) =
+instruction LWC2Decode (rd::reg, cb::reg, rt::reg, offset::byte, v::bits(3)) =
    LWC2(CHERILWC2
       (match v
        {
-           case 'rd cb rt offset 0 t' => CLoad(rd, cb, rt, offset, 0b0, t)
-           case 'rd cb rt offset 100' => CLoad(rd, cb, rt, offset, 0b1, 0b00)
-           case 'rd cb rt offset 101' => CLoad(rd, cb, rt, offset, 0b1, 0b01)
-           case 'rd cb rt offset 110' => CLoad(rd, cb, rt, offset, 0b1, 0b10)
-           case 'rd cb rt offset 111' => CLLD(rd, cb, rt, offset)
+           case '0 t' => CLoad(rd, cb, rt, offset, 0b0, t)
+           case '100' => CLoad(rd, cb, rt, offset, 0b1, 0b00)
+           case '101' => CLoad(rd, cb, rt, offset, 0b1, 0b01)
+           case '110' => CLoad(rd, cb, rt, offset, 0b1, 0b10)
+           case '111' => CLLD(rd, cb, rt, offset)
        }))
 
-instruction LDC2Decode (v::bits(26)) =
+instruction SWC2Decode (rs::reg, cb::reg, rt::reg, offset::byte, v::bits(3)) =
    match v
    {
-      case 'cd cb rt offset' => LDC2(CHERILDC2(CLC(cd, cb, rt, offset)))
+      case '0 t' => SWC2(CHERISWC2(CStore(rs, cb, rt, offset, t)))
+      case '111' => SWC2(CHERISWC2(CSCD(rs, cb, rt, offset)))
+      case _     => COP2(CHERICOP2(UnknownCapInstruction))
    }
 
-instruction SWC2Decode (v::bits(26)) =
-   match v
-   {
-      case 'rs cb rt offset 0 t' => SWC2(CHERISWC2(CStore(rs, cb, rt, offset, t)))
-      case 'rs cb rt offset 111' => SWC2(CHERISWC2(CSCD(rs, cb, rt, offset)))
-      case _                     => COP2(CHERICOP2(UnknownCapInstruction))
-   }
-
-instruction SDC2Decode (v::bits(26)) =
-   match v
-   {
-      case 'cs cb rt offset' => SDC2(CHERISDC2(CSC(cs, cb, rt, offset)))
-   }
+instruction LDC2Decode (a::reg * reg * reg * bits(11)) = LDC2(CHERILDC2(CLC(a)))
+instruction SDC2Decode (a::reg * reg * reg * bits(11)) = SDC2(CHERISDC2(CSC(a)))
