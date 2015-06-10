@@ -30,7 +30,7 @@ tar -xf l3.tar.bz2
 cd L3-AAAA-MM-DD/
 ```
 
-(with `L3-AAAA-MM-DD/` matching the date of your L3 realease):
+(with `L3-AAAA-MM-DD/` matching the date of your L3 release):
 
 Edit the `Makefile` to specify what lib flags to use when compiling L3: the `POLYLIB` variable should be set to `-L${LIBPATH} -lpolymain -lpolyml -lpthread -lgmp -ldl -lstdc++`.
 You should now be able to build L3:
@@ -131,35 +131,35 @@ capability coprocessor). Each *.spec* file specify a part of the ISA :
 
 * **mips-base.spec**
 Declares the state variables of the processor as well as a few utility functions
+* **mips-decode.spec**
+Defines the MIPS instruction decoder
 * **mips-encode.spec**
 Defines some pretty printing and encoding functions for the MIPS instructions
+* **mips-exception.spec**
+Defines the MIPS exception codes, a function to trigger an exception, and the ERET instruction
 * **mips-init.spec**
 Defines the initial state of the processor
+* **mips-instructions.spec**
+Defines the semantic functions representing the MIPS instructions that are called in the decoder
 * **mips-memaccess.spec**
 Defines the data load, data store, and instructions fetch operations
 * **mips-sml.spec**
 /!\\ need more refactoring /!\\
-* **mips-tlb-translate.spec**
-Defines the TLB address translation function
-* **mips-types.spec**
-Defines types used throughout the model
-* **mips-decode.spec**
-Defines the decoder and the next state function for the MIPS model
-* **mips-exception.spec**
-Defines the MIPS exception codes, a function to trigger an exception, and the ERET instruction
-* **mips-instructions.spec**
-Defines the semantic functions representing the MIPS instructions that are called in the decoder
+* **mips-next.spec**
+Defines the next state function for the MIPS model
 * **mips-pic.spec**
 Models the MIPS programmable interrupt controller
-* **mips-tlb.spec**
-Declares some TLB state variables, and defines TLB internal functions and TLB instructions
-* **mips-tlb-types.spec**
-Defines TLB entry types
+* **mips-types.spec**
+Defines types used throughout the model
 * **mips-uart.spec**
 Models a UART controller
 * tlb directory
     * **base.spec**
+      Declares some TLB state variables and internal functions
     * **instructions.spec**
+      Defines TLB instructions
     * **translate.spec**
+      Defines the TLB address translation function
     * **types.spec**
+      Defines TLB entry types
 
