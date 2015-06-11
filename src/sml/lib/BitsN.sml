@@ -171,7 +171,7 @@ struct
    fun bitFieldInsert (B (v, s1), B (w, s2), h, l) =
       let
          val mask = dim (h + 1) - dim l
-         val w' = modDim s2 (IntInf.<< (w, Word.fromInt (Int.min (l, s2))))
+         val w' = IntInf.<< (w, Word.fromInt l)
       in
          B (IntInf.orb
               (IntInf.andb (IntInf.notb mask, v), IntInf.andb (mask, w')), s1)
