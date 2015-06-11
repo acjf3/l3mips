@@ -520,9 +520,11 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
+        -- XXX bug in spec
+        if SignExtend(getOffset(CAPR(cb))) + ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
+        -- XXX bug in spec
+        else if SignExtend(getOffset(CAPR(cb))) + ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if not isCapAligned(addr) then
         {
@@ -554,9 +556,11 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         addr = cursor + GPR(rt) + SignExtend(offset);
-        if ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
+        -- XXX bug in spec
+        if SignExtend(getOffset(CAPR(cb))) + ('0':GPR(rt)) + SignExtend(offset) + CAPBYTEWIDTH >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if ('0':GPR(rt)) + SignExtend(offset) < 0 then
+        -- XXX bug in spec
+        else if SignExtend(getOffset(CAPR(cb))) + ('0':GPR(rt)) + SignExtend(offset) < 0 then
             SignalCapException(capExcLength,cb)
         else if not isCapAligned(addr) then
         {
@@ -621,9 +625,11 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
                 aligned <- addr<2:0> == 0
             }
         };
-        if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':getLength(CAPR(cb))) then
+        -- XXX BUG in the spec
+        if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
+        -- XXX BUG in the spec
+        else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
         {
@@ -660,9 +666,11 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcSeal,cb)
     else if not getPerms(CAPR(cb)).Permit_Load then
         SignalCapException(capExcPermLoad,cb)
-    else if SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':getLength(CAPR(cb))) then
+    -- XXX bug in spec
+    else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':getLength(CAPR(cb))) then
         SignalCapException(capExcLength,cb)
-    else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
+    -- XXX bug in spec
+    else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<2:0> <> 0 then
     {
@@ -723,9 +731,11 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
                 aligned <- addr<2:0> == 0
             }
         };
-        if SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':getLength(CAPR(cb))) then
+        -- XXX bug in spec
+        if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) + size >+ ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
+        -- XXX bug in spec
+        else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) < 0 then
             SignalCapException(capExcLength,cb)
         else if not aligned then
         {
@@ -754,9 +764,11 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcSeal,cb)
     else if not getPerms(CAPR(cb)).Permit_Store then
         SignalCapException(capExcPermStore,cb)
-    else if SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':getLength(CAPR(cb))) then
+    -- XXX bug in spec
+    else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) + 8 >+ ('0':getLength(CAPR(cb))) then
         SignalCapException(capExcLength,cb)
-    else if SignExtend(offset) + ('0':GPR(rt)) < 0 then
+    -- XXX bug in spec
+    else if SignExtend(getOffset(CAPR(cb))) + SignExtend(offset) + ('0':GPR(rt)) < 0 then
         SignalCapException(capExcLength,cb)
     else if addr<2:0> <> 0 then
     {
