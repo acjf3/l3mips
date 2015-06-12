@@ -115,8 +115,26 @@ Capability updatePtr (cap::Capability, ptr::bits(64)) =
     new_cap
 }
 
+Capability updateBounds (cap::Capability, ptr::bits(64)) =
+{
+    ptrDiff     = ((ptr >>+ [cap.exp]) - (getPtr(cap) >>+ [cap.exp]))<15:0>;
+    newToTop    = cap.toTop    - ptrDiff;
+    newToBottom = cap.toBottom - ptrDiff;
+
+    var new_cap = cap;
+    new_cap.toTop    <- newToTop;
+    new_cap.toBottom <- newToBottom;
+    new_cap
+}
+
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag      <- tag; new_cap}
-Capability setType   (cap::Capability, otype::OType)     = {var new_cap = cap; TypedPointer(new_cap.pointer).otype <- otype; new_cap}
+Capability setType   (cap::Capability, otype::OType)     =
+{
+    var new_cap = cap;
+    TypedPointer(new_cap.pointer).otype <- otype;
+    new_cap <- updateBounds (new_cap, new_cap.pointer);
+    new_cap
+}
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
 Capability setOffset (cap::Capability, offset::bits(64)) =
@@ -128,12 +146,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 
     var new_cap = cap;
     newPtr      = getBase(cap) + offset;
-    ptrDiff     = ((newPtr >>+ [cap.exp]) - (getPtr(cap) >>+ [cap.exp]))<15:0>;
-    newToTop    = cap.toTop    - ptrDiff;
-    newToBottom = cap.toBottom - ptrDiff;
-
-    new_cap.toTop    <- newToTop;
-    new_cap.toBottom <- newToBottom;
+    new_cap <- updateBounds(new_cap, newPtr);
     new_cap <- updatePtr(new_cap, newPtr);
 
     new_cap.base_eq_pointer <- if offset == 0 then true else false;
