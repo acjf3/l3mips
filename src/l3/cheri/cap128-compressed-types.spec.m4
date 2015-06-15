@@ -131,18 +131,16 @@ Capability setType   (cap::Capability, otype::OType)     =
 {
     var new_cap = cap;
     when cap.sealed do
-    {
         TypedPointer(new_cap.pointer).otype <- otype;
-        new_cap <- updateBounds (new_cap, new_cap.pointer)
-    };
     new_cap
 }
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
 Capability setSealed (cap::Capability, sealed::bool) =
 {
     var new_cap = cap;
-    when not sealed do
-        new_cap.pointer<58:0> <- SignExtend(TypedPointer(cap.pointer).vaddr);
+    ptr = cap.pointer<63:59> : SignExtend(TypedPointer(cap.pointer).vaddr);
+    new_cap <- updateBounds (new_cap, ptr);
+    new_cap.pointer <- ptr;
     new_cap.sealed <- sealed;
     new_cap
 }
