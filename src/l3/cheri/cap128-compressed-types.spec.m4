@@ -34,8 +34,7 @@ register TypedPointer :: bits (64)
 {
     63-59 : seg         -- top 5 bits of virtual address
     58-43 : otype       -- the type of the sealed object
-    42-40 : reserved    -- unused
-     39-0 : vaddr       -- the 40 bits of the virtual address
+     42-0 : vaddr       -- the 40 bits of the virtual address
 }
 
 -- in memory representation of compressed 128 bits capabilities
@@ -68,7 +67,7 @@ if not cap.sealed then
 else
 {
     var addr = cap.pointer;
-    addr<58:0> <- SignExtend(TypedPointer(cap.pointer).vaddr); -- XXX help ? SignExtend an address ?
+    addr<58:0> <- SignExtend(TypedPointer(cap.pointer).vaddr);
     addr
 }
 bits(65) innerGetTop (cap::Capability) =
@@ -108,7 +107,7 @@ Capability updatePtr (cap::Capability, ptr::bits(64)) =
     var new_cap = cap;
     if cap.sealed then
     {
-        TypedPointer(new_cap.pointer).vaddr <- ptr<39:0>;
+        TypedPointer(new_cap.pointer).vaddr <- ptr<42:0>;
         TypedPointer(new_cap.pointer).seg   <- ptr<63:59>
     }
     else new_cap.pointer <- ptr;
@@ -131,12 +130,22 @@ Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; n
 Capability setType   (cap::Capability, otype::OType)     =
 {
     var new_cap = cap;
-    TypedPointer(new_cap.pointer).otype <- otype;
-    new_cap <- updateBounds (new_cap, new_cap.pointer);
+    when cap.sealed do
+    {
+        TypedPointer(new_cap.pointer).otype <- otype;
+        new_cap <- updateBounds (new_cap, new_cap.pointer)
+    };
     new_cap
 }
 Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
-Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed   <- sealed; new_cap}
+Capability setSealed (cap::Capability, sealed::bool) =
+{
+    var new_cap = cap;
+    when not sealed do
+        new_cap.pointer<58:0> <- SignExtend(TypedPointer(cap.pointer).vaddr);
+    new_cap.sealed <- sealed;
+    new_cap
+}
 Capability setOffset (cap::Capability, offset::bits(64)) =
 {
     -- XXX experimental :
