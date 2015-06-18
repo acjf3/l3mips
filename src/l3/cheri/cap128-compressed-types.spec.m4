@@ -42,8 +42,8 @@ register Capability :: bits (129)
 {
         128 : tag       -- 1 tag bit
     127-105 : perms     -- 23 permission bits
-        104 : unused    -- unused
-        103 : base_eq_pointer
+        104 : base_eq_pointer
+        103 : unused    -- unused
      102-97 : exp       -- 6 exponent bits
       96-81 : toTop     -- 16 bits signed mantis
       80-65 : toBottom  -- 16 bits signed mantis
@@ -235,9 +235,9 @@ Capability setBounds (cap::Capability, length::bits(64)) =
 
 bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
 
-CAPRAWBITS capToBits (cap :: Capability) = &cap<127:0> -- XXX might want to reverse the 2 dwords to be consistent with the 256 bits implementation
+CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
 
-Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw) -- XXX same here ?
+Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw<63:0> : raw<127:64>) -- XXX swap dwords to match CHERI bluespec implementation
 
 dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
 if dwordAddr<0> then raw<127:64> else raw<63:0>
