@@ -69,7 +69,7 @@ struct
          B (modDim w (IntInf.~>> (i, Word.fromInt l)), w)
       end
 
-   fun bit (B (a, _), n) = IntInf.~>> (a, Word.fromInt n) mod 2 = 1
+   fun bit (B (a, _), n) = Int.rem (IntInf.~>> (a, Word.fromInt n), 2) = 1
    fun lsb (B (a, _)) = Int.rem (a, 2) = 1
    fun msb a = bit (a, Nat.- (size a, Nat.one))
 
