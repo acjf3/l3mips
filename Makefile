@@ -122,6 +122,7 @@ endif
 endif
 
 SIM_PROFILE ?= l3mips_prof
+SIM_COVERAGE ?= l3mips_coverage
 
 M4_CHERI_FILES = $(basename $(wildcard ${L3SRCDIR}/cheri/*.spec.m4))
 M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
@@ -171,6 +172,9 @@ ${SIM}: ${SMLLIB} ${SMLSRC}
 
 ${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
 	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} ${SMLSRCDIR}/$(MLBFILE)
+
+${SIM_COVERAGE}: ${SMLLIB} ${SMLSRC}
+	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_COVERAGE} ${SMLSRCDIR}/$(MLBFILE)
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
