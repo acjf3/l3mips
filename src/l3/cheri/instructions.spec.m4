@@ -503,7 +503,9 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
 -- CSC
 -----------------------------------
 define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
-    if register_inaccessible(cs) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cs) then
         SignalCapException_v(cs)
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
@@ -542,7 +544,9 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
 -- CLC
 -----------------------------------
 define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
-    if register_inaccessible(cd) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
         SignalCapException_v(cd)
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
@@ -579,7 +583,9 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
 -- CLoad
 -----------------------------------
 define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::bits(1), t::bits(2)) =
-    if register_inaccessible(cb) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
@@ -658,7 +664,9 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
 {
     cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
     addr = cursor + GPR(rt) + SignExtend(offset);
-    if register_inaccessible(cb) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
@@ -685,7 +693,9 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
 -- CStore
 -----------------------------------
 define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2)) =
-    if register_inaccessible(cb) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
@@ -756,7 +766,9 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
 {
     cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
     addr = cursor + GPR(rt) + SignExtend(offset);
-    if register_inaccessible(cb) then
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
