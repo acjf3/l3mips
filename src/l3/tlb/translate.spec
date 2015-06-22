@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- MIPS TLB address translation
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
@@ -108,51 +109,3 @@ pAddr option tlbTryTranslation (vAddr::vAddr) =
     };
     ret
 }
-
-TLBEntry ModifyTLB (ie::TLBEntry) =
-{
-   eHi = CP0.EntryHi;
-   eLo1 = CP0.EntryLo1;
-   eLo0 = CP0.EntryLo0;
-   var e = ie;
-   e.Mask <- CP0.PageMask.Mask;
-   e.R <- eHi.R;
-   e.VPN2 <- eHi.VPN2;
-   e.ASID <- eHi.ASID;
-   e.PFN1 <- eLo1.PFN;
-   e.C1 <- eLo1.C;
-   e.D1 <- eLo1.D;
-   e.V1 <- eLo1.V;
-   e.G <- eLo1.G and eLo0.G;
-   e.PFN0 <- eLo0.PFN;
-   e.C0 <- eLo0.C;
-   e.D0 <- eLo0.D;
-   e.V0 <- eLo0.V;
-   return e
-}
-
-define TLBR =
-   if !CP0.Status.CU0 and !KernelMode then
-     SignalException(CpU)
-   else
-   {
-     i = CP0.Index.Index;
-     e = if [i] >= TLBEntries then
-           TLB_direct (i<6:0>)
-         else
-           TLB_assoc ([i]);
-     CP0.PageMask.Mask <- e.Mask;
-     CP0.EntryHi.R <- e.R;
-     CP0.EntryHi.VPN2 <- e.VPN2;
-     CP0.EntryHi.ASID <- e.ASID;
-     CP0.EntryLo1.PFN <- e.PFN1;
-     CP0.EntryLo1.C <- e.C1;
-     CP0.EntryLo1.D <- e.D1;
-     CP0.EntryLo1.V <- e.V1;
-     CP0.EntryLo1.G <- e.G;
-     CP0.EntryLo0.PFN <- e.PFN0;
-     CP0.EntryLo0.C <- e.C0;
-     CP0.EntryLo0.D <- e.D0;
-     CP0.EntryLo0.V <- e.V0;
-     CP0.EntryLo0.G <- e.G
-   }

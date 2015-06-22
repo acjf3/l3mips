@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- Model of the MIPS TLB
 -- (c) Anthony Fox, University of Cambridge
+-- (c) Aleaxndre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
 nat TLBEntries = 16
@@ -8,8 +9,8 @@ nat TLBEntries = 16
 -- Each core has its own TLB, with both associative and direct-mapped
 -- regions.  (See BERI manual.)
 
-type TLBAssocMap = bits(4) -> TLBEntry
-type TLBDirectMap = bits(7) -> TLBEntry
+type TLBAssocMap = bits(4) -> TLBEntry option
+type TLBDirectMap = bits(7) -> TLBEntry option
 
 declare
 {
@@ -20,7 +21,7 @@ declare
 -- The following two components give read/write access to the TLB of
 -- the currently-running core.
 
-component TLB_direct (i::bits(7)) :: TLBEntry
+component TLB_direct (i::bits(7)) :: TLBEntry option
 {
    value = { var m = c_TLB_direct(procID); m(i) }
    assign value = { var m = c_TLB_direct(procID)
@@ -28,7 +29,7 @@ component TLB_direct (i::bits(7)) :: TLBEntry
                   ; c_TLB_direct(procID) <- m }
 }
 
-component TLB_assoc (i::bits(4)) :: TLBEntry
+component TLB_assoc (i::bits(4)) :: TLBEntry option
 {
    value = { var m = c_TLB_assoc(procID); m(i) }
    assign value = { var m = c_TLB_assoc(procID)
@@ -38,23 +39,35 @@ component TLB_assoc (i::bits(4)) :: TLBEntry
 
 (bits(8) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
 {
-   e = TLB_direct (vpn2<6:0>);
-   index`8 = if [vpn2<6:0>] >= TLBEntries
-             then [vpn2<6:0>] else 128 + [vpn2<6:0>];
-   nmask`27 = ~[e.Mask];
-   var found = Nil;
-   when CP0.Config6.LTLB do
-     found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
-                    and (e.G or e.ASID == CP0.EntryHi.ASID) then
-                     list {(index, e)}
-              else Nil;
-   for i in 0 .. TLBEntries - 1 do
-   {
-      e = TLB_assoc ([i]);
-      nmask`27 = ~[e.Mask];
-      when e.VPN2 && nmask == vpn2 && nmask and e.R == r
-           and (e.G or e.ASID == CP0.EntryHi.ASID) do
-         found <- ([i], e) @ found
+    var found = Nil;
+    match TLB_direct (vpn2<6:0>)
+    {
+        case Some (e) =>
+        {
+            index`8 = if [vpn2<6:0>] >= TLBEntries then
+                      [vpn2<6:0>] else 128 + [vpn2<6:0>];
+            nmask`27 = ~[e.Mask];
+            when CP0.Config6.LTLB do
+                found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
+                         and (e.G or e.ASID == CP0.EntryHi.ASID) then
+                            list {(index, e)}
+                         else Nil
+        }
+        case _ => found <- Nil
+    };
+    for i in 0 .. TLBEntries - 1 do
+    {
+        match TLB_assoc ([i])
+        {
+            case Some (e) =>
+            {
+                nmask`27 = ~[e.Mask];
+                when e.VPN2 && nmask == vpn2 && nmask and e.R == r
+                     and (e.G or e.ASID == CP0.EntryHi.ASID) do
+                     found <- ([i], e) @ found
+            }
+            case _ => nothing
+        }
    };
    return found
 }
@@ -72,6 +85,28 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
    CP0.XContext.BadVPN2 <- vpn2;
    CP0.Context.BadVPN2 <- vAddr<31:13>;
    UNKNOWN
+}
+
+TLBEntry CP0TLBEntry () =
+{
+   eHi = CP0.EntryHi;
+   eLo1 = CP0.EntryLo1;
+   eLo0 = CP0.EntryLo0;
+   var e::TLBEntry;
+   e.Mask <- CP0.PageMask.Mask;
+   e.R <- eHi.R;
+   e.VPN2 <- eHi.VPN2;
+   e.ASID <- eHi.ASID;
+   e.PFN1 <- eLo1.PFN;
+   e.C1 <- eLo1.C;
+   e.D1 <- eLo1.D;
+   e.V1 <- eLo1.V;
+   e.G <- eLo1.G and eLo0.G;
+   e.PFN0 <- eLo0.PFN;
+   e.C0 <- eLo0.C;
+   e.D0 <- eLo0.D;
+   e.V0 <- eLo0.V;
+   return e
 }
 
 (pAddr * CCA) option * bool CheckSegment (vAddr::vAddr) =
