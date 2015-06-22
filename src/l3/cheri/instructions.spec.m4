@@ -455,7 +455,7 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
            case 3 => GPR(rd) <- [less or equal]
            case 4 => GPR(rd) <- [lessu]
            case 5 => GPR(rd) <- [lessu or equal]
-           case _ => nothing
+           case _ => SignalException (ResI)
         }
     }
 
