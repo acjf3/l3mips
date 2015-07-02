@@ -42,10 +42,7 @@ unit PIC_update (id :: id) =
         ip<[reg.IRQ]> <- ip<[reg.IRQ]> or reg.EN
       };
   -- (IRQs 5, 6 and 7 currently ignored)
-  if id == procID then
-    c_state.c_CP0.Cause.IP<6:2> <- ip<4:0>
-  else
-    all_state(id).c_CP0.Cause.IP<6:2> <- ip<4:0>
+  c_CP0(id).Cause.IP<6:2> <- ip<4:0>
 }
 
 -- Initialisation

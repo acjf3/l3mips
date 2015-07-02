@@ -12,51 +12,37 @@
 
 type RegFile = reg -> dword
 
-record CoreStats
+declare
 {
-    branch_taken :: nat
-    branch_not_taken :: nat
+  c_gpr          :: id -> RegFile       -- general purpose registers
+  c_PC           :: id -> dword         -- the program counter
+  c_hi           :: id -> dword option  -- mul/div register high result
+  c_lo           :: id -> dword option  -- mul/div register low result
+  c_CP0          :: id -> CP0           -- CP0 registers
+  c_BranchDelay  :: id -> dword option  -- Branch to be taken after instruction
+  c_BranchTo     :: id -> dword option  -- Requested branch
+  c_LLbit        :: id -> bool option   -- Load link flag
+  c_exceptionSignalled :: id -> bool    -- flag exceptions to pick up
+                                        -- in branch delay
 }
 
-record procState {
-  c_PC           :: dword         -- the program counter
-  c_hi           :: dword option  -- mul/div register high result
-  c_lo           :: dword option  -- mul/div register low result
-  c_CP0          :: CP0           -- CP0 registers
-  c_BranchDelay  :: dword option  -- Branch to be taken after instruction
-  c_BranchTo     :: dword option  -- Requested branch
-  c_LLbit        :: bool option   -- Load link flag
-  c_CoreStats    :: CoreStats     -- core statistics
-  c_exceptionSignalled :: bool    -- flag exceptions to pick up
-}                                 -- in branch delay
+-- Instruction counter
+declare instCnt :: nat
 
-declare {
-  all_gpr     :: id -> RegFile
-  all_state   :: id -> procState
-  c_gpr       :: RegFile
-  c_state     :: procState
-  instCnt     :: nat             -- Instruction counter
-  currentInst :: bits(32) option -- Current instruction
-  totalCore   :: nat             -- Total amount of core(s)
-  procID      :: id              -- ID of the core executing current instruction
-}
+-- Current instruction
+declare currentInst :: bits(32) option
 
--- Switch cores by saving the current core state in the global map and then
--- update to the current core state to be that of core "i".
+-- Total amount of core(s)
+declare totalCore :: nat
 
-nat switchCore (n::nat) =
+-- ID of the core executing current instruction
+declare procID :: id
+
+nat switchCore(new::nat) =
 {
-   i = [n];
-   when i <> procID do
-   {
-      all_gpr (procID) <- c_gpr;
-      all_state (procID) <- c_state;
-      c_gpr <- all_gpr (i);
-      c_state <- all_state (i)
-   };
-   old = [procID];
-   procID <- i;
-   return old
+  old = [procID];
+  procID <- [new];
+  old
 }
 
 -- The following components provide read/write access to state of the
@@ -65,66 +51,64 @@ nat switchCore (n::nat) =
 
 component gpr (n::reg) :: dword
 {
-   value = c_gpr(n)
-   assign value = c_gpr(n) <- value
+   value = { m = c_gpr(procID); m(n) }
+   assign value = { var m = c_gpr(procID)
+                  ; m(n) <- value
+                  ; c_gpr(procID) <- m }
 }
 
 component GPR (n::reg) :: dword
 {
    value = if n == 0 then 0 else gpr(n)
-   assign value =
-      when n <> 0 do
-      { gpr(n) <- value;
-        when 2 <= trace_level do mark_log (2, log_w_gpr (n, value))
-      }
+   assign value = when n <> 0 do { gpr(n) <- value; mark_log (2, log_w_gpr (n, value)) }
 }
 
 component PC :: dword
 {
-   value = c_state.c_PC
-   assign value = c_state.c_PC <- value
+   value = c_PC(procID)
+   assign value = c_PC(procID) <- value
 }
 
 component hi :: dword option
 {
-   value = c_state.c_hi
-   assign value = c_state.c_hi <- value
+   value = c_hi(procID)
+   assign value = c_hi(procID) <- value
 }
 
 component lo :: dword option
 {
-   value = c_state.c_lo
-   assign value = c_state.c_lo <- value
+   value = c_lo(procID)
+   assign value = c_lo(procID) <- value
 }
 
 component CP0 :: CP0
 {
-   value = c_state.c_CP0
-   assign value = c_state.c_CP0 <- value
+   value = c_CP0(procID)
+   assign value = c_CP0(procID) <- value
 }
 
 component BranchDelay :: dword option
 {
-   value = c_state.c_BranchDelay
-   assign value = c_state.c_BranchDelay <- value
+   value = c_BranchDelay(procID)
+   assign value = c_BranchDelay(procID) <- value
 }
 
 component BranchTo :: dword option
 {
-   value = c_state.c_BranchTo
-   assign value = c_state.c_BranchTo <- value
+   value = c_BranchTo(procID)
+   assign value = c_BranchTo(procID) <- value
 }
 
 component LLbit :: bool option
 {
-   value = c_state.c_LLbit
-   assign value = c_state.c_LLbit <- value
+   value = c_LLbit(procID)
+   assign value = c_LLbit(procID) <- value
 }
 
 component exceptionSignalled :: bool
 {
-   value = c_state.c_exceptionSignalled
-   assign value = c_state.c_exceptionSignalled <- value
+   value = c_exceptionSignalled(procID)
+   assign value = c_exceptionSignalled(procID) <- value
 }
 
 bool UserMode =
@@ -164,10 +148,19 @@ unit dumpRegs () =
 
 -- stats utils --
 
+record CoreStats
+{
+    branch_taken :: nat
+    branch_not_taken :: nat
+}
+
+declare c_CoreStats :: id -> CoreStats
 component coreStats :: CoreStats
 {
-   value = c_state.c_CoreStats
-   assign value = c_state.c_CoreStats <- value
+   value = { m = c_CoreStats(procID); m }
+   assign value = { var m = c_CoreStats(procID)
+                  ; m <- value
+                  ; c_CoreStats(procID) <- m }
 }
 
 unit initCoreStats =
@@ -177,7 +170,5 @@ unit initCoreStats =
 }
 
 string printCoreStats =
-    PadRight (#" ", 16, "branch_taken") : " = " :
-    PadLeft (#" ", 9, [coreStats.branch_taken]) : "\\n" :
-    PadRight (#" ", 16, "branch_not_taken") : " = " :
-    PadLeft (#" ", 9, [coreStats.branch_not_taken])
+    PadRight (#" ", 16, "branch_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_taken::nat]) : "\\n" :
+    PadRight (#" ", 16, "branch_not_taken") : " = " : PadLeft (#" ", 9, [coreStats.branch_not_taken::nat])
