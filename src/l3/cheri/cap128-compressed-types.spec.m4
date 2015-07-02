@@ -263,6 +263,21 @@ Capability defaultCap =
     new_cap
 }
 
+Capability nullCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- false;
+    new_cap.sealed <- false;
+    new_cap.perms <- 0;
+    new_cap.unused <- false;
+    new_cap.base_eq_pointer <- false;
+    new_cap.exp <- 0;
+    new_cap.pointer <- 0;
+    new_cap.toBottom <- 0;
+    new_cap.toTop <- 0;
+    new_cap
+}
+
 -- log utils --
 
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))

@@ -18,6 +18,21 @@ bool register_inaccessible(cb::reg) =
          or cb == 28 and not perms.Access_KR2C)
 }
 
+unit register_inaccessible_write_attempt(mask::bits(16)) =
+{
+    perms = getPerms(PCC);
+    if mask<15> and not perms.Access_EPCC then
+        SignalCapException_v(31)
+    else if mask<14> and not perms.Access_KDC then
+        SignalCapException_v(30)
+    else if mask<13> and not perms.Access_KCC then
+        SignalCapException_v(29)
+    else if mask<11> and not perms.Access_KR1C then
+        SignalCapException_v(27)
+    else when mask<12> and not perms.Access_KR2C do
+        SignalCapException_v(28)
+}
+
 -- only works for non empty lists
 bool list SignExtendBitString(w::nat, x::bool list) = PadLeft (Head(x), w, x)
 
@@ -264,6 +279,25 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
     }
 
 -----------------------------------
+-- CClearRegs
+-----------------------------------
+define COP2 > CHERICOP2 > CSet > CClearRegs (regset::bits(5), mask::bits(16)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else
+    {
+        register_inaccessible_write_attempt(mask); -- XXX Spec doesn't define an exception code yet ...
+        match regset
+        {
+            case 0 => for i in  0 .. 15 do when mask<i> do GPR([i])     <- 0
+            case 1 => for i in 16 .. 31 do when mask<i-16> do GPR([i])  <- 0
+            case 2 => for i in  0 .. 15 do when mask<i> do CAPR([i])    <- nullCap
+            case 3 => for i in 16 .. 31 do when mask<i-16> do CAPR([i]) <- nullCap
+            case _ => SignalException (ResI)
+        }
+    }
+
+-----------------------------------
 -- CClearTag
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
@@ -369,18 +403,7 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else if GPR(rt) == 0 then
-    {
-        var new_cap::Capability;
-        new_cap <- setTag(new_cap, false);
-        new_cap <- setSealed(new_cap, false);
-        new_cap <- setPerms(new_cap, Perms(0));
-        new_cap <- setBase(new_cap, 0);
-        new_cap <- setLength(new_cap, 0);
-        new_cap <- setOffset(new_cap, 0);
-        new_cap <- setType(new_cap, 0);
-        --new_cap <- setReserved(new_cap, 0); -- XXX reserved
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- nullCap
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then

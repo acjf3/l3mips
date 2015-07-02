@@ -98,6 +98,20 @@ Capability defaultCap =
     new_cap
 }
 
+Capability nullCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- false;
+    new_cap.sealed <- false;
+    new_cap.offset <- 0;
+    new_cap.base <- 0;
+    new_cap.length <- 0;
+    new_cap.otype <- 0;
+    new_cap.perms <- 0;
+    new_cap.reserved <- 0;
+    new_cap
+}
+
 -- log utils --
 
 string hex24 (x::bits(24)) = hexN (6, x)
