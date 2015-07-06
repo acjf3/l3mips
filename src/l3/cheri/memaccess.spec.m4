@@ -245,11 +245,12 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
         {
             for core in 0 .. totalCore - 1 do
             {   i = [core];
+                st = all_state(i);
                 when i <> procID and
                      (not cond or sc_success) and
-                     c_LLbit(i) == Some (true) and
-                     c_CP0(i).LLAddr<39:5> == pAddr<39:5> do
-                        c_LLbit(i) <- Some (false)
+                     st.c_LLbit == Some (true) and
+                     st.c_CP0.LLAddr<39:5> == pAddr<39:5> do
+                        all_state(i).c_LLbit <- Some (false)
             };
             when not cond or sc_success do
                 WriteData(a, MemElem, mask)
@@ -308,10 +309,11 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
             for core in 0 .. totalCore - 1 do
             {
                 i = [core];
+                st = all_state(i);
                 when i <> procID and
-                    c_LLbit(i) == Some (true) and
-                    c_CP0(i).LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
-                        c_LLbit(i) <- Some (false)
+                    st.c_LLbit == Some (true) and
+                    st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
+                        all_state(i).c_LLbit <- Some (false)
             };
 
             memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;

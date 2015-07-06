@@ -17,7 +17,7 @@ val non_blocking_input = ref false
 val dump_stats = ref false
 val rdhwr_extra = ref false
 val nb_core = ref 1
-val watch_paddr = ref NONE (* 40-bits phy addr *)
+val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
@@ -339,10 +339,9 @@ local
 in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t (pureLoop mx) 0
-   fun run pc_uart mx code raw =
+   fun run (pc,uart) mx code raw =
       ( List.tabulate(!nb_core,
-          fn x => (mips.switchCore x;
-                   mips.initMips (#1 pc_uart, (#2 pc_uart, !rdhwr_extra))))
+          fn x => (mips.switchCore x; mips.initMips (pc, (uart, !rdhwr_extra))))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
       ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
