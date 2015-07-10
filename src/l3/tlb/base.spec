@@ -115,9 +115,9 @@ TLBEntry CP0TLBEntry () =
    else if SupervisorMode then
       None,
       vAddr <+ 0x0000_0100_0000_0000 or         -- xsuseg
-      vAddr <=+ 0x4000_0000_0000_0000 and
+      0x4000_0000_0000_0000 <=+ vAddr and
       vAddr <+  0x4000_0100_0000_0000 or        -- xsseg
-      vAddr <=+ 0xFFFF_FFFF_C000_0000 and
+      0xFFFF_FFFF_C000_0000 <=+ vAddr and
       vAddr <+  0xFFFF_FFFF_E000_0000           -- csseg
    else if vAddr <+ 0x0000_0100_0000_0000 then  -- xkuseg
       None, true
