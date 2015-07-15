@@ -62,11 +62,13 @@ struct
                ; w
             end) (Nat.fromLit s)
 
-   fun bits (B (i, s), h, l) =
+   fun bits (h,l) =
       let
          val w = h + 1 - l
+         val l =  Word.fromInt l
+         val mask = pdim w
       in
-         B (modDim w (IntInf.~>> (i, Word.fromInt l)), w)
+         fn B (i, _) => B (IntInf.andb (mask,IntInf.~>> (i, l)), w)
       end
 
    fun bit (B (a, _), n) = Int.rem (IntInf.~>> (a, Word.fromInt n), 2) = 1
@@ -168,13 +170,20 @@ struct
 
    fun resize_replicate i = resize i o replicate
 
-   fun bitFieldInsert (B (v, s1), B (w, s2), h, l) =
+   fun bitFieldInsert (h,l) =
       let
-         val mask = Int.max (dim (Int.min (s1, h + 1)) - dim l, 0)
-         val w' = IntInf.<< (w, Word.fromInt l)
+         val dl = dim l
+         val dh = dim (h + 1)
+         val wl = Word.fromInt l
       in
-         B (IntInf.orb
-              (IntInf.andb (IntInf.notb mask, v), IntInf.andb (mask, w')), s1)
+         fn (B (v, s), B (w, _)) =>
+            let
+               val mask = Int.max (Int.min (dim s, dh) - dl, 0)
+               val w' = IntInf.<< (w, wl)
+            in
+               B (IntInf.orb (IntInf.andb (IntInf.notb mask, v),
+                              IntInf.andb (mask, w')), s)
+            end
       end
 
    fun op <+  (B (v1, _), B (v2, _)) = Int.< (v1, v2)
@@ -217,7 +226,7 @@ struct
          open Nat
          val x = n mod s
       in
-         if x = 0 then a else bits (a, pred x, zero) @@ bits (a, pred s, x)
+         if x = 0 then a else bits (pred x, zero) a @@ bits (pred s, x) a
       end
 
    fun op #<< (a as B (_, s), n) = let open Nat in a #>> (s - n mod s) end

@@ -160,16 +160,17 @@ struct
          if n < s then zero (s - n) @ l else List.drop (l, n - s)
       end
 
-   fun bits (b, h, l) =
+   fun bits (h, l) =
       let
          val s = Nat.- (Nat.suc h, l)
       in
-         if s = Nat.zero then [false] else setSize (Nat.toInt s) (b >>+ l)
+         fn b =>
+           if s = Nat.zero then [false] else setSize (Nat.toInt s) (b >>+ l)
       end
 
-   fun bit (a, n) = bits (a, n, n) = [true]
+   fun bit (a, n) = bits (n, n) a = [true]
 
-   fun bitFieldInsert (x, y, h, l) =
+   fun bitFieldInsert (h,l) (x, y) =
       modify (fn (i, b) => if Nat.<= (l, i) andalso Nat.<= (i, h)
                               then bit (y, Nat.- (i, l))
                            else b) x

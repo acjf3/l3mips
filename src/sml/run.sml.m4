@@ -147,7 +147,7 @@ fun storeArrayInMem (base, marray) =
    Loading code into memory from raw file
    -------------------------------------------------------------------------- *)
 
-fun word8ToBits8 word8 = BitsN.B (Word8.toInt word8, 8)
+fun word8ToBits8 word8 = BitsN.fromInt (Word8.toInt word8, 8)
 
 fun getByte v i =
   if i < Word8Vector.length v
@@ -212,7 +212,8 @@ end
    ------------------------------------------------------------------------ *)
 
 val bytesToString = String.implode o List.map (Char.chr o BitsN.toNat)
-val stringToBytes = List.map (fn c => BitsN.B (Char.ord c, 8)) o String.explode
+val stringToBytes =
+   List.map (fn c => BitsN.fromInt (Char.ord c, 8)) o String.explode
 
 fun uart_output () =
    let
@@ -486,7 +487,8 @@ val () =
                        | _    => failExit "Unknown argument to --ignore"
                    ) igns
           val (w, l) = processOption "--watch-paddr" l
-          val () = watch_paddr := Option.map (fn s => BitsN.B(getHexNumber s, 40)) w
+          val () = watch_paddr :=
+                   Option.map (fn s => BitsN.fromInt (getHexNumber s, 40)) w
           val (nb, l) = processOption "--non-block" l
           val () = case nb of
                        NONE       => ()

@@ -6,7 +6,12 @@
 -- utils functions
 
 word flip_endian_word (w::word) =
-   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
+{
+   c, d = QuotRem ([[w]::nat], 256);
+   b, c = QuotRem (c, 256);
+   a, b = QuotRem (b, 256);
+   return ([d]`8 : [c]`8 : [b]`8 : [a]`8)
+}
 
 -----------------
 -- stats utils --

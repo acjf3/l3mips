@@ -5,7 +5,7 @@
 structure MutableMap :> MutableMap =
 struct
 
-val arrayBits = 0w16
+val arrayBits = 0w20
 val arraySize = IntInf.<< (1, arrayBits)
 val arrayMask = arraySize - 1
 
