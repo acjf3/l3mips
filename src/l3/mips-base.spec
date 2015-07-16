@@ -46,16 +46,16 @@ declare {
 
 nat switchCore (n::nat) =
 {
-   i = [n];
-   when i <> procID do
+   old = [procID];
+   when n <> old do
    {
+      i = [n];
       all_gpr (procID) <- c_gpr;
       all_state (procID) <- c_state;
       c_gpr <- all_gpr (i);
-      c_state <- all_state (i)
+      c_state <- all_state (i);
+      procID <- i
    };
-   old = [procID];
-   procID <- i;
    return old
 }
 
