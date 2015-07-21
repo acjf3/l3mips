@@ -87,28 +87,6 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
    UNKNOWN
 }
 
-TLBEntry CP0TLBEntry () =
-{
-   eHi = CP0.EntryHi;
-   eLo1 = CP0.EntryLo1;
-   eLo0 = CP0.EntryLo0;
-   var e::TLBEntry;
-   e.Mask <- CP0.PageMask.Mask;
-   e.R <- eHi.R;
-   e.VPN2 <- eHi.VPN2;
-   e.ASID <- eHi.ASID;
-   e.PFN1 <- eLo1.PFN;
-   e.C1 <- eLo1.C;
-   e.D1 <- eLo1.D;
-   e.V1 <- eLo1.V;
-   e.G <- eLo1.G and eLo0.G;
-   e.PFN0 <- eLo0.PFN;
-   e.C0 <- eLo0.C;
-   e.D0 <- eLo0.D;
-   e.V0 <- eLo0.V;
-   return e
-}
-
 (pAddr * CCA) option * bool CheckSegment (vAddr::vAddr) =
    if UserMode then
       None, vAddr <+ 0x0000_0100_0000_0000      -- xuseg
