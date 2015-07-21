@@ -320,7 +320,7 @@ fun loop mx i =
     ; if 5 <= !trace_level then printLog 5 else ()
     ; if !mips.done orelse i = mx then end_sim i
       else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
-                       then (print "exception\n"; i)
+                       then ((*print "exception level changed\n";*) i+1)
                     else i + 1)
    end
 
