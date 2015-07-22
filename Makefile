@@ -74,21 +74,11 @@ endif
 L3SRCBASE+=mips-init.spec
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 
-# sml lib sources
+# hol / sml sources
 #######################################
 HOLSRCDIR=src/hol
 SMLSRCDIR=src/sml
-SMLLIBDIR=src/sml/lib
-SMLLIBSRC=Runtime.sig Runtime.sml\
-          IntExtra.sig IntExtra.sml\
-          Nat.sig Nat.sml\
-          L3.sig L3.sml\
-          Bitstring.sig Bitstring.sml\
-          BitsN.sig BitsN.sml\
-          FP64.sig FP64.sml\
-          Ptree.sig Ptree.sml\
-          MutableMap.sig MutableMap.sml
-SMLLIB=$(patsubst %, $(SMLLIBDIR)/%, $(SMLLIBSRC))
+L3_SML_LIB ?= `l3 --lib-path`
 
 # generating the sml source list
 #######################################
@@ -174,14 +164,14 @@ MLTON ?= mlton
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
 	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
-${SIM}: ${SMLLIB} ${SMLSRC}
-	$(MLTON) -inline 1000 -default-type intinf -verbose 1 -output ${SIM} ${SMLSRCDIR}/$(MLBFILE)
+${SIM}: ${SMLSRC}
+	$(MLTON) -inline 1000 -default-type intinf -verbose 1 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
-${SIM_PROFILE}: ${SMLLIB} ${SMLSRC}
-	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} ${SMLSRCDIR}/$(MLBFILE)
+${SIM_PROFILE}: ${SMLSRC}
+	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
-${SIM_COVERAGE}: ${SMLLIB} ${SMLSRC}
-	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_COVERAGE} ${SMLSRCDIR}/$(MLBFILE)
+${SIM_COVERAGE}: ${SMLSRC}
+	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
