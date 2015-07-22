@@ -636,7 +636,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     new_entry <- mkL2CacheEntry(true, L2Tag(addr), L2UpdateSharers (L1ID, true, Nil), data);
 
     -- get current prefetch depth --
-    prefetchDepth = Length (past_addr) - 1;
+    prefetchDepth = Length (past_addr);
 
     -- take care of replacement --
     victimWay = L2ReplacePolicy (addr);
@@ -704,7 +704,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
         {
             memStats.l2_write_miss <- memStats.l2_write_miss + 1;
             when 4 <= trace_level do mark_log (4, log_l2_write_miss (addr));
-            cacheLine = L2ServeMiss (addr, list{addr});
+            cacheLine = L2ServeMiss (addr, list{});
             var retEntry;
             match L2Hit (addr)
             {
@@ -749,7 +749,7 @@ L2Data L2Read (addr::L2Addr) =
         {
             memStats.l2_read_miss <- memStats.l2_read_miss + 1;
             when 4 <= trace_level do mark_log (4, log_l2_read_miss(addr));
-            cacheLine <- L2ServeMiss (addr, list{addr})
+            cacheLine <- L2ServeMiss (addr, list{})
         }
     };
     cacheLine
