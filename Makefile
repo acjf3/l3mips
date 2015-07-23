@@ -142,7 +142,7 @@ $(L3SRCDIR)/mips-memory-caches.spec: $(L3SRCDIR)/mips-memory-caches.spec.m4
 	m4 -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
-	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) $^ > $@
+	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 ${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
 ifdef CACHE
