@@ -790,7 +790,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         {
             -- write cache line back to memory --
             -- when old_entry.dirty do
-            mem_addr = (old_entry.tag : [MemAddrFromL2Addr(addr)]) + [i];
+            mem_addr = old_entry.tag : MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-L2TAGWIDTH-1):eval(log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
             MEM(mem_addr) <- Head(tmp_data);
             tmp_data <- Drop(1, tmp_data);
             -- take care of coherence --
