@@ -174,21 +174,22 @@ type L2Cache = nat -> DirectMappedL2
 declare
 {
     current_l1_type :: L1Type
-    c_l1_cache      :: (L1Type * id) -> L1Cache
+    c_l1_dcache     :: id -> L1Cache
+    c_l1_icache     :: id -> L1Cache
 }
 
 component L1Cache (idx::L1Index) :: L1Entry
 {
     value =
     {
-        cache = c_l1_cache(current_l1_type, procID);
+        cache = if current_l1_type == Data then c_l1_dcache (procID) else c_l1_icache (procID);
         cache (idx)
     }
     assign value =
     {
-        var new_cache = c_l1_cache(current_l1_type, procID);
+        var new_cache = if current_l1_type == Data then c_l1_dcache (procID) else c_l1_icache (procID);
         new_cache (idx) <- value;
-        c_l1_cache(current_l1_type, procID) <- new_cache
+        if current_l1_type == Data then c_l1_dcache (procID) <- new_cache else c_l1_icache (procID) <- new_cache
     }
 }
 
@@ -886,8 +887,8 @@ unit InitMEM =
         c_l2(i) <- DirectMappedL2Init ();
     for i in 0 .. totalCore-1 do
     {
-        c_l1_cache (Data, [i]) <- DirectMappedL1Init ();
-        c_l1_cache (Inst, [i]) <- DirectMappedL1Init ()
+        c_l1_dcache ([i]) <- DirectMappedL1Init ();
+        c_l1_icache ([i]) <- DirectMappedL1Init ()
     }
 }
 
