@@ -931,4 +931,4 @@ unit WriteDWORD (pAddr::dwordAddr, data::dword) =
 
 -- sml helper function
 unit Write256 (pAddr::bits(35), data::bits(256)) =
-    for i in 4 .. 1 do WriteDWORD (pAddr:[i], data<(i*64)-1:(i-1)*64>)
+    for i in 3 .. 0 do WriteDWORD (pAddr:[i], data<((i+1)*64)-1:(i)*64>)
