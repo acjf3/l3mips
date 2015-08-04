@@ -83,6 +83,14 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 -----------------
 -- Data accesses
 -----------------
+bool isAligned (vAddr::vAddr, MemType::bits(3)) = match MemType
+{
+    case 0 => true
+    case 1 => not vAddr<0>
+    case 3 => if vAddr<1:0> == 0 then true else false
+    case 7 => if vAddr<2:0> == 0 then true else false
+    case _ => #UNPREDICTABLE ("Unsupported mem type access")
+}
 
 dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
                      AccessType::AccessType, link::bool) =
@@ -142,7 +150,7 @@ dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
     else return UNKNOWN
 }
 
-dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
                   IorD::IorD, AccessType::AccessType, link::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
@@ -156,6 +164,8 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
        then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
+    else if needAlign and not isAligned (final_vAddr, MemType)
+      then { CP0.BadVAddr <- vAddr; SignalException (AdEL); UNKNOWN}
     else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
 }
 
@@ -265,7 +275,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
     return sc_success
 }
 
-bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
@@ -279,6 +289,8 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
       then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
       then {SignalCapException(capExcPermStore, 0); UNKNOWN}
+    else if needAlign and not isAligned (final_vAddr, MemType)
+      then { CP0.BadVAddr <- vAddr; SignalException (AdES); UNKNOWN}
     else StoreMemoryCap (MemType, AccessLength, MemElem, final_vAddr, IorD,
                          AccessType, cond)
 }

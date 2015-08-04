@@ -63,7 +63,7 @@ unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 
 -- Pimitive memory load (with memory-mapped devices)
 
-dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
                   IorD::IorD, AccessType::AccessType, link::bool) =
 {
     var pAddr;
@@ -123,7 +123,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), vAddr::vAddr,
 
 -- Pimitive memory store. Big-endian.
 
-bool StoreMemory (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
     var pAddr;
