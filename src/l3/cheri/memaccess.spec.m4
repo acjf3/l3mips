@@ -83,14 +83,7 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 -----------------
 -- Data accesses
 -----------------
-bool isAligned (vAddr::vAddr, MemType::bits(3)) = match MemType
-{
-    case 0 => true
-    case 1 => not vAddr<0>
-    case 3 => if vAddr<1:0> == 0 then true else false
-    case 7 => if vAddr<2:0> == 0 then true else false
-    case _ => #UNPREDICTABLE ("Unsupported mem type access")
-}
+bool isAligned (vAddr::vAddr, MemType::bits(3)) = vAddr && [MemType] == 0
 
 dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
                      AccessType::AccessType, link::bool) =

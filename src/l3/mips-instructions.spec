@@ -636,7 +636,7 @@ define Trap > TNEI (rs::reg, immediate::bits(16)) =
 unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
    vAddr = SignExtend (offset) + GPR(base);
-   memdoubleword = LoadMemory (BYTE, BYTE, true, vAddr, DATA, LOAD, false);
+   memdoubleword = LoadMemory (BYTE, BYTE, false, vAddr, DATA, LOAD, false);
    when not exceptionSignalled do
    {
       byte = vAddr<2:0> ?? BigEndianCPU^3;
@@ -848,7 +848,7 @@ define Store > SB (base::reg, rt::reg, offset::bits(16)) =
    vAddr = SignExtend (offset) + GPR(base);
    bytesel = vAddr<2:0> ?? BigEndianCPU^3;
    datadoubleword = GPR(rt) << (0n8 * [bytesel]);
-   _ = StoreMemory (BYTE, BYTE, true, datadoubleword, vAddr, DATA, STORE, false);
+   _ = StoreMemory (BYTE, BYTE, false, datadoubleword, vAddr, DATA, STORE, false);
    when not exceptionSignalled do LLbit <- None
 }
 
