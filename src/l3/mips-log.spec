@@ -68,10 +68,10 @@ string log_w_mem (addr::bits(37), mask::bits(64), data::dword) =
 string log_r_mem (addr::bits(37), data::dword) =
    "data <- MEM[0x" : hex40(addr:'000') : "]: 0x" : hex64(data)
 
-declare trace_level :: int
+declare trace_level :: nat
 declare log :: nat -> string list   -- One log per "trace level"
 
 unit mark_log (lvl::nat, s::string) = log(lvl) <- s @ log(lvl)
 unit unmark_log (lvl::nat) = log(lvl) <- Tail (log(lvl))
 --unit clear_logs () = log <- InitMap(Nil)
-unit clear_logs () = for i in 0 .. [trace_level] do log(i) <- Nil
+unit clear_logs () = for i in 0 .. trace_level do log(i) <- Nil

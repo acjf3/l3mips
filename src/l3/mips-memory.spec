@@ -81,8 +81,7 @@ word ReadInst (a::pAddr) =
 }
 
 -- sml helper function
-unit WriteDWORD (pAddr::dwordAddr, data::dword) =
-    MEM(pAddr) <- data
+unit WriteDWORD (pAddr::dwordAddr, data::dword) = MEM(pAddr) <- data
 
 -- sml helper function
 unit Write256 (pAddr::bits(35), data::bits(256)) =

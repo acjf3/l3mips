@@ -55,8 +55,7 @@ unit PIC_initialise (pic::nat) =
   id = procID;
   PIC_base_address(id) <- [[pic]`40 >>+ 3];
   var config_regs = PIC_config_regs(id);
-  for i in 0 .. 127 do
-    &config_regs([i]) <- 0;
+  for i in 0 .. 127 do &config_regs([i]) <- 0;
   for i in 0 .. 4 do
   {
     config_regs([i]).EN  <- true;
@@ -74,16 +73,14 @@ dword PIC_load(id :: id, addr :: bits(37)) =
 {
   offset = addr - PIC_base_address(id);
   config_regs = PIC_config_regs(id);
-  var ret :: dword;
   if offset < 128 then
-    ret <- &config_regs([offset])
+    &config_regs([offset])
   else if offset == 1024 then
-    ret <- PIC_ip_bits(id)<63:0> || PIC_external_intrs(id)
+    PIC_ip_bits(id)<63:0> || PIC_external_intrs(id)
   else if offset == 1025 then
-    ret <- PIC_ip_bits(id)<127:64>
+    PIC_ip_bits(id)<127:64>
   else
-    ret <- UNKNOWN;
-  return ret
+    UNKNOWN
 }
 
 unit PIC_store(id :: id, addr :: bits(37), mask :: dword, data :: dword) =

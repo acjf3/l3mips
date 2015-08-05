@@ -288,6 +288,15 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
                          AccessType, cond)
 }
 
+unit StoreMem
+   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
+    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+{
+   _ = StoreMemory (MemType,AccessLength,needAlign,MemElem,vAddr,IorD,
+                    AccessType,false);
+   nothing
+}
+
 unit StoreCap (vAddr::vAddr, cap::Capability) =
 {
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
@@ -377,15 +386,4 @@ word option Fetch =
         SignalException (AdEL);
         None
     }
-}
-
------------------------------------
--- JALR rs (rd = 31 implied)
--- JALR rd, rs
------------------------------------
-define Branch > JALR (rs::reg, rd::reg) =
-{
-   temp = GPR(rs);
-   GPR(rd) <- PC + 8;
-   BranchTo <- Some (temp)
 }

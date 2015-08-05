@@ -24,7 +24,7 @@ string dumpStats =
 {
     var out = "";
     for i in 0 .. totalCore-1 do
-       out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
+        out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
     out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
     out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
     out
