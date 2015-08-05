@@ -146,6 +146,8 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
     when 2 <= trace_level do
        mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) :
                     ", reg: 0x" : ToLower ([capcause.RegNum]));
+    BranchDelayPCC <- None;
+    BranchToPCC <- None;
     SignalException(C2E)
 }
 
