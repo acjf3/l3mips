@@ -161,7 +161,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
        then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ getBase(CAPR(0)))
        then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+    else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
        then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
@@ -277,7 +277,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
       then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ getBase(CAPR(0)))
       then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (final_vAddr >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+    else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
       then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
       then {SignalCapException(capExcPermStore, 0); UNKNOWN}
