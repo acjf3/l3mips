@@ -5,12 +5,30 @@
 
 include(`helpers.m4')dnl
 include(`cap-params.m4')dnl
+
 -- utils functions
 
 word flip_endian_word (w::word) =
-changequote(!,!)dnl
-   match w { case 'a`8 b`8 c`8 d' => d : c : b : a }
-changequote(`,')dnl
+{
+   c, d = QuotRem ([[w]::nat], 256);
+   b, c = QuotRem (c, 256);
+   a, b = QuotRem (b, 256);
+   changequote(!,!)dnl
+   return ([d]`8 : [c]`8 : [b]`8 : [a]`8)
+   changequote(`,')dnl
+}
+
+bool isAligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
+
+pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr) =
+  match MemType
+  {
+     case 0 => pAddr ?? [ReverseEndian^3]
+     case 1 => pAddr ?? [ReverseEndian^2 : '0']
+     case 3 => pAddr ?? [ReverseEndian : '00']
+     case 7 => pAddr
+     case _ => #UNPREDICTABLE ("bad access length")
+  }
 
 -----------------
 -- stats utils --
@@ -83,23 +101,13 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 -----------------
 -- Data accesses
 -----------------
-bool isAligned (vAddr::vAddr, MemType::bits(3)) = vAddr && [MemType] == 0
 
 dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
                      AccessType::AccessType, link::bool) =
 {
-    var pAddr;
     tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
-    pAddr <- tmp;
-    pAddr<2:0> <- match MemType
-    {
-        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
-        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
-        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
-        case 7 =>  pAddr<2:0>
-        case _ => #UNPREDICTABLE ("bad access length")
-    };
-    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    pAddr = AdjustEndian (MemType, tmp);
+    -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     if not exceptionSignalled then
     {
         a = pAddr<39:3>;
@@ -199,19 +207,10 @@ Capability LoadCap (vAddr::vAddr) =
 bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
-    var pAddr;
     var sc_success = false;
     tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
-    pAddr <- tmp;
-    pAddr<2:0> <- match MemType
-    {
-        case 0 => (pAddr<2:0> ?? ReverseEndian^3)
-        case 1 => (pAddr<2:0> ?? (ReverseEndian^2 : '0'))
-        case 3 => (pAddr<2:0> ?? (ReverseEndian : '00'))
-        case 7 =>  pAddr<2:0>
-        case _ => #UNPREDICTABLE ("bad access length")
-    };
-    pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+    pAddr = AdjustEndian (MemType, tmp);
+    -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     when not exceptionSignalled do
     {
         a = pAddr<39:3>;
