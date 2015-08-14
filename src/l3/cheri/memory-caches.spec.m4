@@ -478,6 +478,10 @@ string l2addr_tag_str (addr::L2Addr) =
     "0x" : PadLeft (`#'"0", eval((L2TAGWIDTH+3)/4), [L2Tag(addr)])
 string l2addr_idx_str (addr::L2Addr) =
     [[L2Idx(addr)]::nat]
+string l2addr_details_str (addr::L2Addr) =
+    l2addr_str(addr) :
+    "(tag " : l2addr_tag_str(addr) :
+    ", idx " : l2addr_idx_str(addr) : ")"
 string l2line_str (line::L2LineNumber) =
     "0x" : PadLeft (`#'"0", eval((L2LINENUMBERWIDTH+3)/4), [line])
 string l2tag_str (tag::L2Tag) =
@@ -519,11 +523,6 @@ string l2entry_str (entry::L2Entry) =
     "|sharers" : sharers_str(entry.sharers) :
     "|" : l2data_str(entry.data) : "]"
 
-string l2addr_details_str (addr::L2Addr) =
-    l2addr_line_str(addr) :
-    "(tag:" : l2addr_tag_str(addr) :
-    ",idx:" : l2addr_idx_str(addr) : ")"
-
 --------------
 -- l2 cache --
 --------------
@@ -532,8 +531,7 @@ string l2addr_details_str (addr::L2Addr) =
 
 string l2prefix_str (addr::L2Addr) =
     "L2(core" : [[procID]::nat] : "," : l1type_str(current_l1_type) : ")" :
-    "@" : l2addr_str(addr) :
-    "(tag " : l2addr_tag_str(addr) : ", idx " : l2addr_idx_str(addr) :")"
+    "@" : l2addr_details_str(addr)
 
 string log_l2_read (addr::L2Addr) =
     l2prefix_str(addr) : " - read"
@@ -692,7 +690,7 @@ dnl-- l2 prefetchers --
 define(`MACRO_PftchFirstPtr',`dnl
 match firstptr (L2DataToDwordList (data))
         {
-            case Some (ptr) => match L2Hit (ptr)
+            case Some (ptr) => when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
             {
                 case None => { _ = L2ServeMiss (ptr, Cons (ptr, past_addr)); nothing }
                 case _    => nothing
@@ -706,7 +704,7 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
             case Some(ptr) =>
             {
                 memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
-                match L2Hit (ptr)
+                when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
                 {
                     case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
                     case _ => nothing
@@ -723,7 +721,7 @@ match firstcap (data)
                 case Some(paddr) =>
                 {
                     memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
-                    match L2Hit (paddr)
+                    when not aliasWithAddrList (paddr, past_addr_list) do match L2Hit (paddr)
                     {
                         case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
                         case _ => nothing
@@ -743,7 +741,7 @@ foreach elem in data do match elem
                 case Some(paddr) =>
                 {
                     memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
-                    match L2Hit (paddr)
+                    when not aliasWithAddrList (paddr, past_addr_list) do match L2Hit (paddr)
                     {
                         case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
                         case _ => nothing
@@ -811,19 +809,22 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     else
         memStats.l2_prefetch <- memStats.l2_prefetch + 1;
     -- prefecth --
-    when (! aliasWithAddrList (addr, past_addr) and
-          (prefetchDepth < l2PrefetchDepth)) do match l2Prefetcher
+    when prefetchDepth < l2PrefetchDepth do
     {
-        -- First-Ptr prefetch --
-        case 0 => MACRO_PftchFirstPtr
-        -- All-Ptr prefetch --
-        case 1 => MACRO_PftchAllPtr
-        -- First-Cap prefetch --
-        case 2 => MACRO_PftchFirstCap
-        -- All-Cap Prefetch --
-        case 3 => MACRO_PftchAllCap
-        -- no prefetch --
-        case _ => nothing
+        past_addr_list = Cons (addr, past_addr);
+        match l2Prefetcher
+        {
+            -- First-Ptr prefetch --
+            case 0 => MACRO_PftchFirstPtr
+            -- All-Ptr prefetch --
+            case 1 => MACRO_PftchAllPtr
+            -- First-Cap prefetch --
+            case 2 => MACRO_PftchFirstCap
+            -- All-Cap Prefetch --
+            case 3 => MACRO_PftchAllCap
+            -- no prefetch --
+            case _ => nothing
+        }
     };
 
     -- return data --
@@ -857,7 +858,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
                     retEntry <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
                     L2Cache(way,L2Idx(addr)) <- retEntry
                 }
-                case _ => #UNPREDICTABLE ("L2 cache reached an inconsistent state (write miss -> serve miss -> no hit)")
+                case _ => #UNPREDICTABLE ("L2 cache reached an inconsistent state (write miss -> serve miss -> no hit for @ " : l2addr_details_str(addr) : ")")
             };
             retEntry
         }
