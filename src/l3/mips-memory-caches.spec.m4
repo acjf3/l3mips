@@ -604,9 +604,9 @@ dnl-- l2 prefetchers --
 define(`MACRO_PftchFirstPtr',`dnl
 match firstptr (L2DataToDwordList (data))
         {
-            case Some (ptr) => match L2Hit (ptr)
+            case Some (ptr) => when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
             {
-                case None => { _ = L2ServeMiss (ptr, Cons (ptr, past_addr)); nothing }
+                case None => { _ = L2ServeMiss (ptr, past_addr_list); nothing }
                 case _    => nothing
             }
             case _ => nothing
@@ -618,9 +618,9 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
             case Some(ptr) =>
             {
                 memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
-                match L2Hit (ptr)
+                when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
                 {
-                    case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
+                    case None => { _ = L2ServeMiss (ptr, past_addr_list); nothing }
                     case _ => nothing
                 }
             }
@@ -663,27 +663,30 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
             invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], old_entry.sharers, true)
     };
 
+    -- update cache --
+    when 4 <= trace_level do
+       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
+    L2Cache(victimWay,L2Idx(addr)) <- new_entry;
+
     -- prefetch stats --
     if (prefetchDepth == 0) then
         memStats.l2_mandatory_fetch <- memStats.l2_mandatory_fetch + 1
     else
         memStats.l2_prefetch <- memStats.l2_prefetch + 1;
     -- prefecth --
-    when (! aliasWithAddrList (addr, past_addr) and
-          (prefetchDepth < l2PrefetchDepth)) do match l2Prefetcher
+    when prefetchDepth < l2PrefetchDepth do
     {
-        -- First-Ptr prefetch --
-        case 0 => MACRO_PftchFirstPtr
-        -- All-Ptr prefetch --
-        case 1 => MACRO_PftchAllPtr
-        -- no prefetch --
-        case _ => nothing
+        past_addr_list = Cons (addr, past_addr);
+        match l2Prefetcher
+        {
+            -- First-Ptr prefetch --
+            case 0 => MACRO_PftchFirstPtr
+            -- All-Ptr prefetch --
+            case 1 => MACRO_PftchAllPtr
+            -- no prefetch --
+            case _ => nothing
+        }
     };
-
-    -- update cache --
-    when 4 <= trace_level do
-       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
-    L2Cache(victimWay,L2Idx(addr)) <- new_entry;
 
     -- return data --
     data
