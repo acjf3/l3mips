@@ -532,7 +532,8 @@ string l2addr_details_str (addr::L2Addr) =
 
 string l2prefix_str (addr::L2Addr) =
     "L2(core" : [[procID]::nat] : "," : l1type_str(current_l1_type) : ")" :
-    "@" : l2addr_str(addr)
+    "@" : l2addr_str(addr) :
+    "(tag " : l2addr_tag_str(addr) : ", idx " : l2addr_idx_str(addr) :")"
 
 string log_l2_read (addr::L2Addr) =
     l2prefix_str(addr) : " - read"
@@ -554,9 +555,9 @@ string log_l2_evict (addr::L2Addr, way::nat, old::L2Entry, new::L2Entry) =
     "old@" : l2line_str(old.tag:L2Idx(addr)) : l2entry_str(old) : " - " :
     "new@" : l2line_str(new.tag:L2Idx(addr)) : l2entry_str(new)
 
-string log_l2_write_hit (addr::L2Addr, way::nat, data::L2Data) =
+string log_l2_write_hit (addr::L2Addr, way::nat, new::L2Entry) =
     l2prefix_str(addr) : " - write hit - way " : [way] : " - " :
-    l2data_str(data)
+    l2entry_str(new)
 
 string log_l2_write_miss (addr::L2Addr) =
     l2prefix_str(addr) : " - write miss"
@@ -728,9 +729,9 @@ match firstcap (data)
                         case _ => nothing
                     }
                 }
-                case _ => nothing
+                case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
             }
-            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
+            case _ => nothing
         }')dnl
 dnl
 define(`MACRO_PftchAllCap',`dnl
@@ -748,9 +749,9 @@ foreach elem in data do match elem
                         case _ => nothing
                     }
                 }
-                case _ => nothing
+                case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
             }
-            case _ => memStats.l2_tlb_miss <- memStats.l2_tlb_miss + 1
+            case _ => nothing
         }
 ')dnl
 dnl
@@ -799,6 +800,11 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         }
     };
 
+    -- update cache --
+    when 4 <= trace_level do
+       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
+    L2Cache(victimWay,L2Idx(addr)) <- new_entry;
+
     -- prefetch stats --
     if (prefetchDepth == 0) then
         memStats.l2_mandatory_fetch <- memStats.l2_mandatory_fetch + 1
@@ -820,11 +826,6 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         case _ => nothing
     };
 
-    -- update cache --
-    when 4 <= trace_level do
-       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
-    L2Cache(victimWay,L2Idx(addr)) <- new_entry;
-
     -- return data --
     data
 }
@@ -836,9 +837,10 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
         {
             memStats.l2_write_hit <- memStats.l2_write_hit + 1;
             var new_data = L2MergeData (cacheEntry.data, data, mask);
-            L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
+            new_entry = mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
+            L2Cache(way,L2Idx(addr)) <- new_entry;
             when 4 <= trace_level do
-               mark_log (4, log_l2_write_hit (addr, way, new_data));
+               mark_log (4, log_l2_write_hit (addr, way, new_entry));
             L2Cache(way,L2Idx(addr))
         }
         case None =>
