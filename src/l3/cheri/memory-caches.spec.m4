@@ -692,7 +692,13 @@ match firstptr (L2DataToDwordList (data))
         {
             case Some (ptr) => when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
             {
-                case None => { _ = L2ServeMiss (ptr, Cons (ptr, past_addr)); nothing }
+                case None =>
+                {
+                    when 5 <= trace_level do
+                        mark_log (5, "firstPtr prefetcher triggered");
+                    _ = L2ServeMiss (ptr, past_addr_list);
+                    nothing
+                }
                 case _    => nothing
             }
             case _ => nothing
@@ -706,7 +712,13 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
                 memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
                 when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
                 {
-                    case None =>{ _ = L2ServeMiss (ptr, Cons(ptr, past_addr)); nothing }
+                    case None =>
+                    {
+                        when 5 <= trace_level do
+                            mark_log (5, "allPtr prefetcher triggered");
+                        _ = L2ServeMiss (ptr, past_addr_list);
+                        nothing
+                    }
                     case _ => nothing
                 }
             }
@@ -723,7 +735,13 @@ match firstcap (data)
                     memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
                     when not aliasWithAddrList (paddr, past_addr_list) do match L2Hit (paddr)
                     {
-                        case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
+                        case None =>
+                        {
+                            when 5 <= trace_level do
+                                mark_log (5, "firstCap prefetcher triggered");
+                            _ = L2ServeMiss (paddr, past_addr_list);
+                            nothing
+                        }
                         case _ => nothing
                     }
                 }
@@ -743,7 +761,13 @@ foreach elem in data do match elem
                     memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
                     when not aliasWithAddrList (paddr, past_addr_list) do match L2Hit (paddr)
                     {
-                        case None =>{ _ = L2ServeMiss (paddr, Cons(paddr, past_addr)); nothing }
+                        case None =>
+                        {
+                            when 5 <= trace_level do
+                                mark_log (5, "allCap prefetcher triggered");
+                            _ = L2ServeMiss (paddr, past_addr_list);
+                            nothing
+                        }
                         case _ => nothing
                     }
                 }
