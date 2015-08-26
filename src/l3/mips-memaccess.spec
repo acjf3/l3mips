@@ -145,8 +145,10 @@ bool StoreMemory
     var pAddr = Fst (AddressTranslation (vAddr, IorD, AccessType));
     pAddr <- AdjustEndian (MemType, pAddr);
     -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-    sc_success =
-      if cond then
+    var sc_success = true;
+    when not exceptionSignalled do
+    {
+      sc_success <- if cond then
         match LLbit
         {
           case None => #UNPREDICTABLE ("conditional store: LLbit not set")
@@ -157,10 +159,8 @@ bool StoreMemory
             else
               #UNPREDICTABLE
                 ("conditional store: address doesn't match previous LL address")
-          }
-       else true;
-    when not exceptionSignalled do
-    {
+        }
+        else true;
       a = pAddr<39:3>;
       b = [AccessLength] + 0n1;
       l = 64 - (b + [vAddr<2:0>]) * 0n8;
