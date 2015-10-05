@@ -156,17 +156,24 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
-       then {SignalCapException(capExcTag,0); UNKNOWN}
+        then {SignalCapException(capExcTag,0); UNKNOWN}
     else if getSealed(CAPR(0))
-       then {SignalCapException(capExcSeal,0); UNKNOWN}
+        then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ getBase(CAPR(0)))
-       then {SignalCapException(capExcLength,0); UNKNOWN}
+        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
-       then {SignalCapException(capExcLength,0); UNKNOWN}
+        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
-       then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
+        then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
     else if needAlign and not isAligned (final_vAddr, MemType)
-      then { CP0.BadVAddr <- vAddr; SignalException (AdEL); UNKNOWN}
+        then {
+            when 2 <= trace_level do
+                mark_log
+                    (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
+            CP0.BadVAddr <- vAddr;
+            SignalException (AdEL);
+            UNKNOWN
+        }
     else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
 }
 
@@ -272,17 +279,24 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
-      then {SignalCapException(capExcTag,0); UNKNOWN}
+        then {SignalCapException(capExcTag,0); UNKNOWN}
     else if getSealed(CAPR(0))
-      then {SignalCapException(capExcSeal,0); UNKNOWN}
+        then {SignalCapException(capExcSeal,0); UNKNOWN}
     else if (final_vAddr <+ getBase(CAPR(0)))
-      then {SignalCapException(capExcLength,0); UNKNOWN}
+        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
-      then {SignalCapException(capExcLength,0); UNKNOWN}
+        then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
-      then {SignalCapException(capExcPermStore, 0); UNKNOWN}
+        then {SignalCapException(capExcPermStore, 0); UNKNOWN}
     else if needAlign and not isAligned (final_vAddr, MemType)
-      then { CP0.BadVAddr <- vAddr; SignalException (AdES); UNKNOWN}
+        then {
+            when 2 <= trace_level do
+                mark_log
+                    (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
+            CP0.BadVAddr <- vAddr;
+            SignalException (AdES);
+            UNKNOWN
+        }
     else StoreMemoryCap (MemType, AccessLength, MemElem, final_vAddr, IorD,
                          AccessType, cond)
 }
@@ -381,6 +395,9 @@ word option Fetch =
     }
     else
     {
+        when 2 <= trace_level do
+            mark_log
+                (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(getBase(PCC) + PC));
         CP0.BadVAddr <- getBase(PCC) + PC;
         SignalException (AdEL);
         None

@@ -80,6 +80,9 @@ dword LoadMemory
     IorD::IorD, AccessType::AccessType, link::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
+    when 2 <= trace_level do
+      mark_log
+        (2, "Bad load, CP0.BadVAddr <-" : hex64(vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdEL);
     return UNKNOWN
@@ -136,6 +139,9 @@ bool StoreMemory
     vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
+    when 2 <= trace_level do
+      mark_log
+        (2, "Bad store, CP0.BadVAddr <-" : hex64(vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdES);
     return false
@@ -245,6 +251,9 @@ unit Fetch =
    }
    else
    {
+      when 2 <= trace_level do
+        mark_log
+          (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(PC));
       CP0.BadVAddr <- PC;
       SignalException (AdEL)
    }
