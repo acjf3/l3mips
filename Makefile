@@ -125,6 +125,9 @@ all: $(SIM)
 hol: ${L3SRC}
 	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
 
+isabelle: ${L3SRC}
+	echo 'IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI")' | l3
+
 count: ${L3SRC}
 	@wc -l ${L3SRC}
 
