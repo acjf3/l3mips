@@ -243,7 +243,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
             case None => #UNPREDICTABLE("conditional store: LLbit not set")
             case Some (false) => sc_success <- false
             case Some (true) =>
-                if CP0.LLAddr<39:5> == pAddr<39:5> then
+                if CP0.LLAddr == [pAddr] then
                     sc_success <- true
                 else #UNPREDICTABLE("conditional store: address does not match previous LL address")
         };
@@ -258,7 +258,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
                 when i <> procID and
                      (not cond or sc_success) and
                      st.c_LLbit == Some (true) and
-                     st.c_CP0.LLAddr<39:5> == pAddr<39:5> do
+                     st.c_CP0.LLAddr<39:3> == pAddr<39:3> do
                         all_state(i).c_LLbit <- Some (false)
             };
             when not cond or sc_success do
