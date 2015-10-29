@@ -14,12 +14,17 @@ L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
-ifeq ($(CAP), 128)
-L3SRCBASE+=cheri/cap128-types.spec
-else ifeq ($(CAP), c128)
+ifeq ($(CAP), c128)
 L3SRCBASE+=cheri/cap128-compressed-types.spec
+else ifeq ($(CAP), p64)
+L3SRCBASE+=cheri/cap256-precise.spec
+L3SRCBASE+=cheri/cap-precise-64.spec
+else ifeq ($(CAP), p128)
+L3SRCBASE+=cheri/cap256-precise.spec
+L3SRCBASE+=cheri/cap-precise-128.spec
 else
-L3SRCBASE+=cheri/cap256-types.spec
+L3SRCBASE+=cheri/cap256-precise.spec
+L3SRCBASE+=cheri/cap-precise-256.spec
 endif
 L3SRCBASE+=cheri/state.spec
 L3SRCBASE+=cheri/exception.spec
@@ -99,9 +104,9 @@ L2LINESIZE ?= 64
 
 ifdef CAP
 ifdef CACHE
-	SIM ?= l3mips-cheri$(CAP)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
+	SIM ?= l3mips-cheri-$(CAP)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
 else
-	SIM ?= l3mips-cheri$(CAP)
+	SIM ?= l3mips-cheri-$(CAP)
 endif
 else
 ifdef CACHE
@@ -146,6 +151,9 @@ $(L3SRCDIR)/mips-memory-caches.spec: $(L3SRCDIR)/mips-memory-caches.spec.m4
 
 ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
+
+#${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri/%.spec.m4
+#	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 ${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
 ifdef CACHE

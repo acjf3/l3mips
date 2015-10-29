@@ -6,6 +6,18 @@
 include(`helpers.m4')dnl
 include(`cap-params.m4')dnl
 ifelse(dnl
+CAPBYTEWIDTH, 8,dnl
+unit WriteDWORD (dwordAddr::bits(37), data::dword) =
+    MEM(dwordAddr) <- Raw(data)
+
+unit Write256 (addr::bits(35), data::bits(256)) =
+{
+    MEM(addr:'11') <- Raw (data<255:192>);
+    MEM(addr:'10') <- Raw (data<191:128>);
+    MEM(addr:'01') <- Raw (data<127:64>);
+    MEM(addr:'00') <- Raw (data<63:0>)
+}
+,dnl
 CAPBYTEWIDTH, 16,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
