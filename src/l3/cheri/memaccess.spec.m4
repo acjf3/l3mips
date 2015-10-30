@@ -177,7 +177,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
     else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
 }
 
-Capability LoadCap (vAddr::vAddr) =
+Capability LoadCap (vAddr::vAddr, link::bool) =
 {
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
     if not exceptionSignalled then
@@ -193,6 +193,14 @@ Capability LoadCap (vAddr::vAddr) =
                      and a <+ (PIC_base_address([core])+1072)<36:BOTTOM> do
                     #UNPREDICTABLE ("Capability load attempted on PIC");
         undefine(BOTTOM)dnl
+
+        if link then
+        {
+            LLbit <- Some (true);
+            CP0.LLAddr <- [pAddr]
+        }
+        else
+            LLbit <- None;
 
         var cap = ReadCap(a);
 
@@ -310,8 +318,9 @@ unit StoreMem
    nothing
 }
 
-unit StoreCap (vAddr::vAddr, cap::Capability) =
+bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 {
+    var sc_success = false;
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
     when not exceptionSignalled do
     {
@@ -327,6 +336,16 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
                     #UNPREDICTABLE ("Capability store attempted on PIC");
         undefine(BOTTOM)dnl
 
+        when cond do match LLbit
+        {
+            case None => #UNPREDICTABLE("conditional store of capability: LLbit not set")
+            case Some (false) => sc_success <- false
+            case Some (true) =>
+                if CP0.LLAddr == [pAddr] then
+                    sc_success <- true
+                else #UNPREDICTABLE("conditional store of capability: address does not match previous LL address")
+        };
+
         LLbit <- None;
 
         if (S and getTag(cap)) then
@@ -338,6 +357,7 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
                 i = [core];
                 st = all_state(i);
                 when i <> procID and
+                    (not cond or sc_success) and
                     st.c_LLbit == Some (true) and
                     st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
                         all_state(i).c_LLbit <- Some (false)
@@ -349,9 +369,11 @@ unit StoreCap (vAddr::vAddr, cap::Capability) =
                             " at vAddr 0x":hex64(vAddr));
 
             watchForCapStore(pAddr, cap);
-            WriteCap(a, cap)
+            when not cond or sc_success do
+                WriteCap(a, cap)
         }
-    }
+    };
+    return sc_success
 }
 
 -------------------------

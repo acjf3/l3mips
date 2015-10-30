@@ -558,7 +558,7 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
         }
         else
         {
-            StoreCap(addr,CAPR(cs));
+            _ = StoreCap(addr, CAPR(cs), false);
             LLbit <- None
         }
     }
@@ -596,7 +596,7 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         }
         else
         {
-            tmp = LoadCap(addr);
+            tmp = LoadCap(addr, false);
             when not exceptionSignalled do CAPR(cd) <- tmp;
             LLbit <- None
         }
@@ -679,7 +679,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
             }
         }
     }
-
+{-
 -----------------------------------
 -- CLLD
 -----------------------------------
@@ -711,7 +711,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
     else
         GPR(rd) <- LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD, true)
 }
-
+-}
 -----------------------------------
 -- CStore
 -----------------------------------
@@ -781,7 +781,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             nothing
         }
     }
-
+{-
 -----------------------------------
 -- CSCD
 -----------------------------------
@@ -812,6 +812,138 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
     }
     else
         GPR(rs) <- if StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD, true) then 1 else 0
+}
+-}
+
+-----------------------------------
+-- CLLC
+-----------------------------------
+define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
+{
+    addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Load_Capability then
+        SignalCapException(capExcPermLoadCap,cb)
+    else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if addr <+ getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if not isCapAligned(addr) then
+    {
+        CP0.BadVAddr <- addr;
+        SignalException(AdEL)
+    }
+    else CAPR(cd) <- LoadCap(addr, true)
+}
+
+-----------------------------------
+-- CLLx
+-----------------------------------
+define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
+{
+    t = stt<1:0>;
+    addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+    size = ZeroExtend(1 << t);
+    access_length = '1'^[t];
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Load then
+        SignalCapException(capExcPermLoad,cb)
+    else if addr + size >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if addr <+ getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else
+    {
+        mem_dword = LoadMemoryCap(access_length, addr, DATA, LOAD, true);
+        GPR(rd) <- match stt
+        {
+            case '000' => ZeroExtend(mem_dword<7:0>)
+            case '001' => ZeroExtend(mem_dword<15:0>)
+            case '010' => ZeroExtend(mem_dword<31:0>)
+            case '011' => mem_dword
+            case '100' => SignExtend(mem_dword<7:0>)
+            case '101' => SignExtend(mem_dword<15:0>)
+            case '110' => SignExtend(mem_dword<31:0>)
+            case _      => #UNPREDICTABLE("non-capability CLL detected but should have been a CLLC")
+        }
+    }
+}
+
+-----------------------------------
+-- CSCC
+-----------------------------------
+define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
+{
+    addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cs) then
+        SignalCapException_v(cs)
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Store_Capability then
+        SignalCapException(capExcPermStoreCap,cb)
+    else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
+            and getTag(CAPR(cs)) and not getPerms(CAPR(cs)).Global then
+        SignalCapException(capExcPermStoreLocalCap,cb)
+    else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if addr <+ getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if not isCapAligned(addr) then
+    {
+        CP0.BadVAddr <- addr;
+        SignalException(AdES)
+    }
+    else GPR(rd) <- if StoreCap(addr, CAPR(cs), true) then 1 else 0
+}
+
+-----------------------------------
+-- CSCx
+-----------------------------------
+define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
+{
+    addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+    size = ZeroExtend(1 << t);
+    access_length = '1'^[t];
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Store then
+        SignalCapException(capExcPermStore,cb)
+    else if addr + size >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if addr <+ getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else
+        GPR(rd) <- if StoreMemoryCap(access_length, access_length,
+                                     GPR(rs), addr, DATA, STORE, true)
+                                     then 1 else 0
 }
 
 -----------------------------------
@@ -978,4 +1110,4 @@ define COP2 > CHERICOP2 > CReturn =
 define COP2 > CHERICOP2 > UnknownCapInstruction =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-   else SignalException (ResI)
+    else SignalException (ResI)

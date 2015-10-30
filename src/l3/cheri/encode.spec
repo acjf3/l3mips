@@ -69,6 +69,10 @@ string COP2InstructionToString (i::instruction) =
                 case CUnseal(cd, cs, ct)          => op_cr_cr_cr("cunseal",cd,cs,ct)
                 case CCall(cs, cb)                => op_cr_cr("ccall",cs,cb)
                 case CReturn                      => "creturn"
+                case CLLx(rd, cb, stt)            => "cllx" -- TODO
+                case CLLC(cd, cb)                 => op_cr_cr("cllc", cd, cb)
+                case CSCx(rcs, cb, rd, ctt)       => "cscx" -- TODO
+                case CSCC(cs, cb, rd)             => op_gr_cr_cr("cscc", rd, cs, cb)
                 case UnknownCapInstruction        => "unknown_cap_inst"
             }
         case _ => "unmatched_cap_inst"
@@ -91,7 +95,6 @@ string LWC2InstructionToString (i::instruction) =
                 case CLoad(rd, cb, rt, offset, 0b1, 0b00) => op_gr_cr_gr_imm("clb",rd,cb,rt,offset)
                 case CLoad(rd, cb, rt, offset, 0b1, 0b01) => op_gr_cr_gr_imm("clh",rd,cb,rt,offset)
                 case CLoad(rd, cb, rt, offset, 0b1, 0b10) => op_gr_cr_gr_imm("clw",rd,cb,rt,offset)
-                case CLLD(rd, cb, rt, offset)             => op_gr_cr_gr_imm("clld",rd,cb,rt,offset)
                 case _                                    => "unmatched_cap_inst"
             }
         case _ => "unmatched_cap_inst"
@@ -122,7 +125,6 @@ string SWC2InstructionToString (i::instruction) =
                         case 0b10 => op_gr_cr_gr_imm("csw",rs,cb,rt,offset)
                         case 0b11 => op_gr_cr_gr_imm("csd",rs,cb,rt,offset)
                     }
-                case CSCD(rs, cb, rt, offset) => op_gr_cr_gr_imm("cscd",rs,cb,rt,offset)
             }
         case _ => "unmatched_cap_inst"
     }

@@ -43,25 +43,30 @@ ifdef(<!NO_CINCBASE_CSETLEN!>, <!dnl!>, <!dnl
            case '00011 cd cs ct _'           => CUnseal(cd, cs, ct)
            case '00101 cs cb _'              => CCall(cs, cb)
            case '00110 _'                    => CReturn
+           case '10000 rd cb _ 1 s 00'       => CLLx(rd, cb, s:'00')
+           case '10000 rd cb _ 1 s 01'       => CLLx(rd, cb, s:'01')
+           case '10000 rd cb _ 1 s 10'       => CLLx(rd, cb, s:'10')
+           case '10000 rd cb _ 1011'         => CLLx(rd, cb, '011')
+           case '10000 cd cb _ 1111'         => CLLC(cd, cb)
+           case '10000 rs cb rd _ 00 tt'     => CSCx(rs, cb, rd, tt)
+           case '10000 cs cb rd _ 0111'      => CSCC(cs, cb, rd)
            case _                            => UnknownCapInstruction
        }))
 
 instruction LWC2Decode (rd::reg, cb::reg, rt::reg, offset::byte, v::bits(3)) =
-   LWC2(CHERILWC2
-      (match v
+      match v
        {
-           case '0 t' => CLoad(rd, cb, rt, offset, 0b0, t)
-           case '100' => CLoad(rd, cb, rt, offset, 0b1, 0b00)
-           case '101' => CLoad(rd, cb, rt, offset, 0b1, 0b01)
-           case '110' => CLoad(rd, cb, rt, offset, 0b1, 0b10)
-           case '111' => CLLD(rd, cb, rt, offset)
-       }))
+           case '0 t' => LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b0, t)))
+           case '100' => LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b00)))
+           case '101' => LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b01)))
+           case '110' => LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b10)))
+           case _     => COP2(CHERICOP2(UnknownCapInstruction))
+       }
 
 instruction SWC2Decode (rs::reg, cb::reg, rt::reg, offset::byte, v::bits(3)) =
    match v
    {
       case '0 t' => SWC2(CHERISWC2(CStore(rs, cb, rt, offset, t)))
-      case '111' => SWC2(CHERISWC2(CSCD(rs, cb, rt, offset)))
       case _     => COP2(CHERICOP2(UnknownCapInstruction))
    }
 
