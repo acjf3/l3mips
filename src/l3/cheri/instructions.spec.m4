@@ -858,7 +858,7 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
     t = stt<1:0>;
     addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
     size = ZeroExtend(1::bits(64) << [t]);
-    access_length = '1'^[t];
+    access_length = if t == '00' then '000' else '1'^[t];
     bytesel = match t
         {
             case '00' => addr<2:0> ?? BigEndianCPU^3
@@ -935,7 +935,7 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
 {
     addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
     size = ZeroExtend(1::bits(64) << [t]);
-    access_length = '1'^[t];
+    access_length = if t == '00' then '000' else '1'^[t];
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
