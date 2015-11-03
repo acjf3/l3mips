@@ -35,6 +35,7 @@ unit register_inaccessible_write_attempt(mask::bits(16)) =
 
 -- only works for non empty lists
 bool list SignExtendBitString(w::nat, x::bool list) = PadLeft (Head(x), w, x)
+bool list ZeroExtendBitString(w::nat, x::bool list) = PadLeft (false, w, x)
 
 -----------------------------------
 -- dump capability registers
@@ -674,7 +675,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
                 bottom = ([bytesel]::nat)*8;
                 top = ([bytesel]::nat)*8 + ([size]::nat)*8 - 1;
                 final_data = data_list<top:bottom>;
-                if s == 0 then GPR(rd) <- [final_data]
+                if s == 0 then GPR(rd) <- [ZeroExtendBitString(64, final_data)]
                 else GPR(rd) <- [SignExtendBitString(64, final_data)]
             }
         }
@@ -842,7 +843,11 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
         CP0.BadVAddr <- addr;
         SignalException(AdEL)
     }
-    else CAPR(cd) <- LoadCap(addr, true)
+    else
+    {
+        ret_cap = LoadCap(addr, true);
+        when not exceptionSignalled do CAPR(cd) <- ret_cap
+    }
 }
 
 -----------------------------------
@@ -852,8 +857,15 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
 {
     t = stt<1:0>;
     addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
-    size = ZeroExtend(1 << t);
+    size = ZeroExtend(1::bits(64) << [t]);
     access_length = '1'^[t];
+    bytesel = match t
+        {
+            case '00' => addr<2:0> ?? BigEndianCPU^3
+            case '01' => addr<2:0> ?? (BigEndianCPU^2:'0')
+            case '10' => addr<2:0> ?? (BigEndianCPU^1:'00')
+            case '11' => '000'
+        };
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
@@ -870,17 +882,15 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
         SignalCapException(capExcLength,cb)
     else
     {
-        mem_dword = LoadMemoryCap(access_length, addr, DATA, LOAD, true);
-        GPR(rd) <- match stt
+        data = LoadMemoryCap(access_length, addr, DATA, LOAD, true);
+        when not exceptionSignalled do
         {
-            case '000' => ZeroExtend(mem_dword<7:0>)
-            case '001' => ZeroExtend(mem_dword<15:0>)
-            case '010' => ZeroExtend(mem_dword<31:0>)
-            case '011' => mem_dword
-            case '100' => SignExtend(mem_dword<7:0>)
-            case '101' => SignExtend(mem_dword<15:0>)
-            case '110' => SignExtend(mem_dword<31:0>)
-            case _      => #UNPREDICTABLE("non-capability CLL detected but should have been a CLLC")
+            data_list = [data]::bool list;
+            bottom = ([bytesel]::nat)*8;
+            top = ([bytesel]::nat)*8 + ([size]::nat)*8 - 1;
+            final_data = data_list<[top]:[bottom]>;
+            if not stt<2> then GPR(rd) <- [ZeroExtendBitString(64, [final_data])]
+            else GPR(rd) <- [SignExtendBitString(64, [final_data])]
         }
     }
 }
@@ -924,7 +934,7 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
 define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
 {
     addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
-    size = ZeroExtend(1 << t);
+    size = ZeroExtend(1::bits(64) << [t]);
     access_length = '1'^[t];
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
