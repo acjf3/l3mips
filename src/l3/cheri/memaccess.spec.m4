@@ -206,8 +206,6 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
 
         when L do cap <- setTag(cap, false);
 
-        LLbit <- None;
-
         memAccessStats.bytes_read <- memAccessStats.bytes_read + CAPBYTEWIDTH;
         when 2 <= trace_level do
            mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) :
