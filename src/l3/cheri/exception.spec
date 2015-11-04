@@ -67,7 +67,7 @@ unit SignalException (ExceptionType::ExceptionType) =
 {
     when not CP0.Status.EXL do
     {
-        if IsSome (BranchDelay) then
+        if IsSome (BranchDelay) or IsSome(BranchDelayPCC) then
         {
             when 2 <= trace_level do
                 mark_log (2, "EPC <- ":hex64(PC - 4):" (in branch delay slot => PC - 4 )");
@@ -101,6 +101,8 @@ unit SignalException (ExceptionType::ExceptionType) =
             0xFFFF_FFFF_8000_0000;
     BranchDelay <- None;
     BranchTo <- None;
+    BranchDelayPCC <- None;
+    BranchToPCC <- None;
     exceptionSignalled <- true;
 
     -- move PCC to EPCC
@@ -150,8 +152,6 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
     when 2 <= trace_level do
        mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) :
                     ", reg: 0x" : ToLower ([capcause.RegNum]));
-    BranchDelayPCC <- None;
-    BranchToPCC <- None;
     SignalException(C2E)
 }
 
