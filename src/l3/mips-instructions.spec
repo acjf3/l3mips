@@ -880,12 +880,16 @@ define Store > SD (base::reg, rt::reg, offset::bits(16)) =
 }
 
 define Store > SC (base::reg, rt::reg, offset::bits(16)) =
-    when not exceptionSignalled do
-        GPR(rt) <- if storeWord (base, rt, offset, true) then 1 else 0
+{
+    ret = if storeWord (base, rt, offset, true) then 1 else 0;
+    when not exceptionSignalled do GPR(rt) <- ret
+}
 
 define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
-    when not exceptionSignalled do
-        GPR(rt) <- if storeDoubleword (base, rt, offset, true) then 1 else 0
+{
+    ret = if storeDoubleword (base, rt, offset, true) then 1 else 0;
+    when not exceptionSignalled do GPR(rt) <- ret
+}
 
 -----------------------------------
 -- SWL rt, offset(base)
