@@ -133,6 +133,9 @@ hol: ${L3SRC}
 isabelle: ${L3SRC}
 	echo 'IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI")' | l3
 
+isabelle_monadic: ${L3SRC}
+	echo 'IsabelleExport.monadicExport true; IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI_Monadic")' | l3
+
 count: ${L3SRC}
 	@wc -l ${L3SRC}
 
