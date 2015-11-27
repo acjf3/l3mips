@@ -471,7 +471,7 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
             lessu <- cursor1 <+ cursor2;
             greateru <- cursor1 >+ cursor2
         };
-        match t
+        when not exceptionSignalled do match t
         {
            case 0 => GPR(rd) <- [equal]
            case 1 => GPR(rd) <- [not equal]
@@ -926,7 +926,11 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
         CP0.BadVAddr <- addr;
         SignalException(AdES)
     }
-    else GPR(rd) <- if StoreCap(addr, CAPR(cs), true) then 1 else 0
+    else
+    {
+        ret = if StoreCap(addr, CAPR(cs), true) then 1 else 0;
+        when not exceptionSignalled do GPR(rd) <- ret
+    }
 }
 
 -----------------------------------
@@ -952,9 +956,12 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
     else if addr <+ getBase(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
     else
-        GPR(rd) <- if StoreMemoryCap(access_length, access_length,
+    {
+        ret = if StoreMemoryCap(access_length, access_length,
                                      GPR(rs), addr, DATA, STORE, true)
-                                     then 1 else 0
+                                     then 1 else 0;
+        when not exceptionSignalled do GPR(rd) <- ret
+    }
 }
 
 -----------------------------------
