@@ -147,6 +147,12 @@ define COP1 > CVT_D_L(fd::reg, fs::reg) =
     FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)]::int)
 
 -----------------------------------
+-- CVT.D.S fd, fs
+-----------------------------------
+define COP1 > CVT_D_S(fd::reg, fs::reg) =
+    FGR(fd) <- FP32_ToFP64(FGR(fs)<31:0>)
+
+-----------------------------------
 -- CVT.D.W fd, fs
 -----------------------------------
 define COP1 > CVT_D_W(fd::reg, fs::reg) =
@@ -156,6 +162,18 @@ define COP1 > CVT_D_W(fd::reg, fs::reg) =
 
     FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int)
 }
+
+-----------------------------------
+-- CVT.S.D fd, fs
+-----------------------------------
+define COP1 > CVT_S_D(fd::reg, fs::reg) =
+    FGR(fd) <- SignExtend(FP64_ToFP32(roundTiesToEven, FGR(fs)))
+
+-----------------------------------
+-- CVT.S.W fd, fs
+-----------------------------------
+define COP1 > CVT_S_W(fd::reg, fs::reg) =
+    nothing -- XXX: TO DO
 
 -----------------------------------
 -- DIV.D fd, fs, ft

@@ -43,6 +43,10 @@ instruction COP1Decode (v::bits(26)) =
             case '10001 ft fs 00000 110110'   => C_OLE_D(ft, fs)
             case '10001 ft fs 00000 110111'   => C_ULE_D(ft, fs)
 
+            case '10001 00000 fs fd 100000'   => CVT_S_D(fd, fs)
+            case '10100 00000 fs fd 100000'   => CVT_S_W(fd, fs)
+
+            case '10000 00000 fs fd 100001'   => CVT_D_S(fd, fs)
             case '10100 00000 fs fd 100001'   => CVT_D_W(fd, fs)
             case '10101 00000 fs fd 100001'   => CVT_D_L(fd, fs)
 

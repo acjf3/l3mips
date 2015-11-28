@@ -17,6 +17,8 @@ $(L3_SML_LIB)/FP.sig
 $(L3_SML_LIB)/FP.sml
 $(L3_SML_LIB)/FP32.sml
 $(L3_SML_LIB)/FP64.sml
+$(L3_SML_LIB)/FPConvert.sig
+$(L3_SML_LIB)/FPConvert.sml
 $(L3_SML_LIB)/Ptree.sig
 $(L3_SML_LIB)/Ptree.sml
 $(L3_SML_LIB)/MutableMap.sig
