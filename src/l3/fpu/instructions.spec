@@ -208,10 +208,37 @@ define COP1 > MOV_D (fd::reg, fs::reg) =
     FGR(fd) <- FGR(fs)
 
 -----------------------------------
+-- MOVF.D fd, fs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVF_D(fd::reg, fs::reg) =
+    if not fcsr.C then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
 -- MOVN.D fd, fs, rt (MIPS IV)
 -----------------------------------
 define COP1 > MOVN_D(fd::reg, fs::reg, rt::reg) =
     if GPR(rt) <> 0 then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MOVT.D fd, fs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVT_D(fd::reg, fs::reg) =
+    if fcsr.C then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MOVZ.D fd, fs, rt (MIPS IV)
+-----------------------------------
+define COP1 > MOVZ_D(fd::reg, fs::reg, rt::reg) =
+    if GPR(rt) == 0 then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -250,6 +277,12 @@ define COP1 > ROUND_W_D(fd::reg, fs::reg) =
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64
     }
+
+-----------------------------------
+-- SQRT.D fd, fs, ft
+-----------------------------------
+define COP1 > SQRT_D (fd::reg, fs::reg) =
+    FGR(fd) <- FP64_Sqrt(roundTiesToEven, FGR(fs))
 
 -----------------------------------
 -- SUB.D fd, fs, ft
