@@ -61,10 +61,25 @@ define COP1 > ABS_D (fd::reg, fs::reg) =
         FGR(fd) <- FP64_Abs1985(FGR(fs))
 
 -----------------------------------
+-- ABS.S fd, fs
+-----------------------------------
+define COP1 > ABS_S (fd::reg, fs::reg) =
+    if fcsr.ABS2008 then
+        FGR(fd) <- SignExtend(FP32_Abs(FGR(fs)<31:0>))
+    else
+        FGR(fd) <- SignExtend(FP32_Abs1985(FGR(fs)<31:0>))
+
+-----------------------------------
 -- ADD.D fd, fs, ft
 -----------------------------------
 define COP1 > ADD_D (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- FP64_Add(roundTiesToEven, FGR(fs), FGR(ft))
+
+-----------------------------------
+-- ADD.S fd, fs, ft
+-----------------------------------
+define COP1 > ADD_S (fd::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
 -- C.F.D fd, fs
@@ -173,13 +188,24 @@ define COP1 > CVT_S_D(fd::reg, fs::reg) =
 -- CVT.S.W fd, fs
 -----------------------------------
 define COP1 > CVT_S_W(fd::reg, fs::reg) =
-    nothing -- XXX: TO DO
+{
+    when NotWordValue (FGR(fs))
+        do #UNPREDICTABLE("CVT.S.W: NotWordValue");
+
+    FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int))
+}
 
 -----------------------------------
 -- DIV.D fd, fs, ft
 -----------------------------------
 define COP1 > DIV_D (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- FP64_Div(roundTiesToEven, FGR(fs), FGR(ft))
+
+-----------------------------------
+-- DIV.S fd, fs, ft
+-----------------------------------
+define COP1 > DIV_S (fd::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Div(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
 -- FLOOR.L.D fd, fs
@@ -205,6 +231,12 @@ define COP1 > FLOOR_W_D(fd::reg, fs::reg) =
 -- MOV.D fd, fs
 -----------------------------------
 define COP1 > MOV_D (fd::reg, fs::reg) =
+    FGR(fd) <- FGR(fs)
+
+-----------------------------------
+-- MOV.S fd, fs
+-----------------------------------
+define COP1 > MOV_S (fd::reg, fs::reg) =
     FGR(fd) <- FGR(fs)
 
 -----------------------------------
@@ -250,6 +282,12 @@ define COP1 > MUL_D (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft))
 
 -----------------------------------
+-- MUL.S fd, fs, ft
+-----------------------------------
+define COP1 > MUL_S (fd::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+
+-----------------------------------
 -- NEG.D fd, fs
 -----------------------------------
 define COP1 > NEG_D (fd::reg, fs::reg) =
@@ -257,6 +295,15 @@ define COP1 > NEG_D (fd::reg, fs::reg) =
         FGR(fd) <- FP64_Neg(FGR(fs))
     else
         FGR(fd) <- FP64_Neg1985(FGR(fs))
+
+-----------------------------------
+-- NEG.S fd, fs
+-----------------------------------
+define COP1 > NEG_S (fd::reg, fs::reg) =
+    if fcsr.ABS2008 then
+        FGR(fd) <- SignExtend(FP32_Neg(FGR(fs)<31:0>))
+    else
+        FGR(fd) <- SignExtend(FP32_Neg1985(FGR(fs)<31:0>))
 
 -----------------------------------
 -- ROUND.L.D fd, fs
@@ -285,10 +332,22 @@ define COP1 > SQRT_D (fd::reg, fs::reg) =
     FGR(fd) <- FP64_Sqrt(roundTiesToEven, FGR(fs))
 
 -----------------------------------
+-- SQRT.S fd, fs, ft
+-----------------------------------
+define COP1 > SQRT_S (fd::reg, fs::reg) =
+    FGR(fd) <- SignExtend(FP32_Sqrt(roundTiesToEven, FGR(fs)<31:0>))
+
+-----------------------------------
 -- SUB.D fd, fs, ft
 -----------------------------------
 define COP1 > SUB_D (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- FP64_Sub(roundTiesToEven, FGR(fs), FGR(ft))
+
+-----------------------------------
+-- SUB.S fd, fs, ft
+-----------------------------------
+define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
 -- TRUNC.L.D fd, fs
@@ -301,10 +360,30 @@ define COP1 > TRUNC_L_D(fd::reg, fs::reg) =
     }
 
 -----------------------------------
+-- TRUNC.L.S fd, fs
+-----------------------------------
+define COP1 > TRUNC_L_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
 -- TRUNC.W.D fd, fs
 -----------------------------------
 define COP1 > TRUNC_W_D(fd::reg, fs::reg) =
     FGR(fd) <- match FP64_ToInt(roundTowardZero, FGR(fs))
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
+
+-----------------------------------
+-- TRUNC.W.S fd, fs
+-----------------------------------
+define COP1 > TRUNC_W_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
     {
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64

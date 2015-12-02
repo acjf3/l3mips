@@ -15,6 +15,16 @@ instruction COP1Decode (v::bits(26)) =
             case '00101 rt fs 00000000000'    => DMTC1(rt, fs)
             case '00110 rt fs 00000000000'    => CTC1(rt, fs)
 
+            case '10000 ft fs fd 000000'      => ADD_S(fd, fs, ft)
+            case '10000 ft fs fd 000001'      => SUB_S(fd, fs, ft)
+            case '10000 ft fs fd 000010'      => MUL_S(fd, fs, ft)
+            case '10000 ft fs fd 000011'      => DIV_S(fd, fs, ft)
+            case '10000 00000 fs fd 000100'   => SQRT_S(fd, fs)
+            case '10000 00000 fs fd 000101'   => ABS_S(fd, fs)
+            case '10000 00000 fs fd 000110'   => MOV_S(fd, fs)
+            case '10000 00000 fs fd 000111'   => NEG_S(fd, fs)
+            case '10000 00000 fs fd 001001'   => TRUNC_L_S(fd, fs)
+            case '10000 00000 fs fd 001101'   => TRUNC_W_S(fd, fs)
             case '10000 ft fs 00000 110010'   => C_EQ_S(ft, fs)
 
             case '10001 ft fs fd 000000'      => ADD_D(fd, fs, ft)
