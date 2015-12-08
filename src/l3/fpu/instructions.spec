@@ -51,6 +51,9 @@ dword IntToDWordMIPS(v::int) =
 bool FP64_Unordered(a::dword, b::dword) =
     FP64_IsNan(a) or FP64_IsNan(b)
 
+bool FP32_Unordered(a::word, b::word) =
+    FP32_IsNan(a) or FP32_IsNan(b)
+
 -----------------------------------
 -- ABS.D fd, fs
 -----------------------------------
@@ -82,58 +85,118 @@ define COP1 > ADD_S (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
--- C.F.D fd, fs
+-- BC1F offset
 -----------------------------------
-define COP1 > C_F_D(ft::reg, fs::reg) =
+define COP1 > BC1F(i::bits(16)) =
+    if not fcsr.C then
+        BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
+    else
+        CheckBranch
+
+-----------------------------------
+-- BC1T offset
+-----------------------------------
+define COP1 > BC1T(i::bits(16)) =
+    if fcsr.C then
+        BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
+    else
+        CheckBranch
+
+--------------------------------
+-- C.F.D fs, ft
+-----------------------------------
+define COP1 > C_F_D(fs::reg, ft::reg) =
+    fcsr.C <- false
+
+--------------------------------
+-- C.F.S fs, ft
+-----------------------------------
+define COP1 > C_F_S(fs::reg, ft::reg) =
     fcsr.C <- false
 
 -----------------------------------
--- C.UN.D fd, fs
+-- C.UN.D fs, ft
 -----------------------------------
-define COP1 > C_UN_D(ft::reg, fs::reg) =
-    fcsr.C <- FP64_Unordered(FGR(ft), FGR(fs))
+define COP1 > C_UN_D(fs::reg, ft::reg) =
+    fcsr.C <- FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
--- C.EQ.D fd, fs
+-- C.UN.S fs, ft
 -----------------------------------
-define COP1 > C_EQ_D(ft::reg, fs::reg) =
-    fcsr.C <- FP64_Equal(FGR(ft), FGR(fs))
+define COP1 > C_UN_S(fs::reg, ft::reg) =
+    fcsr.C <- FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
--- C.UEQ.D fd, fs
+-- C.EQ.D fs, ft
 -----------------------------------
-define COP1 > C_UEQ_D(ft::reg, fs::reg) =
-    fcsr.C <- FP64_Equal(FGR(ft), FGR(fs)) or FP64_Unordered(FGR(ft), FGR(fs))
+define COP1 > C_EQ_D(fs::reg, ft::reg) =
+    fcsr.C <- FP64_Equal(FGR(fs), FGR(ft))
 
 -----------------------------------
--- C.OLT.D fd, fs
+-- C.EQ.S fs, ft
 -----------------------------------
-define COP1 > C_OLT_D(ft::reg, fs::reg) =
-    fcsr.C <- FP64_LessThan(FGR(ft), FGR(fs))
+define COP1 > C_EQ_S(fs::reg, ft::reg) =
+    fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
--- C.ULT.D fd, fs
+-- C.UEQ.D fs, ft
 -----------------------------------
-define COP1 > C_ULT_D(ft::reg, fs::reg) =
-    fcsr.C <- not FP64_GreaterEqual(FGR(ft), FGR(fs))
+define COP1 > C_UEQ_D(fs::reg, ft::reg) =
+    fcsr.C <- FP64_Equal(FGR(fs), FGR(ft)) or FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
--- C.OLE.D fd, fs
+-- C.UEQ.S fs, ft
 -----------------------------------
-define COP1 > C_OLE_D(ft::reg, fs::reg) =
-    fcsr.C <- FP64_LessEqual(FGR(ft), FGR(fs))
+define COP1 > C_UEQ_S(fs::reg, ft::reg) =
+    fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>) or FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
--- C.ULE.D fd, fs
+-- C.OLT.D fs, ft
 -----------------------------------
-define COP1 > C_ULE_D(ft::reg, fs::reg) =
-    fcsr.C <- not FP64_GreaterThan(FGR(ft), FGR(fs))
+define COP1 > C_OLT_D(fs::reg, ft::reg) =
+    fcsr.C <- FP64_LessThan(FGR(fs), FGR(ft))
 
 -----------------------------------
--- C.EQ.S fd, fs
+-- C.OLT.S fs, ft
 -----------------------------------
-define COP1 > C_EQ_S(ft::reg, fs::reg) =
-    nothing -- XXX: TO DO
+define COP1 > C_OLT_S(fs::reg, ft::reg) =
+    fcsr.C <- FP32_LessThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
+
+-----------------------------------
+-- C.ULT.D fs, ft
+-----------------------------------
+define COP1 > C_ULT_D(fs::reg, ft::reg) =
+    fcsr.C <- not FP64_GreaterEqual(FGR(fs), FGR(ft))
+
+-----------------------------------
+-- C.ULT.S fs, ft
+-----------------------------------
+define COP1 > C_ULT_S(fs::reg, ft::reg) =
+    fcsr.C <- not FP32_GreaterEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+
+-----------------------------------
+-- C.OLE.D fs, ft
+-----------------------------------
+define COP1 > C_OLE_D(fs::reg, ft::reg) =
+    fcsr.C <- FP64_LessEqual(FGR(fs), FGR(ft))
+
+-----------------------------------
+-- C.OLE.S fs, ft
+-----------------------------------
+define COP1 > C_OLE_S(fs::reg, ft::reg) =
+    fcsr.C <- FP32_LessEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+
+-----------------------------------
+-- C.ULE.D fs, ft
+-----------------------------------
+define COP1 > C_ULE_D(fs::reg, ft::reg) =
+    fcsr.C <- not FP64_GreaterThan(FGR(fs), FGR(ft))
+
+-----------------------------------
+-- C.ULE.S fs, ft
+-----------------------------------
+define COP1 > C_ULE_S(fs::reg, ft::reg) =
+    fcsr.C <- not FP32_GreaterThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- CEIL.L.D fd, fs
@@ -146,10 +209,30 @@ define COP1 > CEIL_L_D(fd::reg, fs::reg) =
     }
 
 -----------------------------------
+-- CEIL.L.S fd, fs
+-----------------------------------
+define COP1 > CEIL_L_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
 -- CEIL.W.D fd, fs
 -----------------------------------
 define COP1 > CEIL_W_D(fd::reg, fs::reg) =
     FGR(fd) <- match FP64_ToInt(roundTowardPositive, FGR(fs))
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
+
+-----------------------------------
+-- CEIL.W.S fd, fs
+-----------------------------------
+define COP1 > CEIL_W_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
     {
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64
@@ -185,6 +268,12 @@ define COP1 > CVT_S_D(fd::reg, fs::reg) =
     FGR(fd) <- SignExtend(FP64_ToFP32(roundTiesToEven, FGR(fs)))
 
 -----------------------------------
+-- CVT.S.L fd, fs
+-----------------------------------
+define COP1 > CVT_S_L(fd::reg, fs::reg) =
+    FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)]::int))
+
+-----------------------------------
 -- CVT.S.W fd, fs
 -----------------------------------
 define COP1 > CVT_S_W(fd::reg, fs::reg) =
@@ -218,10 +307,30 @@ define COP1 > FLOOR_L_D(fd::reg, fs::reg) =
     }
 
 -----------------------------------
+-- FLOOR.L.S fd, fs
+-----------------------------------
+define COP1 > FLOOR_L_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
 -- FLOOR.W.D fd, fs
 -----------------------------------
 define COP1 > FLOOR_W_D(fd::reg, fs::reg) =
     FGR(fd) <- match FP64_ToInt(roundTowardNegative, FGR(fs))
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
+
+-----------------------------------
+-- FLOOR.W.S fd, fs
+-----------------------------------
+define COP1 > FLOOR_W_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
     {
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64
@@ -316,6 +425,16 @@ define COP1 > ROUND_L_D(fd::reg, fs::reg) =
     }
 
 -----------------------------------
+-- ROUND.L.S fd, fs
+-----------------------------------
+define COP1 > ROUND_L_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
 -- ROUND.W.D fd, fs
 -----------------------------------
 define COP1 > ROUND_W_D(fd::reg, fs::reg) =
@@ -324,6 +443,22 @@ define COP1 > ROUND_W_D(fd::reg, fs::reg) =
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64
     }
+
+-----------------------------------
+-- ROUND.W.S fd, fs
+-----------------------------------
+define COP1 > ROUND_W_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
+
+-----------------------------------
+-- SDC1 rb, ft, i
+-----------------------------------
+define COP1 > SDC1 (ft::reg, i::bits(16), rb::reg) =
+    nothing -- XXX : TO DO
 
 -----------------------------------
 -- SQRT.D fd, fs, ft
@@ -394,7 +529,6 @@ define COP1 > TRUNC_W_S(fd::reg, fs::reg) =
 -----------------------------------
 define COP1 > DMFC1 (rt::reg, fs::reg) =
     GPR(rt) <- FGR(fs)
-
 
 -----------------------------------
 -- DMTC1 rt, fs
