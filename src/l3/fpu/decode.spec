@@ -83,3 +83,11 @@ instruction COP1Decode (v::bits(26)) =
             case _                            => UnknownFPInstruction
         }
     )
+
+instruction LDC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(LDC1(base, offset, ft))
+
+instruction LWC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(LWC1(base, offset, ft))
+
+instruction SDC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SDC1(base, offset, ft))
+
+instruction SWC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SWC1(base, offset, ft))

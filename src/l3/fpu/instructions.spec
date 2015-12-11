@@ -262,6 +262,26 @@ define COP1 > CVT_D_W(fd::reg, fs::reg) =
 }
 
 -----------------------------------
+-- CVT.L.D fd, fs
+-----------------------------------
+define COP1 > CVT_L_D(fd::reg, fs::reg) =
+    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
+-- CVT.L.S fd, fs
+-----------------------------------
+define COP1 > CVT_L_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+    {
+        case Some(x) => IntToDWordMIPS(x)
+        case None => 0x7fffffffffffffff`64
+    }
+
+-----------------------------------
 -- CVT.S.D fd, fs
 -----------------------------------
 define COP1 > CVT_S_D(fd::reg, fs::reg) =
@@ -283,6 +303,26 @@ define COP1 > CVT_S_W(fd::reg, fs::reg) =
 
     FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int))
 }
+
+-----------------------------------
+-- CVT.W.D fd, fs
+-----------------------------------
+define COP1 > CVT_W_D(fd::reg, fs::reg) =
+    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
+
+-----------------------------------
+-- CVT.W.S fd, fs
+-----------------------------------
+define COP1 > CVT_W_S(fd::reg, fs::reg) =
+    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+    {
+        case Some(x) => SignExtend(IntToWordMIPS(x))
+        case None => 0x7fffffff`64
+    }
 
 -----------------------------------
 -- DIV.D fd, fs, ft
@@ -335,6 +375,33 @@ define COP1 > FLOOR_W_S(fd::reg, fs::reg) =
         case Some(x) => SignExtend(IntToWordMIPS(x))
         case None => 0x7fffffff`64
     }
+
+-----------------------------------
+-- LDC1 ft, offset(base)
+-----------------------------------
+define COP1 > LDC1 (ft::reg, offset::bits(16), base::reg) =
+{
+    vAddr = SignExtend (offset) + GPR(base);
+    memdoubleword =
+        LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+    when not exceptionSignalled do FGR(ft) <- memdoubleword
+}
+
+-----------------------------------
+-- LWC1 ft, offset(base)
+-----------------------------------
+define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
+{
+    vAddr = SignExtend (offset) + GPR(base);
+    memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
+    when not exceptionSignalled do
+    {
+        byte = vAddr<2:0> ?? (BigEndianCPU : '00');
+        memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
+        -- The upper 32 bits are UNDEFINED in the MIPS ISA
+        FGR(ft) <- SignExtend(memword)
+    }
+}
 
 -----------------------------------
 -- MOV.D fd, fs
@@ -455,10 +522,16 @@ define COP1 > ROUND_W_S(fd::reg, fs::reg) =
     }
 
 -----------------------------------
--- SDC1 rb, ft, i
+-- SDC1 ft, offset(base)
 -----------------------------------
-define COP1 > SDC1 (ft::reg, i::bits(16), rb::reg) =
-    nothing -- XXX : TO DO
+define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
+{
+    vAddr = SignExtend (offset) + GPR(base);
+    datadoubleword = FGR(ft);
+    _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
+    nothing
+}
+
 
 -----------------------------------
 -- SQRT.D fd, fs, ft
@@ -483,6 +556,15 @@ define COP1 > SUB_D (fd::reg, fs::reg, ft::reg) =
 -----------------------------------
 define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
     FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+
+-----------------------------------
+-- SWC1 ft, offset(base)
+-----------------------------------
+define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
+{
+    vAddr = SignExtend (offset) + GPR(base);
+    nothing -- XXX: TO DO
+}
 
 -----------------------------------
 -- TRUNC.L.D fd, fs
@@ -567,7 +649,18 @@ define COP1 > CFC1(rt::reg, fs::reg) =
 define COP1 > CTC1(rt:: reg, fs::reg) = 
     match (fs)
     {
-        case 31 => &fcsr <- GPR(rt)<31:0>
+        case 31 =>
+        {
+            &fcsr <- GPR(rt)<31:0>;
+            -- FS is R/W in the MIPS ISA, but we don't implement it
+            fcsr.FS <- false;
+            -- ABS2008 is read-only in the MIPS ISA
+            fcsr.ABS2008 <- false;
+            -- NAN2008 is read-only in the MIPS ISA
+            fcsr.NAN2008 <- true;
+            -- RM is R/w in the MIPS ISA, but we don't implement it
+            fcsr.RM <- 0
+        }
         case _  => #UNPREDICTABLE("Unsupported floating point control register")
     }
 
