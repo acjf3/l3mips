@@ -388,6 +388,17 @@ define COP1 > LDC1 (ft::reg, offset::bits(16), base::reg) =
 }
 
 -----------------------------------
+-- LDXC1 fd, index(base)
+-----------------------------------
+define COP1 > LDXC1 (fd::reg, index::reg, base::reg) =
+{
+    vAddr = GPR(index) + GPR(base);
+    memdoubleword =
+        LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+    when not exceptionSignalled do FGR(fd) <- memdoubleword
+}
+
+-----------------------------------
 -- LWC1 ft, offset(base)
 -----------------------------------
 define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
@@ -404,6 +415,20 @@ define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
 }
 
 -----------------------------------
+-- MADD.D fd, fr, fs, ft (MIPS IV)
+-----------------------------------
+define COP1 > MADD_D (fd::reg, fr::reg, fs::reg, ft::reg) =
+    FGR(fd) <- FP64_Add(roundTiesToEven,
+        FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)), FGR(fr))
+
+-----------------------------------
+-- MADD.S fd, fr, fs, ft (MIPS IV)
+-----------------------------------
+define COP1 > MADD_S (fd::reg, fr::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven,
+        FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>), FGR(fr)<31:0>))
+
+-----------------------------------
 -- MOV.D fd, fs
 -----------------------------------
 define COP1 > MOV_D (fd::reg, fs::reg) =
@@ -416,9 +441,27 @@ define COP1 > MOV_S (fd::reg, fs::reg) =
     FGR(fd) <- FGR(fs)
 
 -----------------------------------
+-- MOVF rd, rs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVF(rd::reg, rs::reg) =
+    if not fcsr.C then
+        GPR(rd) <- GPR(rs)
+    else
+        nothing
+
+-----------------------------------
 -- MOVF.D fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVF_D(fd::reg, fs::reg) =
+    if not fcsr.C then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MOVF.S fd, fs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVF_S(fd::reg, fs::reg) =
     if not fcsr.C then
         FGR(fd) <- FGR(fs)
     else
@@ -434,9 +477,36 @@ define COP1 > MOVN_D(fd::reg, fs::reg, rt::reg) =
         nothing
 
 -----------------------------------
+-- MOVN.S fd, fs, rt (MIPS IV)
+-----------------------------------
+define COP1 > MOVN_S(fd::reg, fs::reg, rt::reg) =
+    if GPR(rt) <> 0 then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MOVT rd, rs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVT(rd::reg, rs::reg) =
+    if fcsr.C then
+        GPR(rd) <- GPR(rs)
+    else
+        nothing
+
+-----------------------------------
 -- MOVT.D fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVT_D(fd::reg, fs::reg) =
+    if fcsr.C then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MOVT.S fd, fs, cc (MIPS IV)
+-----------------------------------
+define COP1 > MOVT_S(fd::reg, fs::reg) =
     if fcsr.C then
         FGR(fd) <- FGR(fs)
     else
@@ -450,6 +520,29 @@ define COP1 > MOVZ_D(fd::reg, fs::reg, rt::reg) =
         FGR(fd) <- FGR(fs)
     else
         nothing
+
+-----------------------------------
+-- MOVZ.S fd, fs, rt (MIPS IV)
+-----------------------------------
+define COP1 > MOVZ_S(fd::reg, fs::reg, rt::reg) =
+    if GPR(rt) == 0 then
+        FGR(fd) <- FGR(fs)
+    else
+        nothing
+
+-----------------------------------
+-- MSUB.D fd, fr, fs, ft (MIPS IV)
+-----------------------------------
+define COP1 > MSUB_D (fd::reg, fr::reg, fs::reg, ft::reg) =
+    FGR(fd) <- FP64_Sub(roundTiesToEven,
+        FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)), FGR(fr))
+
+-----------------------------------
+-- MSUB.S fd, fr, fs, ft (MIPS IV)
+-----------------------------------
+define COP1 > MSUB_S (fd::reg, fr::reg, fs::reg, ft::reg) =
+    FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven,
+        FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>), FGR(fr)<31:0>))
 
 -----------------------------------
 -- MUL.D fd, fs, ft
@@ -532,6 +625,16 @@ define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
     nothing
 }
 
+-----------------------------------
+-- SDXC1 fs, index(base)
+-----------------------------------
+define COP1 > SDXC1 (fs::reg, index::reg, base::reg) =
+{
+    vAddr = GPR(index) + GPR(base);
+    datadoubleword = FGR(fs);
+    _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
+    nothing
+}
 
 -----------------------------------
 -- SQRT.D fd, fs, ft
@@ -649,6 +752,8 @@ define COP1 > CFC1(rt::reg, fs::reg) =
 define COP1 > CTC1(rt:: reg, fs::reg) = 
     match (fs)
     {
+        -- Floating Point Condition Codes Register (not in MIPS III)
+        case 25 => fcsr.C <- GPR(rt)<0>
         case 31 =>
         {
             &fcsr <- GPR(rt)<31:0>;

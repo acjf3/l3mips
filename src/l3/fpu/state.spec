@@ -31,6 +31,16 @@ register FCSR :: word
 
 declare
 {
-    FGR :: reg -> bits(64)
+    fgr :: reg -> bits(64)
     fcsr :: FCSR
+}
+
+component FGR(n::reg)::dword
+{
+    value = fgr(n)
+    assign value =
+    {
+        fgr(n) <- value;
+        when 2 <= trace_level do mark_log (2, log_w_fgr (n, value))
+    }
 }

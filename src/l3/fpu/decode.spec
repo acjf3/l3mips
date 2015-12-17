@@ -34,6 +34,10 @@ instruction COP1Decode (v::bits(26)) =
             case '10000 00000 fs fd 001101'   => TRUNC_W_S(fd, fs)
             case '10000 00000 fs fd 001110'   => CEIL_W_S(fd, fs)
             case '10000 00000 fs fd 001111'   => FLOOR_W_S(fd, fs)
+            case '10000 000 00 fs fd 010001'  => MOVF_S(fd, fs)
+            case '10000 000 01 fs fd 010001'  => MOVT_S(fd, fs)
+            case '10000 rt fs fd    010010'   => MOVZ_S(fd, fs, rt)
+            case '10000 rt fs fd    010011'   => MOVN_S(fd, fs, rt)
             case '10000 ft fs 00000 110000'   => C_F_S(fs, ft)
             case '10000 ft fs 00000 110001'   => C_UN_S(fs, ft)
             case '10000 ft fs 00000 110010'   => C_EQ_S(ft, fs)
@@ -59,8 +63,8 @@ instruction COP1Decode (v::bits(26)) =
             case '10001 00000 fs fd 001101'   => TRUNC_W_D(fd, fs)
             case '10001 00000 fs fd 001110'   => CEIL_W_D(fd, fs)
             case '10001 00000 fs fd 001111'   => FLOOR_W_D(fd, fs)
-            case '10001 000 00 fs fd 010001'   => MOVF_D(fd, fs)
-            case '10001 000 01 fs fd 010001'   => MOVT_D(fd, fs)
+            case '10001 000 00 fs fd 010001'  => MOVF_D(fd, fs)
+            case '10001 000 01 fs fd 010001'  => MOVT_D(fd, fs)
             case '10001 rt fs fd    010010'   => MOVZ_D(fd, fs, rt)
             case '10001 rt fs fd    010011'   => MOVN_D(fd, fs, rt)
             case '10001 ft fs 00000 110000'   => C_F_D(fs, ft)
@@ -80,6 +84,12 @@ instruction COP1Decode (v::bits(26)) =
             case '10100 00000 fs fd 100001'   => CVT_D_W(fd, fs)
             case '10101 00000 fs fd 100001'   => CVT_D_L(fd, fs)
 
+            case '10000 00000 fs fd 100100'   => CVT_W_S(fd, fs)
+            case '10001 00000 fs fd 100100'   => CVT_W_D(fd, fs)
+
+            case '10000 00000 fs fd 100101'   => CVT_L_S(fd, fs)
+            case '10001 00000 fs fd 100101'   => CVT_L_D(fd, fs)
+
             case _                            => UnknownFPInstruction
         }
     )
@@ -91,3 +101,18 @@ instruction LWC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(LWC1(base, 
 instruction SDC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SDC1(base, offset, ft))
 
 instruction SWC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SWC1(base, offset, ft))
+
+instruction COP3Decode (v::bits(26)) =
+    COP1
+    (
+        match v
+        {
+            case 'base index 00000 fd 000001' => LDXC1(fd, index, base)
+            case 'base index fs 00000 001001' => SDXC1(fs, index, base)
+            case 'fr ft fs fd         100000' => MADD_S(fd, fr, fs, ft)
+            case 'fr ft fs fd         100001' => MADD_D(fd, fr, fs, ft)
+            case 'fr ft fs fd         101000' => MSUB_S(fd, fr, fs, ft)
+            case 'fr ft fs fd         101001' => MSUB_D(fd, fr, fs, ft)
+            case _                            => UnknownFPInstruction
+        }
+    )
