@@ -139,6 +139,7 @@ string instructionToString (i::instruction) =
      case ERET                           => "eret"
      case RDHWR (rt, rd)                 => op2r ("rdhwr", rt, rd)
      case WAIT                           => "wait"
+     case COP1 (_)                       => COP1InstructionToString(i)
      case COP2 (_)                       => COP2InstructionToString(i)
      case LWC2 (_)                       => LWC2InstructionToString(i)
      case LDC2 (_)                       => LDC2InstructionToString(i)

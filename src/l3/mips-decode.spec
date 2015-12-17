@@ -18,6 +18,8 @@ instruction Decode000_000 (s::int, t::int, i::int) =
    match s, t, d, i, r
    {
       case 0, _, _, _, 0b000_000 => Shift (SLL (rt, rd, imm5))
+--      case _, 0, _, _, 0b000_001 => COP1(MOVF(rd, rs))
+--      case _, 1, _, _, 0b000_001 => COP1(MOVT(rd, rs))
       case 0, _, _, _, 0b000_010 => Shift (SRL (rt, rd, imm5))
       case 0, _, _, _, 0b000_011 => Shift (SRA (rt, rd, imm5))
       case _, _, _, 0, 0b000_100 => Shift (SLLV (rs, rt, rd))
@@ -191,7 +193,9 @@ instruction Decode (w::word) =
       case 0b001_111 =>
          if s == 0 then ArithI (LUI ([t], [i])) else ReservedInstruction
       case 0b010_000 => Decode010_000 (r)
+      case 0b010_001 => COP1Decode ([r])
       case 0b010_010 => COP2Decode ([r])
+      case 0b010_011 => COP3Decode ([r])
       case 0b010_100 => Branch (BEQL ([s], [t], [i]))
       case 0b010_101 => Branch (BNEL ([s], [t], [i]))
       case 0b010_110 =>
@@ -233,12 +237,16 @@ instruction Decode (w::word) =
       case 0b111_100 => Store (SCD ([s], [t], [i]))
       case 0b111_111 => Store (SD ([s], [t], [i]))
       -- Coprocessor 2 and reserved instructions
+      case 0b110_001 => LWC1Decode([t]`5, [i]`16, [s]`5)
       case 0b110_010 =>
          match [i] { case 'rt oset v' => LWC2Decode ([s], [t], rt, oset, v) }
+      case 0b111_001 => SWC1Decode([t]`5, [i]`16, [s]`5)
       case 0b111_010 =>
          match [i] { case 'rt oset v' => SWC2Decode ([s], [t], rt, oset, v) }
+      case 0b110_101 => LDC1Decode([t]`5, [i]`16, [s]`5)
       case 0b110_110 =>
          match [i] { case 'rt offset' => LDC2Decode ([s], [t], rt, offset) }
+      case 0b111_101 => SDC1Decode([t]`5, [i]`16, [s]`5)
       case 0b111_110 =>
          match [i] { case 'rt offset' => SDC2Decode ([s], [t], rt, offset) }
       case _ => ReservedInstruction
