@@ -58,18 +58,35 @@ endif
 L3SRCBASE+=mips-memaccess.spec
 endif
 L3SRCBASE+=mips-sml.spec
+ifdef FPU
+L3SRCBASE+=fpu/fpu-log.spec
+L3SRCBASE+=fpu/state.spec
+L3SRCBASE+=fpu/instructions.spec
+else
+L3SRCBASE+=cp1-null/instructions.spec
+endif
 ifdef CAP
 L3SRCBASE+=cheri/instructions.spec
 else
 L3SRCBASE+=cp2-null/instructions.spec
 endif
 L3SRCBASE+=mips-instructions.spec
+ifdef FPU
+L3SRCBASE+=fpu/decode.spec
+else
+L3SRCBASE+=cp1-null/decode.spec
+endif
 ifdef CAP
 L3SRCBASE+=cheri/decode.spec
 else
 L3SRCBASE+=cp2-null/decode.spec
 endif
 L3SRCBASE+=mips-decode.spec
+ifdef FPU
+L3SRCBASE+=fpu/encode.spec
+else
+L3SRCBASE+=cp1-null/encode.spec
+endif
 ifdef CAP
 L3SRCBASE+=cheri/encode.spec
 else
@@ -110,19 +127,17 @@ L2SIZE ?= 65536
 L2WAYS ?= 1
 L2LINESIZE ?= 64
 
+NAME_STR=l3mips
+ifdef FPU
+NAME_STR:=$(NAME_STR)-fpu
+endif
 ifdef CAP
+NAME_STR:=$(NAME_STR)-cheri_$(CAP)
+endif
 ifdef CACHE
-	SIM ?= l3mips-cheri-$(CAP)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
-else
-	SIM ?= l3mips-cheri-$(CAP)
+NAME_STR:=$(NAME_STR)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
 endif
-else
-ifdef CACHE
-	SIM ?= l3mips-caches
-else
-	SIM ?= l3mips
-endif
-endif
+SIM ?= $(NAME_STR)
 
 SIM_PROFILE ?= l3mips_prof
 SIM_COVERAGE ?= l3mips_coverage
