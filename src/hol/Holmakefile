@@ -1,5 +1,5 @@
-INCLUDES = ${HOLDIR}/examples/l3-machine-code/common ${HOLDIR}/examples/l3-machine-code/base
+INCLUDES = ${HOLDIR}/examples/l3-machine-code/common ${HOLDIR}/examples/l3-machine-code
 
 ifdef POLY
-HOLHEAP = $(HOLDIR)/examples/l3-machine-code/base/base-heap
+HOLHEAP = $(HOLDIR)/examples/l3-machine-code/l3-heap
 endif
