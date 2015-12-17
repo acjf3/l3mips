@@ -6,32 +6,42 @@
 # /!\ inclusion order matters /!\
 #######################################
 L3SRCDIR=src/l3
+
 L3SRCBASE+=mips-print.spec
 ifdef CAP
 L3SRCBASE+=cheri/tlb-types.spec
+else
+L3SRCBASE+=tlb/types.spec
+endif
 L3SRCBASE+=mips-types.spec
 L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
+ifdef CAP
 ifeq ($(CAP), c128)
 L3SRCBASE+=cheri/cap128-compressed-types.spec
 else ifeq ($(CAP), p64)
-L3SRCBASE+=cheri/cap256-precise.spec
-L3SRCBASE+=cheri/cap-precise-64.spec
+L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-64.spec
 else ifeq ($(CAP), p128)
-L3SRCBASE+=cheri/cap256-precise.spec
-L3SRCBASE+=cheri/cap-precise-128.spec
+L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-128.spec
 else
-L3SRCBASE+=cheri/cap256-precise.spec
-L3SRCBASE+=cheri/cap-precise-256.spec
+L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-256.spec
 endif
 L3SRCBASE+=cheri/state.spec
 L3SRCBASE+=cheri/exception.spec
+else
+L3SRCBASE+=mips-exception.spec
+endif
 L3SRCBASE+=tlb/base.spec
+ifdef CAP
 L3SRCBASE+=cheri/tlb-translate.spec
+else
+L3SRCBASE+=tlb/translate.spec
+endif
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
+ifdef CAP
 ifdef CACHE
 L3SRCBASE+=cheri/memory-caches.spec
 else
@@ -39,44 +49,42 @@ L3SRCBASE+=cheri/memory.spec
 endif
 L3SRCBASE+=cheri/memory-sml-helpers.spec
 L3SRCBASE+=cheri/memaccess.spec
-L3SRCBASE+=mips-sml.spec
-L3SRCBASE+=cheri/instructions.spec
-L3SRCBASE+=mips-instructions.spec
-L3SRCBASE+=cheri/decode.spec
-L3SRCBASE+=mips-decode.spec
-L3SRCBASE+=cheri/encode.spec
-L3SRCBASE+=mips-encode.spec
-L3SRCBASE+=cheri/next.spec
-L3SRCBASE+=cheri/init.spec
 else
-L3SRCBASE+=tlb/types.spec
-L3SRCBASE+=mips-types.spec
-L3SRCBASE+=mips-log.spec
-L3SRCBASE+=mips-base.spec
-L3SRCBASE+=mips-pic.spec
-L3SRCBASE+=mips-uart.spec
-L3SRCBASE+=mips-exception.spec
-L3SRCBASE+=tlb/base.spec
-L3SRCBASE+=tlb/translate.spec
-L3SRCBASE+=tlb/instructions.spec
-L3SRCBASE+=mips-encode-utils.spec
 ifdef CACHE
 L3SRCBASE+=mips-memory-caches.spec
 else
 L3SRCBASE+=mips-memory.spec
 endif
 L3SRCBASE+=mips-memaccess.spec
+endif
 L3SRCBASE+=mips-sml.spec
+ifdef CAP
+L3SRCBASE+=cheri/instructions.spec
+else
 L3SRCBASE+=cp2-null/instructions.spec
+endif
 L3SRCBASE+=mips-instructions.spec
+ifdef CAP
+L3SRCBASE+=cheri/decode.spec
+else
 L3SRCBASE+=cp2-null/decode.spec
+endif
 L3SRCBASE+=mips-decode.spec
+ifdef CAP
+L3SRCBASE+=cheri/encode.spec
+else
 L3SRCBASE+=cp2-null/encode.spec
+endif
 L3SRCBASE+=mips-encode.spec
+ifdef CAP
+L3SRCBASE+=cheri/next.spec
+L3SRCBASE+=cheri/init.spec
+else
 L3SRCBASE+=mips-next.spec
 L3SRCBASE+=cp2-null/init.spec
 endif
 L3SRCBASE+=mips-init.spec
+
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 
 # hol / sml sources
