@@ -666,7 +666,10 @@ define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
 define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
 {
     vAddr = SignExtend (offset) + GPR(base);
-    nothing -- XXX: TO DO
+    bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
+    datadoubleword = FGR(ft) << (0n8 * [bytesel]);
+    _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE, false);
+    nothing
 }
 
 -----------------------------------
