@@ -29,7 +29,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config1.WR <- false;     -- Watch registers implemented? (true on BERI)
    CP0.Config1.CA <- false;     -- Code compression (MIPS16) implemented?
    CP0.Config1.EP <- false;     -- EJTAG implemented?
-   CP0.Config1.FP <- false;     -- FPU implemented?
+   CP0.Config1.FP <- hasCP1;    -- FPU implemented?
 
    -- Configuration register 2 (mimic BERI)
    CP0.Config2.M  <- true;      -- true if config register 3 exists
@@ -60,6 +60,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config6.LTLB <- false;   -- Enable large TLB?
 
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)
+   CP0.Status.FR <- hasCP1;
    CP0.Status.BEV <- true;
    CP0.Status.KSU <- '00';
    CP0.Status.EXL <- false;

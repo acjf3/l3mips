@@ -93,6 +93,11 @@ else
 L3SRCBASE+=cp2-null/encode.spec
 endif
 L3SRCBASE+=mips-encode.spec
+ifdef FPU
+L3SRCBASE+=fpu/init.spec
+else
+L3SRCBASE+=cp1-null/init.spec
+endif
 ifdef CAP
 L3SRCBASE+=cheri/next.spec
 L3SRCBASE+=cheri/init.spec
