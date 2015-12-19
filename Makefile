@@ -127,10 +127,10 @@ SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 # memory subsystem params
 L1SIZE ?= 16384
 L1WAYS ?= 1
-L1LINESIZE ?= 32
+L1LINESIZE ?= 128
 L2SIZE ?= 65536
-L2WAYS ?= 1
-L2LINESIZE ?= 64
+L2WAYS ?= 4
+L2LINESIZE ?= 128
 
 NAME_STR=l3mips
 ifdef FPU
