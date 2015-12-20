@@ -380,12 +380,15 @@ define COP1 > FLOOR_W_S(fd::reg, fs::reg) =
 -- LDC1 ft, offset(base)
 -----------------------------------
 define COP1 > LDC1 (ft::reg, offset::bits(16), base::reg) =
-{
-    vAddr = SignExtend (offset) + GPR(base);
-    memdoubleword =
-        LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
-    when not exceptionSignalled do FGR(ft) <- memdoubleword
-}
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = SignExtend (offset) + GPR(base);
+        memdoubleword =
+            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+        when not exceptionSignalled do FGR(ft) <- memdoubleword
+    }
 
 -----------------------------------
 -- LDXC1 fd, index(base)
@@ -402,17 +405,20 @@ define COP1 > LDXC1 (fd::reg, index::reg, base::reg) =
 -- LWC1 ft, offset(base)
 -----------------------------------
 define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
-{
-    vAddr = SignExtend (offset) + GPR(base);
-    memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
-    when not exceptionSignalled do
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
     {
-        byte = vAddr<2:0> ?? (BigEndianCPU : '00');
-        memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
-        -- The upper 32 bits are UNDEFINED in the MIPS ISA
-        FGR(ft) <- SignExtend(memword)
+        vAddr = SignExtend (offset) + GPR(base);
+        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
+        when not exceptionSignalled do
+        {
+            byte = vAddr<2:0> ?? (BigEndianCPU : '00');
+            memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
+            -- The upper 32 bits are UNDEFINED in the MIPS ISA
+            FGR(ft) <- SignExtend(memword)
+        }
     }
-}
 
 -----------------------------------
 -- MADD.D fd, fr, fs, ft (MIPS IV)
@@ -618,12 +624,15 @@ define COP1 > ROUND_W_S(fd::reg, fs::reg) =
 -- SDC1 ft, offset(base)
 -----------------------------------
 define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
-{
-    vAddr = SignExtend (offset) + GPR(base);
-    datadoubleword = FGR(ft);
-    _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
-    nothing
-}
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = SignExtend (offset) + GPR(base);
+        datadoubleword = FGR(ft);
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
+        nothing
+    }
 
 -----------------------------------
 -- SDXC1 fs, index(base)
@@ -664,13 +673,16 @@ define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
 -- SWC1 ft, offset(base)
 -----------------------------------
 define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
-{
-    vAddr = SignExtend (offset) + GPR(base);
-    bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
-    datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-    _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE, false);
-    nothing
-}
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = SignExtend (offset) + GPR(base);
+        bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
+        datadoubleword = FGR(ft) << (0n8 * [bytesel]);
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE, false);
+        nothing
+    }
 
 -----------------------------------
 -- TRUNC.L.D fd, fs
@@ -716,61 +728,79 @@ define COP1 > TRUNC_W_S(fd::reg, fs::reg) =
 -- DMFC1 rt, fs
 -----------------------------------
 define COP1 > DMFC1 (rt::reg, fs::reg) =
-    GPR(rt) <- FGR(fs)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        GPR(rt) <- FGR(fs)
 
 -----------------------------------
 -- DMTC1 rt, fs
 -----------------------------------
 define COP1 > DMTC1 (rt::reg, fs::reg) =
-    FGR(fs) <- GPR(rt)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fs) <- GPR(rt)
 
 -----------------------------------
 -- MFC1 rt, fs
 -----------------------------------
 define COP1 > MFC1 (rt::reg, fs::reg) =
-    -- In the MIPS ISA, the upper 32 bits of FGR(fs) are UNDEFINED.
-    GPR(rt) <- SignExtend(FGR(fs)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        -- In the MIPS ISA, the upper 32 bits of FGR(fs) are UNDEFINED.
+        GPR(rt) <- SignExtend(FGR(fs)<31:0>)
 
 -----------------------------------
 -- MTC1 rt, fs
 -----------------------------------
 define COP1 > MTC1 (rt::reg, fs::reg) =
-    FGR(fs) <- SignExtend(GPR(rt)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fs) <- SignExtend(GPR(rt)<31:0>)
 
 -----------------------------------
 -- CFC1 rt, fs
 -----------------------------------
 define COP1 > CFC1(rt::reg, fs::reg) =
-    GPR(rt) <- match fs
-    {
-        -- Floating Point Condition Codes Register (not in MIPS III)
-        case 25 => ZeroExtend([fcsr.C]`1)
-        case 31 => SignExtend(&fcsr)
-        case _  => #UNPREDICTABLE("Unsupported floating point control register")
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        GPR(rt) <- match fs
+        {
+            -- Floating Point Condition Codes Register (not in MIPS III)
+            case 25 => ZeroExtend([fcsr.C]`1)
+            case 31 => SignExtend(&fcsr)
+            case _  => #UNPREDICTABLE("Unsupported floating point control register")
+        }
 
 -----------------------------------
 -- CTC1 rt, fs
 -----------------------------------
 define COP1 > CTC1(rt:: reg, fs::reg) = 
-    match (fs)
-    {
-        -- Floating Point Condition Codes Register (not in MIPS III)
-        case 25 => fcsr.C <- GPR(rt)<0>
-        case 31 =>
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        match (fs)
         {
-            &fcsr <- GPR(rt)<31:0>;
-            -- FS is R/W in the MIPS ISA, but we don't implement it
-            fcsr.FS <- false;
-            -- ABS2008 is read-only in the MIPS ISA
-            fcsr.ABS2008 <- false;
-            -- NAN2008 is read-only in the MIPS ISA
-            fcsr.NAN2008 <- true;
-            -- RM is R/w in the MIPS ISA, but we don't implement it
-            fcsr.RM <- 0
+            -- Floating Point Condition Codes Register (not in MIPS III)
+            case 25 => fcsr.C <- GPR(rt)<0>
+            case 31 =>
+            {
+                &fcsr <- GPR(rt)<31:0>;
+                -- FS is R/W in the MIPS ISA, but we don't implement it
+                fcsr.FS <- false;
+                -- ABS2008 is read-only in the MIPS ISA
+                fcsr.ABS2008 <- false;
+                -- NAN2008 is read-only in the MIPS ISA
+                fcsr.NAN2008 <- true;
+                -- RM is R/w in the MIPS ISA, but we don't implement it
+                fcsr.RM <- 0
+            }
+            case _  => #UNPREDICTABLE("Unsupported floating point control register")
         }
-        case _  => #UNPREDICTABLE("Unsupported floating point control register")
-    }
 
 -------------------------------------------------------------
 -- Unknown Floating Point Instruction.
