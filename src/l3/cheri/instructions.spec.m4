@@ -622,7 +622,6 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
     {
         var access;
         var size;
-        var aligned;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
         var addr = cursor + GPR(rt) + SignExtend(offset);
         var bytesel = '000';
@@ -632,28 +631,24 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
             {
                 size    <- 1;
                 access  <- BYTE;
-                bytesel <- addr<2:0> ?? BigEndianCPU^3;
-                aligned <- true
+                bytesel <- addr<2:0> ?? BigEndianCPU^3
             }
             case 1 =>
             {
                 size    <- 2;
                 access  <- HALFWORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU^2 : '0');
-                aligned <- addr<0> == false
+                bytesel <- addr<2:0> ?? (BigEndianCPU^2 : '0')
             }
             case 2 =>
             {
                 size    <- 4;
                 access  <- WORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU : '00');
-                aligned <- addr<1:0> == 0
+                bytesel <- addr<2:0> ?? (BigEndianCPU : '00')
             }
             case 3 =>
             {
                 size    <- 8;
-                access  <- DOUBLEWORD;
-                aligned <- addr<2:0> == 0
+                access  <- DOUBLEWORD
             }
         };
         -- XXX bug in spec
@@ -662,14 +657,9 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         -- XXX bug in spec
         else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(offset) <+ getBase(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
-        else if not aligned then
-        {
-            CP0.BadVAddr <- addr;
-            SignalException(AdEL)
-        }
         else
         {
-            data = LoadMemoryCap(access, addr, DATA, LOAD, false);
+            data = LoadMemoryCap(access, true, addr, DATA, LOAD, false);
             when not exceptionSignalled do
             {
                 data_list = [data]::bool list;
@@ -732,7 +722,6 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
     {
         var access;
         var size;
-        var aligned;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
         var addr = cursor + GPR(rt) + SignExtend(offset);
         var bytesel = '000';
@@ -742,28 +731,24 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             {
                 size    <- 1;
                 access  <- BYTE;
-                bytesel <- addr<2:0> ?? BigEndianCPU^3;
-                aligned <- true
+                bytesel <- addr<2:0> ?? BigEndianCPU^3
             }
             case 1 =>
             {
                 size    <- 2;
                 access  <- HALFWORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU^2:'0');
-                aligned <- addr<0> == false
+                bytesel <- addr<2:0> ?? (BigEndianCPU^2:'0')
             }
             case 2 =>
             {
                 size    <- 4;
                 access  <- WORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU^1:'00');
-                aligned <- addr<1:0> == 0
+                bytesel <- addr<2:0> ?? (BigEndianCPU^1:'00')
             }
             case 3 =>
             {
                 size    <- 8;
-                access  <- DOUBLEWORD;
-                aligned <- addr<2:0> == 0
+                access  <- DOUBLEWORD
             }
         };
         -- XXX bug in spec
@@ -772,14 +757,9 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         -- XXX bug in spec
         else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(offset) <+ getBase(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
-        else if not aligned then
-        {
-            CP0.BadVAddr <- addr;
-            SignalException(AdES)
-        }
         else
         {
-            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), addr, DATA, STORE, false);
+            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, addr, DATA, STORE, false);
             nothing
         }
     }
@@ -883,7 +863,7 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
         SignalCapException(capExcLength,cb)
     else
     {
-        data = LoadMemoryCap(access_length, addr, DATA, LOAD, true);
+        data = LoadMemoryCap(access_length, true, addr, DATA, LOAD, true);
         when not exceptionSignalled do
         {
             data_list = [data]::bool list;
@@ -958,7 +938,7 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
     else
     {
         ret = if StoreMemoryCap(access_length, access_length,
-                                     GPR(rs), addr, DATA, STORE, true)
+                                     GPR(rs), true, addr, DATA, STORE, true)
                                      then 1 else 0;
         when not exceptionSignalled do GPR(rd) <- ret
     }

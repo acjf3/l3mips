@@ -102,53 +102,65 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 -- Data accesses
 -----------------
 
-dword LoadMemoryCap (MemType::bits(3), vAddr::vAddr, IorD::IorD,
+dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD,
                      AccessType::AccessType, link::bool) =
 {
-    tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
-    pAddr = AdjustEndian (MemType, tmp);
-    -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-    if not exceptionSignalled then
+    if needAlign and not isAligned (vAddr, MemType)
+    then {
+        when 2 <= trace_level do
+            mark_log
+                (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
+        CP0.BadVAddr <- vAddr;
+        SignalException (AdEL);
+        UNKNOWN
+    }
+    else
     {
-        a = pAddr<39:3>;
-        var ret;
-
-        var found = false;
-        if a == JTAG_UART.base_address then
+        tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
+        pAddr = AdjustEndian (MemType, tmp);
+        -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+        if not exceptionSignalled then
         {
-            found <- true;
-            ret <- flip_endian_word (JTAG_UART.&data) :
-                   flip_endian_word (JTAG_UART.&control);
-            when pAddr<2:0> == 0 do JTAG_UART_load
-        }
-        else for core in 0 .. totalCore - 1 do
-            when a >=+ PIC_base_address([core]) and
-                  a <+ PIC_base_address([core]) + 1072 do
+            a = pAddr<39:3>;
+            var ret;
+
+            var found = false;
+            if a == JTAG_UART.base_address then
             {
                 found <- true;
-                ret <- PIC_load([core], a)
-            };
+                ret <- flip_endian_word (JTAG_UART.&data) :
+                       flip_endian_word (JTAG_UART.&control);
+                when pAddr<2:0> == 0 do JTAG_UART_load
+            }
+            else for core in 0 .. totalCore - 1 do
+                when a >=+ PIC_base_address([core]) and
+                      a <+ PIC_base_address([core]) + 1072 do
+                {
+                    found <- true;
+                    ret <- PIC_load([core], a)
+                };
 
-        if link then
-        {
-            LLbit <- Some (true);
-            CP0.LLAddr <- [pAddr]
+            if link then
+            {
+                LLbit <- Some (true);
+                CP0.LLAddr <- [pAddr]
+            }
+            else
+                LLbit <- None;
+
+            when not found do
+                ret <- ReadData (a);
+
+            memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
+            when 2 <= trace_level do
+               mark_log (2, "Load of " : [[MemType]::nat+1] :
+                            " byte(s) from vAddr 0x":hex64(vAddr));
+
+            watchForLoad(pAddr, ret);
+            ret
         }
-        else
-            LLbit <- None;
-
-        when not found do
-            ret <- ReadData (a);
-
-        memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-        when 2 <= trace_level do
-           mark_log (2, "Load of " : [[MemType]::nat+1] :
-                        " byte(s) from vAddr 0x":hex64(vAddr));
-
-        watchForLoad(pAddr, ret);
-        return ret
+        else UNKNOWN
     }
-    else return UNKNOWN
 }
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
@@ -165,16 +177,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
-    else if needAlign and not isAligned (final_vAddr, MemType)
-        then {
-            when 2 <= trace_level do
-                mark_log
-                    (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
-            CP0.BadVAddr <- vAddr;
-            SignalException (AdEL);
-            UNKNOWN
-        }
-    else LoadMemoryCap(MemType, final_vAddr, IorD, AccessType, link)
+    else LoadMemoryCap(MemType, needAlign, final_vAddr, IorD, AccessType, link)
 }
 
 Capability LoadCap (vAddr::vAddr, link::bool) =
@@ -217,67 +220,78 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
     else return UNKNOWN
 }
 
-bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword,
+bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, needAlign::bool,
                    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
 {
-    var sc_success = false;
-    tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
-    pAddr = AdjustEndian (MemType, tmp);
-    -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-    when not exceptionSignalled do
-    {
-        a = pAddr<39:3>;
-        l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
-        mask::bits(64) = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
-
-        var found = false;
-        if a == JTAG_UART.base_address then
+    if needAlign and not isAligned (vAddr, MemType)
+    then {
+        when 2 <= trace_level do
+            mark_log
+                (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
+        CP0.BadVAddr <- vAddr;
+        SignalException (AdES);
+        return UNKNOWN
+    }
+    else {
+        var sc_success = false;
+        tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
+        pAddr = AdjustEndian (MemType, tmp);
+        -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
+        when not exceptionSignalled do
         {
-            found <- true;
-            JTAG_UART_store (mask, MemElem)
-        }
-        else for core in 0 .. totalCore - 1 do
-            when a >=+ PIC_base_address([core]) and
-                 a <+ PIC_base_address([core]) + 1072 do
+            a = pAddr<39:3>;
+            l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
+            mask::bits(64) = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
+
+            var found = false;
+            if a == JTAG_UART.base_address then
             {
                 found <- true;
-                PIC_store([core], a, mask, MemElem)
+                JTAG_UART_store (mask, MemElem)
+            }
+            else for core in 0 .. totalCore - 1 do
+                when a >=+ PIC_base_address([core]) and
+                     a <+ PIC_base_address([core]) + 1072 do
+                {
+                    found <- true;
+                    PIC_store([core], a, mask, MemElem)
+                };
+
+            when cond do match LLbit
+            {
+                case None => #UNPREDICTABLE("conditional store: LLbit not set")
+                case Some (false) => sc_success <- false
+                case Some (true) =>
+                    if CP0.LLAddr == [pAddr] then
+                        sc_success <- true
+                    else #UNPREDICTABLE("conditional store: address does not match previous LL address")
             };
 
-        when cond do match LLbit
-        {
-            case None => #UNPREDICTABLE("conditional store: LLbit not set")
-            case Some (false) => sc_success <- false
-            case Some (true) =>
-                if CP0.LLAddr == [pAddr] then
-                    sc_success <- true
-                else #UNPREDICTABLE("conditional store: address does not match previous LL address")
-        };
+            LLbit <- None;
 
-        LLbit <- None;
-
-        when not found do
-        {
-            for core in 0 .. totalCore - 1 do
-            {   i = [core];
-                st = all_state(i);
-                when i <> procID and
-                     (not cond or sc_success) and
-                     st.c_LLbit == Some (true) and
-                     st.c_CP0.LLAddr<39:3> == pAddr<39:3> do
-                        all_state(i).c_LLbit <- Some (false)
+            when not found do
+            {
+                for core in 0 .. totalCore - 1 do
+                {   i = [core];
+                    st = all_state(i);
+                    when i <> procID and
+                         (not cond or sc_success) and
+                         st.c_LLbit == Some (true) and
+                         st.c_CP0.LLAddr<39:3> == pAddr<39:3> do
+                            all_state(i).c_LLbit <- Some (false)
+                };
+                when not cond or sc_success do
+                    WriteData(a, MemElem, mask)
             };
-            when not cond or sc_success do
-                WriteData(a, MemElem, mask)
+            memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
+            when 2 <= trace_level do
+               mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
+                            hex64(mask) : " (" : [[AccessLength]::nat+1] :
+                            " byte(s)) at vAddr 0x" : hex64(vAddr));
+            watchForStore(pAddr, MemElem, mask)
         };
-        memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-        when 2 <= trace_level do
-           mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
-                        hex64(mask) : " (" : [[AccessLength]::nat+1] :
-                        " byte(s)) at vAddr 0x" : hex64(vAddr));
-        watchForStore(pAddr, MemElem, mask)
-    };
-    return sc_success
+        return sc_success
+    }
 }
 
 bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
@@ -294,16 +308,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else if needAlign and not isAligned (final_vAddr, MemType)
-        then {
-            when 2 <= trace_level do
-                mark_log
-                    (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
-            CP0.BadVAddr <- vAddr;
-            SignalException (AdES);
-            UNKNOWN
-        }
-    else StoreMemoryCap (MemType, AccessLength, MemElem, final_vAddr, IorD,
+    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, IorD,
                          AccessType, cond)
 }
 
