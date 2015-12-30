@@ -58,7 +58,9 @@ bool FP32_Unordered(a::word, b::word) =
 -- ABS.D fd, fs
 -----------------------------------
 define COP1 > ABS_D (fd::reg, fs::reg) =
-    if fcsr.ABS2008 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.ABS2008 then
         FGR(fd) <- FP64_Abs(FGR(fs))
     else
         FGR(fd) <- FP64_Abs1985(FGR(fs))
@@ -67,7 +69,9 @@ define COP1 > ABS_D (fd::reg, fs::reg) =
 -- ABS.S fd, fs
 -----------------------------------
 define COP1 > ABS_S (fd::reg, fs::reg) =
-    if fcsr.ABS2008 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.ABS2008 then
         FGR(fd) <- SignExtend(FP32_Abs(FGR(fs)<31:0>))
     else
         FGR(fd) <- SignExtend(FP32_Abs1985(FGR(fs)<31:0>))
@@ -76,19 +80,28 @@ define COP1 > ABS_S (fd::reg, fs::reg) =
 -- ADD.D fd, fs, ft
 -----------------------------------
 define COP1 > ADD_D (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Add(roundTiesToEven, FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Add(roundTiesToEven, FGR(fs), FGR(ft))
 
 -----------------------------------
 -- ADD.S fd, fs, ft
 -----------------------------------
 define COP1 > ADD_S (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven,
+            FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
 -- BC1F offset
 -----------------------------------
 define COP1 > BC1F(i::bits(16)) =
-    if not fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if not fcsr.C then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
         CheckBranch
@@ -97,7 +110,9 @@ define COP1 > BC1F(i::bits(16)) =
 -- BC1T offset
 -----------------------------------
 define COP1 > BC1T(i::bits(16)) =
-    if fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.C then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
         CheckBranch
@@ -106,275 +121,387 @@ define COP1 > BC1T(i::bits(16)) =
 -- C.F.D fs, ft
 -----------------------------------
 define COP1 > C_F_D(fs::reg, ft::reg) =
-    fcsr.C <- false
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- false
 
 --------------------------------
 -- C.F.S fs, ft
 -----------------------------------
 define COP1 > C_F_S(fs::reg, ft::reg) =
-    fcsr.C <- false
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- false
 
 -----------------------------------
 -- C.UN.D fs, ft
 -----------------------------------
 define COP1 > C_UN_D(fs::reg, ft::reg) =
-    fcsr.C <- FP64_Unordered(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.UN.S fs, ft
 -----------------------------------
 define COP1 > C_UN_S(fs::reg, ft::reg) =
-    fcsr.C <- FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.EQ.D fs, ft
 -----------------------------------
 define COP1 > C_EQ_D(fs::reg, ft::reg) =
-    fcsr.C <- FP64_Equal(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP64_Equal(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.EQ.S fs, ft
 -----------------------------------
 define COP1 > C_EQ_S(fs::reg, ft::reg) =
-    fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.UEQ.D fs, ft
 -----------------------------------
 define COP1 > C_UEQ_D(fs::reg, ft::reg) =
-    fcsr.C <- FP64_Equal(FGR(fs), FGR(ft)) or FP64_Unordered(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP64_Equal(FGR(fs), FGR(ft)) or
+            FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.UEQ.S fs, ft
 -----------------------------------
 define COP1 > C_UEQ_S(fs::reg, ft::reg) =
-    fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>) or FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>) or
+            FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.OLT.D fs, ft
 -----------------------------------
 define COP1 > C_OLT_D(fs::reg, ft::reg) =
-    fcsr.C <- FP64_LessThan(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP64_LessThan(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.OLT.S fs, ft
 -----------------------------------
 define COP1 > C_OLT_S(fs::reg, ft::reg) =
-    fcsr.C <- FP32_LessThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP32_LessThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.ULT.D fs, ft
 -----------------------------------
 define COP1 > C_ULT_D(fs::reg, ft::reg) =
-    fcsr.C <- not FP64_GreaterEqual(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- not FP64_GreaterEqual(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.ULT.S fs, ft
 -----------------------------------
 define COP1 > C_ULT_S(fs::reg, ft::reg) =
-    fcsr.C <- not FP32_GreaterEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- not FP32_GreaterEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.OLE.D fs, ft
 -----------------------------------
 define COP1 > C_OLE_D(fs::reg, ft::reg) =
-    fcsr.C <- FP64_LessEqual(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP64_LessEqual(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.OLE.S fs, ft
 -----------------------------------
 define COP1 > C_OLE_S(fs::reg, ft::reg) =
-    fcsr.C <- FP32_LessEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- FP32_LessEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.ULE.D fs, ft
 -----------------------------------
 define COP1 > C_ULE_D(fs::reg, ft::reg) =
-    fcsr.C <- not FP64_GreaterThan(FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- not FP64_GreaterThan(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.ULE.S fs, ft
 -----------------------------------
 define COP1 > C_ULE_S(fs::reg, ft::reg) =
-    fcsr.C <- not FP32_GreaterThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        fcsr.C <- not FP32_GreaterThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- CEIL.L.D fd, fs
 -----------------------------------
 define COP1 > CEIL_L_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardPositive, FGR(fs))
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardPositive, FGR(fs))
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- CEIL.L.S fd, fs
 -----------------------------------
 define COP1 > CEIL_L_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- CEIL.W.D fd, fs
 -----------------------------------
 define COP1 > CEIL_W_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardPositive, FGR(fs))
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardPositive, FGR(fs))
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- CEIL.W.S fd, fs
 -----------------------------------
 define COP1 > CEIL_W_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardPositive, FGR(fs)<31:0>)
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- CVT.D.L fd, fs
 -----------------------------------
 define COP1 > CVT_D_L(fd::reg, fs::reg) =
-    FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)]::int)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)]::int)
 
 -----------------------------------
 -- CVT.D.S fd, fs
 -----------------------------------
 define COP1 > CVT_D_S(fd::reg, fs::reg) =
-    FGR(fd) <- FP32_ToFP64(FGR(fs)<31:0>)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP32_ToFP64(FGR(fs)<31:0>)
 
 -----------------------------------
 -- CVT.D.W fd, fs
 -----------------------------------
 define COP1 > CVT_D_W(fd::reg, fs::reg) =
-{
-    when NotWordValue (FGR(fs))
-        do #UNPREDICTABLE("CVT.D.W: NotWordValue");
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        when NotWordValue (FGR(fs))
+            do #UNPREDICTABLE("CVT.D.W: NotWordValue");
 
-    FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int)
-}
+        FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int)
+    }
 
 -----------------------------------
 -- CVT.L.D fd, fs
 -----------------------------------
 define COP1 > CVT_L_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- CVT.L.S fd, fs
 -----------------------------------
 define COP1 > CVT_L_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- CVT.S.D fd, fs
 -----------------------------------
 define COP1 > CVT_S_D(fd::reg, fs::reg) =
-    FGR(fd) <- SignExtend(FP64_ToFP32(roundTiesToEven, FGR(fs)))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP64_ToFP32(roundTiesToEven, FGR(fs)))
 
 -----------------------------------
 -- CVT.S.L fd, fs
 -----------------------------------
 define COP1 > CVT_S_L(fd::reg, fs::reg) =
-    FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)]::int))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)]::int))
 
 -----------------------------------
 -- CVT.S.W fd, fs
 -----------------------------------
 define COP1 > CVT_S_W(fd::reg, fs::reg) =
-{
-    when NotWordValue (FGR(fs))
-        do #UNPREDICTABLE("CVT.S.W: NotWordValue");
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        when NotWordValue (FGR(fs))
+            do #UNPREDICTABLE("CVT.S.W: NotWordValue");
 
-    FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int))
-}
+        FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven,
+            [FGR(fs)<31:0>]::int))
+    }
 
 -----------------------------------
 -- CVT.W.D fd, fs
 -----------------------------------
 define COP1 > CVT_W_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- CVT.W.S fd, fs
 -----------------------------------
 define COP1 > CVT_W_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- DIV.D fd, fs, ft
 -----------------------------------
 define COP1 > DIV_D (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Div(roundTiesToEven, FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Div(roundTiesToEven, FGR(fs), FGR(ft))
 
 -----------------------------------
 -- DIV.S fd, fs, ft
 -----------------------------------
 define COP1 > DIV_S (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Div(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Div(roundTiesToEven,
+            FGR(fs)<31:0>, FGR(ft)<31:0>))
 
 -----------------------------------
 -- FLOOR.L.D fd, fs
 -----------------------------------
 define COP1 > FLOOR_L_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardNegative, FGR(fs))
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardNegative, FGR(fs))
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- FLOOR.L.S fd, fs
 -----------------------------------
 define COP1 > FLOOR_L_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- FLOOR.W.D fd, fs
 -----------------------------------
 define COP1 > FLOOR_W_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardNegative, FGR(fs))
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardNegative, FGR(fs))
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- FLOOR.W.S fd, fs
 -----------------------------------
 define COP1 > FLOOR_W_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardNegative, FGR(fs)<31:0>)
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- LDC1 ft, offset(base)
@@ -394,12 +521,15 @@ define COP1 > LDC1 (ft::reg, offset::bits(16), base::reg) =
 -- LDXC1 fd, index(base)
 -----------------------------------
 define COP1 > LDXC1 (fd::reg, index::reg, base::reg) =
-{
-    vAddr = GPR(index) + GPR(base);
-    memdoubleword =
-        LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
-    when not exceptionSignalled do FGR(fd) <- memdoubleword
-}
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = GPR(index) + GPR(base);
+        memdoubleword =
+            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+        when not exceptionSignalled do FGR(fd) <- memdoubleword
+    }
 
 -----------------------------------
 -- LWC1 ft, offset(base)
@@ -424,33 +554,48 @@ define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
 -- MADD.D fd, fr, fs, ft (MIPS IV)
 -----------------------------------
 define COP1 > MADD_D (fd::reg, fr::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Add(roundTiesToEven,
-        FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)), FGR(fr))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Add(roundTiesToEven,
+            FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)), FGR(fr))
 
 -----------------------------------
 -- MADD.S fd, fr, fs, ft (MIPS IV)
 -----------------------------------
 define COP1 > MADD_S (fd::reg, fr::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven,
-        FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>), FGR(fr)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Add(roundTiesToEven,
+            FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>),
+                FGR(fr)<31:0>))
 
 -----------------------------------
 -- MOV.D fd, fs
 -----------------------------------
 define COP1 > MOV_D (fd::reg, fs::reg) =
-    FGR(fd) <- FGR(fs)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FGR(fs)
 
 -----------------------------------
 -- MOV.S fd, fs
 -----------------------------------
 define COP1 > MOV_S (fd::reg, fs::reg) =
-    FGR(fd) <- FGR(fs)
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FGR(fs)
 
 -----------------------------------
 -- MOVF rd, rs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVF(rd::reg, rs::reg) =
-    if not fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if not fcsr.C then
         GPR(rd) <- GPR(rs)
     else
         nothing
@@ -459,7 +604,9 @@ define COP1 > MOVF(rd::reg, rs::reg) =
 -- MOVF.D fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVF_D(fd::reg, fs::reg) =
-    if not fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if not fcsr.C then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -468,7 +615,9 @@ define COP1 > MOVF_D(fd::reg, fs::reg) =
 -- MOVF.S fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVF_S(fd::reg, fs::reg) =
-    if not fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if not fcsr.C then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -477,7 +626,9 @@ define COP1 > MOVF_S(fd::reg, fs::reg) =
 -- MOVN.D fd, fs, rt (MIPS IV)
 -----------------------------------
 define COP1 > MOVN_D(fd::reg, fs::reg, rt::reg) =
-    if GPR(rt) <> 0 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if GPR(rt) <> 0 then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -486,7 +637,9 @@ define COP1 > MOVN_D(fd::reg, fs::reg, rt::reg) =
 -- MOVN.S fd, fs, rt (MIPS IV)
 -----------------------------------
 define COP1 > MOVN_S(fd::reg, fs::reg, rt::reg) =
-    if GPR(rt) <> 0 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if GPR(rt) <> 0 then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -495,7 +648,9 @@ define COP1 > MOVN_S(fd::reg, fs::reg, rt::reg) =
 -- MOVT rd, rs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVT(rd::reg, rs::reg) =
-    if fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.C then
         GPR(rd) <- GPR(rs)
     else
         nothing
@@ -504,7 +659,9 @@ define COP1 > MOVT(rd::reg, rs::reg) =
 -- MOVT.D fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVT_D(fd::reg, fs::reg) =
-    if fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.C then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -513,7 +670,9 @@ define COP1 > MOVT_D(fd::reg, fs::reg) =
 -- MOVT.S fd, fs, cc (MIPS IV)
 -----------------------------------
 define COP1 > MOVT_S(fd::reg, fs::reg) =
-    if fcsr.C then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.C then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -522,7 +681,9 @@ define COP1 > MOVT_S(fd::reg, fs::reg) =
 -- MOVZ.D fd, fs, rt (MIPS IV)
 -----------------------------------
 define COP1 > MOVZ_D(fd::reg, fs::reg, rt::reg) =
-    if GPR(rt) == 0 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if GPR(rt) == 0 then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -531,7 +692,9 @@ define COP1 > MOVZ_D(fd::reg, fs::reg, rt::reg) =
 -- MOVZ.S fd, fs, rt (MIPS IV)
 -----------------------------------
 define COP1 > MOVZ_S(fd::reg, fs::reg, rt::reg) =
-    if GPR(rt) == 0 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if GPR(rt) == 0 then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -540,33 +703,48 @@ define COP1 > MOVZ_S(fd::reg, fs::reg, rt::reg) =
 -- MSUB.D fd, fr, fs, ft (MIPS IV)
 -----------------------------------
 define COP1 > MSUB_D (fd::reg, fr::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Sub(roundTiesToEven,
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else FGR(fd) <- FP64_Sub(roundTiesToEven,
         FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)), FGR(fr))
 
 -----------------------------------
 -- MSUB.S fd, fr, fs, ft (MIPS IV)
 -----------------------------------
 define COP1 > MSUB_S (fd::reg, fr::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven,
-        FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>), FGR(fr)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven,
+            FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>),
+            FGR(fr)<31:0>))
 
 -----------------------------------
 -- MUL.D fd, fs, ft
 -----------------------------------
 define COP1 > MUL_D (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft))
 
 -----------------------------------
 -- MUL.S fd, fs, ft
 -----------------------------------
 define COP1 > MUL_S (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Mul(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Mul(roundTiesToEven, FGR(fs)<31:0>,
+            FGR(ft)<31:0>))
 
 -----------------------------------
 -- NEG.D fd, fs
 -----------------------------------
 define COP1 > NEG_D (fd::reg, fs::reg) =
-    if fcsr.ABS2008 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.ABS2008 then
         FGR(fd) <- FP64_Neg(FGR(fs))
     else
         FGR(fd) <- FP64_Neg1985(FGR(fs))
@@ -575,7 +753,9 @@ define COP1 > NEG_D (fd::reg, fs::reg) =
 -- NEG.S fd, fs
 -----------------------------------
 define COP1 > NEG_S (fd::reg, fs::reg) =
-    if fcsr.ABS2008 then
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.ABS2008 then
         FGR(fd) <- SignExtend(FP32_Neg(FGR(fs)<31:0>))
     else
         FGR(fd) <- SignExtend(FP32_Neg1985(FGR(fs)<31:0>))
@@ -584,41 +764,53 @@ define COP1 > NEG_S (fd::reg, fs::reg) =
 -- ROUND.L.D fd, fs
 -----------------------------------
 define COP1 > ROUND_L_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- ROUND.L.S fd, fs
 -----------------------------------
 define COP1 > ROUND_L_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- ROUND.W.D fd, fs
 -----------------------------------
 define COP1 > ROUND_W_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- ROUND.W.S fd, fs
 -----------------------------------
 define COP1 > ROUND_W_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- SDC1 ft, offset(base)
@@ -630,7 +822,8 @@ define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
     {
         vAddr = SignExtend (offset) + GPR(base);
         datadoubleword = FGR(ft);
-        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr,
+            DATA, STORE, false);
         nothing
     }
 
@@ -638,36 +831,53 @@ define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
 -- SDXC1 fs, index(base)
 -----------------------------------
 define COP1 > SDXC1 (fs::reg, index::reg, base::reg) =
-{
-    vAddr = GPR(index) + GPR(base);
-    datadoubleword = FGR(fs);
-    _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, DATA, STORE, false);
-    nothing
-}
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = GPR(index) + GPR(base);
+        datadoubleword = FGR(fs);
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr,
+            DATA, STORE, false);
+        nothing
+    }
 
 -----------------------------------
 -- SQRT.D fd, fs, ft
 -----------------------------------
 define COP1 > SQRT_D (fd::reg, fs::reg) =
-    FGR(fd) <- FP64_Sqrt(roundTiesToEven, FGR(fs))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Sqrt(roundTiesToEven, FGR(fs))
 
 -----------------------------------
 -- SQRT.S fd, fs, ft
 -----------------------------------
 define COP1 > SQRT_S (fd::reg, fs::reg) =
-    FGR(fd) <- SignExtend(FP32_Sqrt(roundTiesToEven, FGR(fs)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Sqrt(roundTiesToEven, FGR(fs)<31:0>))
 
 -----------------------------------
 -- SUB.D fd, fs, ft
 -----------------------------------
 define COP1 > SUB_D (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- FP64_Sub(roundTiesToEven, FGR(fs), FGR(ft))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- FP64_Sub(roundTiesToEven, FGR(fs), FGR(ft))
 
 -----------------------------------
 -- SUB.S fd, fs, ft
 -----------------------------------
 define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
-    FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven, FGR(fs)<31:0>, FGR(ft)<31:0>))
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- SignExtend(FP32_Sub(roundTiesToEven, FGR(fs)<31:0>,
+            FGR(ft)<31:0>))
 
 -----------------------------------
 -- SWC1 ft, offset(base)
@@ -680,7 +890,8 @@ define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
         vAddr = SignExtend (offset) + GPR(base);
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE, false);
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE,
+            false);
         nothing
     }
 
@@ -688,41 +899,53 @@ define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
 -- TRUNC.L.D fd, fs
 -----------------------------------
 define COP1 > TRUNC_L_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardZero, FGR(fs))
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardZero, FGR(fs))
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- TRUNC.L.S fd, fs
 -----------------------------------
 define COP1 > TRUNC_L_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
-    {
-        case Some(x) => IntToDWordMIPS(x)
-        case None => 0x7fffffffffffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
+        {
+            case Some(x) => IntToDWordMIPS(x)
+            case None => 0x7fffffffffffffff`64
+        }
 
 -----------------------------------
 -- TRUNC.W.D fd, fs
 -----------------------------------
 define COP1 > TRUNC_W_D(fd::reg, fs::reg) =
-    FGR(fd) <- match FP64_ToInt(roundTowardZero, FGR(fs))
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP64_ToInt(roundTowardZero, FGR(fs))
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- TRUNC.W.S fd, fs
 -----------------------------------
 define COP1 > TRUNC_W_S(fd::reg, fs::reg) =
-    FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
-    {
-        case Some(x) => SignExtend(IntToWordMIPS(x))
-        case None => 0x7fffffff`64
-    }
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+        FGR(fd) <- match FP32_ToInt(roundTowardZero, FGR(fs)<31:0>)
+        {
+            case Some(x) => SignExtend(IntToWordMIPS(x))
+            case None => 0x7fffffff`64
+        }
 
 -----------------------------------
 -- DMFC1 rt, fs
