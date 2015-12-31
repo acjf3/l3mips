@@ -5,3 +5,4 @@
 
 bool hasCP1 = false
 
+unit COP1Init () = ()

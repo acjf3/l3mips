@@ -5,10 +5,10 @@
 
 register FCSR :: word
 {
-    24    : FS       -- Flush denormalized results to zero (true)
+    24    : FS       -- Flush denormalized results to zero
     23    : C        -- Condition code
-    19    : ABS2008  -- ABS and NEG conform to IEEE 754:2008 (false)
-    18    : NAN2008  -- NaN values conform to IEEE 754:2008 (false)
+    19    : ABS2008  -- ABS and NEG conform to IEEE 754:2008
+    18    : NAN2008  -- NaN values conform to IEEE 754:2008
     17    : CauseE   -- Unimplemented operation
     16    : CauseV   -- Invalid operation
     15    : CauseZ   -- Divide by zero
@@ -28,11 +28,24 @@ register FCSR :: word
     1-0   : RM       -- Rounding mode (0, round to nearest tie even)
 }
 
+register FIR :: word
+{
+    22    : F64      -- Floating point registers are 64 bit
+    21    : L        -- 64-bit fixed point type is implemented
+    20    : W        -- 32-bit fixed point type is implemented
+    19    : ASE      -- 3D ASE is implemented
+    18    : PS       -- Paired single type is implemented
+    17    : D        -- Double precision floating point is implemented
+    16    : S        -- Single precision floating point is implemented
+    15-8  : PrID     -- Processor ID
+    7-0   : Rev      -- Revision
+}
 
 declare
 {
     fgr :: reg -> bits(64)
     fcsr :: FCSR
+    fir :: FIR
 }
 
 component FGR(n::reg)::dword

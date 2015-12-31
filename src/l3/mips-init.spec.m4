@@ -89,6 +89,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    hi <- None;
    lo <- None;
    PC <- [pc];
+   COP1Init();
    COP2Init();
    done <- false;
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;

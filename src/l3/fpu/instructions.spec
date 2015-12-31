@@ -994,6 +994,7 @@ define COP1 > CFC1(rt::reg, fs::reg) =
         GPR(rt) <- match fs
         {
             -- Floating Point Condition Codes Register (not in MIPS III)
+            case 0  => SignExtend(&fir)
             case 25 => ZeroExtend([fcsr.C]`1)
             case 31 => SignExtend(&fcsr)
             case _  => #UNPREDICTABLE("Unsupported floating point control register")
@@ -1008,6 +1009,10 @@ define COP1 > CTC1(rt:: reg, fs::reg) =
     else
         match (fs)
         {
+            -- Floating Point Implementation Register
+            -- This is a read-only register; spec is ambiguious about
+            -- whether a write to it is a NOP or is UNPREDICTABLE.
+            case 0 => nothing
             -- Floating Point Condition Codes Register (not in MIPS III)
             case 25 => fcsr.C <- GPR(rt)<0>
             case 31 =>
