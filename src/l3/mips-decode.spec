@@ -18,8 +18,7 @@ instruction Decode000_000 (s::int, t::int, i::int) =
    match s, t, d, i, r
    {
       case 0, _, _, _, 0b000_000 => Shift (SLL (rt, rd, imm5))
---      case _, 0, _, _, 0b000_001 => COP1(MOVF(rd, rs))
---      case _, 1, _, _, 0b000_001 => COP1(MOVT(rd, rs))
+      case _, _, _, 0, 0b000_001 => MOVCIDecode(rs, rt, rd)
       case 0, _, _, _, 0b000_010 => Shift (SRL (rt, rd, imm5))
       case 0, _, _, _, 0b000_011 => Shift (SRA (rt, rd, imm5))
       case _, _, _, 0, 0b000_100 => Shift (SLLV (rs, rt, rd))

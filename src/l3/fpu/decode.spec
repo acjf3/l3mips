@@ -102,6 +102,16 @@ instruction SDC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SDC1(base, 
 
 instruction SWC1Decode (base::reg, offset::bits(16), ft::reg) = COP1(SWC1(base, offset, ft))
 
+instruction MOVCIDecode (rs:: bits(5), rt::bits(5), rd::bits(5)) =
+    {
+        match rt
+        {
+            case '000 0 0' => COP1(MOVF(rd, rs))
+            case '000 0 1' => COP1(MOVT(rd, rs))
+            case _ => ReservedInstruction
+        }
+    }
+
 instruction COP3Decode (v::bits(26)) =
     COP1
     (
