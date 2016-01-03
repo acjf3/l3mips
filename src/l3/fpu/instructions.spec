@@ -127,6 +127,20 @@ define COP1 > BC1F(i::bits(16)) =
         CheckBranch
 
 -----------------------------------
+-- BC1FL offset
+-----------------------------------
+define COP1 > BC1FL(i::bits(16)) =
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if not fcsr.C then
+        BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
+    else
+    {
+        CheckBranch;
+        PC <- PC + 4
+    }
+
+-----------------------------------
 -- BC1T offset
 -----------------------------------
 define COP1 > BC1T(i::bits(16)) =
@@ -136,6 +150,20 @@ define COP1 > BC1T(i::bits(16)) =
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
         CheckBranch
+
+-----------------------------------
+-- BC1TL offset
+-----------------------------------
+define COP1 > BC1TL(i::bits(16)) =
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else if fcsr.C then
+        BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
+    else
+    {
+        CheckBranch;
+        PC <- PC + 4
+    }
 
 --------------------------------
 -- C.F.D fs, ft

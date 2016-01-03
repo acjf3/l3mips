@@ -17,6 +17,8 @@ instruction COP1Decode (v::bits(26)) =
 
             case '01000 00000 i'              => BC1F(i)
             case '01000 00001 i'              => BC1T(i)
+            case '01000 00010 i'              => BC1FL(i)
+            case '01000 00011 i'              => BC1TL(i)
 
             case '10000 ft fs fd 000000'      => ADD_S(fd, fs, ft)
             case '10000 ft fs fd 000001'      => SUB_S(fd, fs, ft)
