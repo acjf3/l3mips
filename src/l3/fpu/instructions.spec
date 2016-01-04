@@ -599,6 +599,25 @@ define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
     }
 
 -----------------------------------
+-- LWXC1 ft, index(base)
+-----------------------------------
+define COP1 > LWXC1 (ft::reg, index::reg, base::reg) =
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = GPR(index) + GPR(base);
+        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
+        when not exceptionSignalled do
+        {
+            byte = vAddr<2:0> ?? (BigEndianCPU : '00');
+            memword`32 = memdoubleword <31 + 8 * [byte] : 8 * [byte]>;
+            -- The upper 32 bits are UNDEFINED in the MIPS ISA
+            FGR(ft) <- SignExtend(memword)
+        }
+    }
+
+-----------------------------------
 -- MADD.D fd, fr, fs, ft (MIPS IV)
 -----------------------------------
 define COP1 > MADD_D (fd::reg, fr::reg, fs::reg, ft::reg) =
@@ -941,6 +960,22 @@ define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
     else
     {
         vAddr = SignExtend (offset) + GPR(base);
+        bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
+        datadoubleword = FGR(ft) << (0n8 * [bytesel]);
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE,
+            false);
+        nothing
+    }
+
+-----------------------------------
+-- SWXC1 ft, index(base)
+-----------------------------------
+define COP1 > SWXC1 (ft::reg, index::reg, base::reg) =
+    if not CP0.Status.CU1 then
+        SignalCP1UnusableException
+    else
+    {
+        vAddr = GPR (index) + GPR(base);
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
         _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE,

@@ -119,7 +119,9 @@ instruction COP3Decode (v::bits(26)) =
     (
         match v
         {
+            case 'base index 00000 fd 000000' => LWXC1(fd, index, base)
             case 'base index 00000 fd 000001' => LDXC1(fd, index, base)
+            case 'base index fs 00000 001000' => SWXC1(fs, index, base)
             case 'base index fs 00000 001001' => SDXC1(fs, index, base)
             case 'fr ft fs fd         100000' => MADD_S(fd, fr, fs, ft)
             case 'fr ft fs fd         100001' => MADD_D(fd, fr, fs, ft)

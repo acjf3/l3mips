@@ -60,6 +60,7 @@ string COP1InstructionToString (i::instruction) =
                 case LDC1(ft, offset, base) => "ldc1"
                 case LDXC1(fs, index, base) => "ldxc1"
                 case LWC1(ft, offset, base) => "lwc1"
+                case LWXC1(ft, offset, base) => "lwxc1"
                 case MFC1(rt, fs) => op2r("mfc1", rt, fs)
                 case MADD_D(fd, fr, fs, ft) => "madd.d"
                 case MADD_S(fd, fr, fs, ft) => "madd.s"
@@ -89,6 +90,7 @@ string COP1InstructionToString (i::instruction) =
                 case SDC1(ft, offset, base) => opmem("sdc1", ft, base, offset)
                 case SDXC1(fs, index, base) => "sdxc1"
                 case SWC1(ft, offset, base) => "swc1"
+                case SWXC1(ft, offset, base) => "swxc1"
                 case SUB_D(fd, fs, ft) => op3r("sub.d", fd, fs, ft)
                 case SUB_S(fd, fs, ft) => op3r("sub.s", fd, fs, ft)
                 case SQRT_D(fd, fs) => op2r("sqrt.d", fd, fs)
@@ -98,7 +100,7 @@ string COP1InstructionToString (i::instruction) =
                 case TRUNC_W_D(fd, fs) => op2r("trunc.w.d", fd, fs)
                 case TRUNC_W_S(fd, fs) => op2r("trunc.w.s", fd, fs)
                 case UnknownFPInstruction => "Unknown floating point instruction"
-                case _ => "Unmatched floating point instruction"
+                -- case _ => "Unmatched floating point instruction"
             }
         case _ => "Unmatched floating point instruction"
     }
