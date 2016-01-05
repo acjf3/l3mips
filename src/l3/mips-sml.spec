@@ -101,7 +101,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 16, 4 => 1 -- Mimic BERI
          case 0, 16, 5 => 1 -- Mimic BERI
          case 0, 16, 6 => [CP0.&Config6]
-         case 0, 17, 0 => [CP0.LLAddr]
+         case 0, 17, 0 =>  CP0.LLAddr
          case 0, 20, 0 =>  CP0.&XContext
          case 0, 23, 0 => [CP0.Debug]
          case 0, 26, 0 => [CP0.ErrCtl]

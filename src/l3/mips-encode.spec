@@ -280,6 +280,7 @@ word Encode (i::instruction) =
      case ERET                           => '01000010000000000000000000011000'
      case RDHWR (rt, rd)                 => form6 (rt, rd, '111011')
      case WAIT                           => '01000010000000000000000000100000'
+     case COP1 (_)                       => COP1Encode(i)
      case COP2 (_)                       => COP2Encode(i)
      case LWC2 (_)                       => LWC2Encode(i)
      case LDC2 (_)                       => LDC2Encode(i)
