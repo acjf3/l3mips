@@ -21,11 +21,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000 rd 00000 _ 100'       => CGet(CGetCause(rd))
            case '00100 00000 00000 rt _ 100' => CSet(CSetCause(rt))
            case '00001 cd cb rt _'           => CSet(CSetBounds(cd, cb, rt))
-ifdef(<!NO_CINCBASE_CSETLEN!>, <!dnl!>, <!dnl
-           case '00100 cd cb rt _ 010'       => CSet(CIncBase(cd, cb, rt))!>)
            case '01101 cd cb rt _ 000'       => CSet(CIncOffset(cd, cb, rt))
-ifdef(<!NO_CINCBASE_CSETLEN!>, <!dnl!>, <!dnl
-           case '00100 cd cb rt _ 011'       => CSet(CSetLen(cd, cb, rt))!>)
            case '01111 regset mask'          => CSet(CClearRegs(regset, mask))
            case '00100 cd cb _ 101'          => CSet(CClearTag(cd, cb))
            case '00100 cd cb rt _ 000'       => CSet(CAndPerm(cd, cb, rt))

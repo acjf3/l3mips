@@ -1,12 +1,14 @@
 ---------------------------------------------------------------------------
--- CHERI types for 128-bits precice capability
+-- CHERI types for 128-bits candidate 1
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 dnl
 include(`helpers.m4')dnl
 include(`cap-params.m4')dnl
 
--- types definitions
+-----------------------
+-- types definitions --
+--------------------------------------------------------------------------------
 
 register Perms :: bits (23)
 {
@@ -51,16 +53,10 @@ register Capability :: bits (129)
        63-0 : pointer   -- 64 bits pointer / compressed address + type when sealed
 }
 
--- Capability API
+---------------------------------
+-- capability helper functions --
+--------------------------------------------------------------------------------
 
--------------
--- getters --
--------------
-
-bool     getTag    (cap::Capability) = cap.tag
-OType    getType   (cap::Capability) = if cap.sealed then TypedPointer(cap.pointer).otype else 0
-Perms    getPerms  (cap::Capability) = Perms(cap.perms)
-bool     getSealed (cap::Capability) = cap.sealed
 bits(64) getPtr (cap::Capability) =
 if not cap.sealed then
     cap.pointer
@@ -83,17 +79,6 @@ bits(65) innerGetBase (cap::Capability) =
         ret <- (ret + (SignExtend(cap.toBottom) << [cap.exp])) && (~0<<[cap.exp]);
     (ret<64:0>)
 }
-bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
-bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
-bits(64) getLength (cap::Capability) =
-{
-    len = innerGetTop(cap) - innerGetBase(cap);
-    if len<64> then ~0 else len<63:0>
-}
-
--------------
--- setters --
--------------
 
 nat innerZeroCount (data::bool list, acc::nat) = match data
 {
@@ -125,6 +110,82 @@ Capability updateBounds (cap::Capability, ptr::bits(64)) =
     new_cap.toBottom <- newToBottom;
     new_cap
 }
+
+--------------------------------------
+-- capability "typeclass" functions --
+--------------------------------------------------------------------------------
+
+bool allow_system_reg_access(p::Perms, r::reg) =
+(  r == 31 and not p.Access_EPCC
+or r == 30 and not p.Access_KDC
+or r == 29 and not p.Access_KCC
+or r == 27 and not p.Access_KR1C
+or r == 28 and not p.Access_KR2C )
+
+bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
+
+CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
+
+Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw<63:0> : raw<127:64>) -- XXX swap dwords to match CHERI bluespec implementation
+
+dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
+if dwordAddr<0> then raw<127:64> else raw<63:0>
+
+CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
+if dwordAddr<0> then
+    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
+else
+    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
+
+Capability defaultCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- true;
+    new_cap.sealed <- false;
+    new_cap.perms <- ~0;
+    new_cap.unused <- false;
+    new_cap.base_eq_pointer <- true;
+    new_cap.exp <- 0x32; -- leftshift by 50
+    new_cap.pointer <- 0;
+    new_cap.toBottom <- 0;
+    new_cap.toTop <- 0x4000;
+    new_cap
+}
+
+Capability nullCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag <- false;
+    new_cap.sealed <- false;
+    new_cap.perms <- 0;
+    new_cap.unused <- false;
+    new_cap.base_eq_pointer <- false;
+    new_cap.exp <- 0;
+    new_cap.pointer <- 0;
+    new_cap.toBottom <- 0;
+    new_cap.toTop <- 0;
+    new_cap
+}
+
+------------------------------------
+-- capability "typeclass" getters --
+--------------------------------------------------------------------------------
+
+bool     getTag    (cap::Capability) = cap.tag
+OType    getType   (cap::Capability) = if cap.sealed then TypedPointer(cap.pointer).otype else 0
+Perms    getPerms  (cap::Capability) = Perms(cap.perms)
+bool     getSealed (cap::Capability) = cap.sealed
+bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
+bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
+bits(64) getLength (cap::Capability) =
+{
+    len = innerGetTop(cap) - innerGetBase(cap);
+    if len<64> then ~0 else len<63:0>
+}
+
+------------------------------------
+-- capability "typeclass" setters --
+--------------------------------------------------------------------------------
 
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag      <- tag; new_cap}
 Capability setType   (cap::Capability, otype::OType)     =
@@ -175,49 +236,6 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
     new_cap
 }
 
-Capability setBase   (cap::Capability, base::bits(64)) =
-{
-    var new_cap = cap;
-    if new_cap.base_eq_pointer then
-    {
-        new_cap <- updatePtr(new_cap, base)
-    }
-    else
-    {
-        newPtr = getOffset(cap) + base;
-        new_cap <- updatePtr(new_cap, newPtr)
-    };
-    new_cap
-}
-
-Capability setLength (cap::Capability, length::bits(64)) =
-{
-    var new_cap = cap;
-    if (cap.base_eq_pointer) then -- Normalise if the base is precise
-    {
-        zeros  = countLeadingZeros (length);
-        newExp = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
-        new_cap.exp      <- [newExp];
-        new_cap.toBottom <- 0;
-        new_cap.toTop    <- ZeroExtend((length >> newExp)<14:0>)
-    }
-    else -- Otherwise, don't normalise
-    {
-        -- new_cap.toTop <- ((length + SignExtend(cap.toBottom)<<[cap.exp])>>[cap.exp])<15:0>
-        base           = getBase(cap);
-        newToTop       = (base + length) - getPtr(cap);
-        newToBottom    = base - getPtr(cap);
-
-        zeros  = countLeadingZeros (length);
-        newExp = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
-
-        new_cap.exp      <- [newExp];
-        new_cap.toTop    <- (newToTop >> newExp)<15:0>;
-        new_cap.toBottom <- (newToBottom >> newExp)<15:0>
-    };
-    new_cap
-}
-
 Capability setBounds (cap::Capability, length::bits(64)) =
 {
     var new_cap = cap;
@@ -233,52 +251,9 @@ Capability setBounds (cap::Capability, length::bits(64)) =
     new_cap
 }
 
-bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
-
-CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
-
-Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw<63:0> : raw<127:64>) -- XXX swap dwords to match CHERI bluespec implementation
-
-dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
-if dwordAddr<0> then raw<127:64> else raw<63:0>
-
-CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
-if dwordAddr<0> then
-    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
-else
-    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
-
-Capability defaultCap =
-{
-    var new_cap :: Capability;
-    new_cap.tag <- true;
-    new_cap.sealed <- false;
-    new_cap.perms <- ~0;
-    new_cap.unused <- false;
-    new_cap.base_eq_pointer <- true;
-    new_cap.exp <- 0x32; -- leftshift by 50
-    new_cap.pointer <- 0;
-    new_cap.toBottom <- 0;
-    new_cap.toTop <- 0x4000;
-    new_cap
-}
-
-Capability nullCap =
-{
-    var new_cap :: Capability;
-    new_cap.tag <- false;
-    new_cap.sealed <- false;
-    new_cap.perms <- 0;
-    new_cap.unused <- false;
-    new_cap.base_eq_pointer <- false;
-    new_cap.exp <- 0;
-    new_cap.pointer <- 0;
-    new_cap.toBottom <- 0;
-    new_cap.toTop <- 0;
-    new_cap
-}
-
+---------------
 -- log utils --
+--------------------------------------------------------------------------------
 
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))

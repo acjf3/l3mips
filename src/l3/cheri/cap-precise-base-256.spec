@@ -1,9 +1,11 @@
 ---------------------------------------------------------------------------
--- CHERI types for 256-bits precice capability
+-- CHERI types for 256-bits precise capability
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
--- types definitions
+-----------------------
+-- types definitions --
+--------------------------------------------------------------------------------
 
 register Perms :: bits (31)
 {
@@ -37,33 +39,16 @@ register Capability :: bits (257)
        63-0 : length    -- 64 length bits
 }
 
--- Capability API
+--------------------------------------
+-- capability "typeclass" functions --
+--------------------------------------------------------------------------------
 
-bool     getTag    (cap::Capability) = cap.tag
-bits(24) getType   (cap::Capability) = cap.otype -- 16 bits in 128-bits mode
-Perms    getPerms  (cap::Capability) = Perms(cap.perms) -- 8 bits in 128-bits mode
-bool     getSealed (cap::Capability) = cap.sealed
-bits(64) getOffset (cap::Capability) = cap.offset
-bits(64) getBase   (cap::Capability) = cap.base
-bits(64) getLength (cap::Capability) = cap.length
-
-Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag    <- tag;    new_cap}
-Capability setType   (cap::Capability, otype::bits(24))  = {var new_cap = cap; new_cap.otype  <- otype;  new_cap}
-Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms  <- &perms; new_cap}
-Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed <- sealed; new_cap}
-Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.offset <- offset; new_cap}
-Capability setBase   (cap::Capability, base::bits(64))   = {var new_cap = cap; new_cap.base   <- base;   new_cap}
-Capability setLength (cap::Capability, length::bits(64)) = {var new_cap = cap; new_cap.length <- length; new_cap}
-Capability setBounds (cap::Capability, length::bits(64)) =
-{
-    var new_cap = cap;
-    new_cap.base   <- cap.base + cap.offset;
-    new_cap.length <- length;
-    new_cap.offset <- 0;
-    new_cap
-}
-
--- useful capabilities --
+bool allow_system_reg_access(p::Perms, r::reg) =
+(  r == 31 and not p.Access_EPCC
+or r == 30 and not p.Access_KDC
+or r == 29 and not p.Access_KCC
+or r == 27 and not p.Access_KR1C
+or r == 28 and not p.Access_KR2C )
 
 Capability defaultCap =
 {
@@ -93,7 +78,39 @@ Capability nullCap =
     new_cap
 }
 
+------------------------------------
+-- capability "typeclass" getters --
+--------------------------------------------------------------------------------
+
+bool     getTag    (cap::Capability) = cap.tag
+bits(24) getType   (cap::Capability) = cap.otype -- 16 bits in 128-bits mode
+Perms    getPerms  (cap::Capability) = Perms(cap.perms) -- 8 bits in 128-bits mode
+bool     getSealed (cap::Capability) = cap.sealed
+bits(64) getOffset (cap::Capability) = cap.offset
+bits(64) getBase   (cap::Capability) = cap.base
+bits(64) getLength (cap::Capability) = cap.length
+
+------------------------------------
+-- capability "typeclass" setters --
+--------------------------------------------------------------------------------
+
+Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag    <- tag;    new_cap}
+Capability setType   (cap::Capability, otype::bits(24))  = {var new_cap = cap; new_cap.otype  <- otype;  new_cap}
+Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms  <- &perms; new_cap}
+Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed <- sealed; new_cap}
+Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.offset <- offset; new_cap}
+Capability setBounds (cap::Capability, length::bits(64)) =
+{
+    var new_cap = cap;
+    new_cap.base   <- cap.base + cap.offset;
+    new_cap.length <- length;
+    new_cap.offset <- 0;
+    new_cap
+}
+
+---------------
 -- log utils --
+--------------------------------------------------------------------------------
 
 string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string hex31 (x::bits(31)) = ToLower (PadLeft (#"0", 8, [x]))

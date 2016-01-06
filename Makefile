@@ -19,14 +19,16 @@ L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 ifdef CAP
-ifeq ($(CAP), c128)
-L3SRCBASE+=cheri/cap128-compressed-types.spec
+ifeq ($(CAP), c128c1)
+L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
+else ifeq ($(CAP), c128c3)
+L3SRCBASE+=cheri/cap128-compressed-candidate-3.spec
 else ifeq ($(CAP), p64)
-L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-64.spec
+L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap64-precise.spec
 else ifeq ($(CAP), p128)
-L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-128.spec
+L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap128-precise.spec
 else
-L3SRCBASE+=cheri/cap256-precise.spec cheri/cap-precise-256.spec
+L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap256-precise.spec
 endif
 L3SRCBASE+=cheri/state.spec
 L3SRCBASE+=cheri/exception.spec
@@ -171,11 +173,7 @@ $(L3SRCDIR)/cheri/memory-caches.spec: $(L3SRCDIR)/cheri/memory-caches.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 ${L3SRCDIR}/cheri/decode.spec: ${L3SRCDIR}/cheri/decode.spec.m4
-ifdef NO_CINCBASE_CSETLEN
-	m4 -D NO_CINCBASE_CSETLEN $^ > $@
-else
 	m4 $^ > $@
-endif
 
 $(L3SRCDIR)/mips-memory-caches.spec: $(L3SRCDIR)/mips-memory-caches.spec.m4
 	m4 -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
