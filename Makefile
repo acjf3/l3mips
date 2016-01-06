@@ -169,20 +169,11 @@ isabelle_monadic: ${L3SRC}
 count: ${L3SRC}
 	@wc -l ${L3SRC}
 
-$(L3SRCDIR)/cheri/memory-caches.spec: $(L3SRCDIR)/cheri/memory-caches.spec.m4
-	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
-
-${L3SRCDIR}/cheri/decode.spec: ${L3SRCDIR}/cheri/decode.spec.m4
-	m4 $^ > $@
-
-$(L3SRCDIR)/mips-memory-caches.spec: $(L3SRCDIR)/mips-memory-caches.spec.m4
-	m4 -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
-
 ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
-#${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri/%.spec.m4
-#	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
+${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri/%.spec.m4
+	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 ${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
 ifdef CACHE
