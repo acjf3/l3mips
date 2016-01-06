@@ -67,34 +67,35 @@ RepRegion * RepRegion * RepRegion getRepRegion (cap::Capability) =
         case Unsealed(uf) => uf.topBits, uf.baseBits
         case Sealed(sf)   => sf.topBits:(0`10), sf.baseBits:(0`10)
     };
-    var repBound = [(('0':tb)+('0':bb))>>1];
-    when tb > bb do repBound <- repBound + (1 << 19);
     ptr = cap.cursor<[cap.exp]+20:[cap.exp]>;
-    pr = if ptr < repBound then Hi (ptr) else Low (ptr);
-    tr = if tb  < repBound then Hi (tb)  else Low (tb);
-    br = if bb  < repBound then Hi (bb)  else Low (bb);
+    var repBound::bits(21) = (('0':tb)+('0':bb))>>1;
+    when tb >+ bb do repBound <- repBound + (1 << 19);
+    pr = if ptr <+ [repBound] then Hi (ptr) else Low (ptr);
+    tr = if tb  <+ [repBound] then Hi (tb)  else Low (tb);
+    br = if bb  <+ [repBound] then Hi (bb)  else Low (bb);
     (pr, tr, br)
 }
 changequote(`,')dnl
 
-bits(64) getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
+bits(66) getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 {
     e::nat = [cap.exp];
     ones::bits(64) = ~0;
     mask::bits(64) = ones<<(e+20);
-    tmpPtr::bits(64) = cap.cursor && mask;
+    tmpPtr::bits(66) = '00':(cap.cursor && mask);
     match (ptr, bound)
     {
-        case Low(p), Low(b) => tmpPtr + ZeroExtend(b<<e)
-        case Low(p), Hi(b)  => tmpPtr + SignExtend(('01':b)<<e)
-        case Hi(p) , Low(b) => tmpPtr + SignExtend(('11':b)<<e)
-        case Hi(p) , Hi(b)  => tmpPtr + ZeroExtend(b<<e)
+        case Low(p), Low(b) => tmpPtr + (ZeroExtend(b)<<e)
+        case Low(p), Hi(b)  => tmpPtr + (SignExtend('01':b)<<e)
+        case Hi(p) , Low(b) => tmpPtr + (SignExtend('11':b)<<e)
+        case Hi(p) , Hi(b)  => tmpPtr + (ZeroExtend(b)<<e)
     }
 }
+
 bits(64) getTop (cap::Capability) =
 {
     pr, tr, br = getRepRegion(cap);
-    getBound (cap, pr, tr)
+    (getBound(cap, pr, tr))<63:0>
 }
 
 nat innerZeroCount (data::bool list, acc::nat) = match data
@@ -167,7 +168,7 @@ Capability defaultCap = -- FIXME
     new_cap.exp      <- 0x2D;
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
-    uf.topBits  <- 0;
+    uf.topBits  <- 0x80000;
     new_cap.sFields  <- Unsealed(uf);
     new_cap.cursor   <- 0;
     new_cap
@@ -211,12 +212,19 @@ bool getSealed (cap::Capability) = match cap.sFields
 bits(64) getBase (cap::Capability) =
 {
     pr, tr, br = getRepRegion(cap);
-    getBound (cap, pr, br)
+    (getBound(cap, pr, br))<63:0>
 }
 
 bits(64) getOffset (cap::Capability) = cap.cursor - getBase(cap)
 
-bits(64) getLength (cap::Capability) = getTop(cap) - getBase(cap)
+bits(64) getLength (cap::Capability) =
+{
+    pr, tr, br = getRepRegion(cap);
+    b = getBound (cap, pr, br);
+    t = getBound (cap, pr, tr);
+    len = t - b;
+    if len<64> then ~0 else len<63:0>
+}
 
 ------------------------------------
 -- capability "typeclass" setters --
@@ -323,20 +331,24 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
 -- log utils --
 --------------------------------------------------------------------------------
 
+string hex10 (x::bits(10)) = ToLower (PadLeft (#"0", 3, [x]))
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
 string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
+string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 
 {-
 string cap_inner_rep (cap::Capability) =
-    "u:":(if cap.tag then "1" else "0"):
-    " perms:0x":hex23(cap.perms):
-    " base_eq_ptr:":(if cap.base_eq_pointer then "1" else "0"):
-    " exp:":[[cap.exp]::nat]:
-    " toTop:0x":hex16(cap.toTop):
-    " toBottom:0x":hex16(cap.toBottom):
-    " sealed:":(if cap.sealed then "1" else "0"):
-    " pointer:0x":hex64(cap.pointer)
+    "perms:0x":hex16(ZeroExtend(cap.&perms)):
+    " exp:":dec6(cap.exp):
+    match cap.sFields
+    {
+        case Sealed(sf)   =>
+            " sealed:1 baseBits:0x":hex10(sf.baseBits):" topBits:0x":hex10(sf.topBits):" otype:0x":hex20(sf.otypeHi:sf.otypeLo):"(hi:0x":hex10(sf.otypeHi):", lo:0x":hex10(sf.otypeLo)
+        case Unsealed(uf) =>
+            " sealed:0 baseBits:0x":hex20(uf.baseBits):" topBits:0x":hex20(uf.topBits)
+    }:
+    " cursor:0x":hex64(cap.cursor)
 -}
 
 string log_cap_write (cap::Capability) =
