@@ -111,7 +111,7 @@ nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
 --------------------------------------------------------------------------------
 
 bool allow_system_reg_access(p::Perms, r::reg) =
-(r == 31 or r == 30 or r == 29 or r == 27 or r == 28 and not p.Access_System_Registers)
+((r == 31 or r == 30 or r == 29 or r == 27 or r == 28) and not p.Access_System_Registers)
 
 bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
