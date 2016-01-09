@@ -5,8 +5,8 @@
 
 register FCSR :: word
 {
+    31-25,23: FCC    -- Condition codes
     24    : FS       -- Flush denormalized results to zero
-    23    : C        -- Condition code
     19    : ABS2008  -- ABS and NEG conform to IEEE 754:2008
     18    : NAN2008  -- NaN values conform to IEEE 754:2008
     17    : CauseE   -- Unimplemented operation

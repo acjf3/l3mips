@@ -36,8 +36,8 @@ instruction COP1Decode (v::bits(26)) =
             case '10000 00000 fs fd 001101'   => TRUNC_W_S(fd, fs)
             case '10000 00000 fs fd 001110'   => CEIL_W_S(fd, fs)
             case '10000 00000 fs fd 001111'   => FLOOR_W_S(fd, fs)
-            case '10000 000 00 fs fd 010001'  => MOVF_S(fd, fs)
-            case '10000 000 01 fs fd 010001'  => MOVT_S(fd, fs)
+            case '10000 cc 00 fs fd 010001'   => MOVF_S(fd, fs, cc)
+            case '10000 cc 01 fs fd 010001'   => MOVT_S(fd, fs, cc)
             case '10000 rt fs fd    010010'   => MOVZ_S(fd, fs, rt)
             case '10000 rt fs fd    010011'   => MOVN_S(fd, fs, rt)
             case '10000 ft fs 00000 110000'   => C_F_S(fs, ft)
@@ -65,8 +65,8 @@ instruction COP1Decode (v::bits(26)) =
             case '10001 00000 fs fd 001101'   => TRUNC_W_D(fd, fs)
             case '10001 00000 fs fd 001110'   => CEIL_W_D(fd, fs)
             case '10001 00000 fs fd 001111'   => FLOOR_W_D(fd, fs)
-            case '10001 000 00 fs fd 010001'  => MOVF_D(fd, fs)
-            case '10001 000 01 fs fd 010001'  => MOVT_D(fd, fs)
+            case '10001 cc 00 fs fd 010001'   => MOVF_D(fd, fs, cc)
+            case '10001 cc 01 fs fd 010001'   => MOVT_D(fd, fs, cc)
             case '10001 rt fs fd    010010'   => MOVZ_D(fd, fs, rt)
             case '10001 rt fs fd    010011'   => MOVN_D(fd, fs, rt)
             case '10001 ft fs 00000 110000'   => C_F_D(fs, ft)
@@ -108,8 +108,8 @@ instruction MOVCIDecode (rs:: bits(5), rt::bits(5), rd::bits(5)) =
     {
         match rt
         {
-            case '000 0 0' => COP1(MOVF(rd, rs))
-            case '000 0 1' => COP1(MOVT(rd, rs))
+            case 'cc 0 0' => COP1(MOVF(rd, rs, cc))
+            case 'cc 0 1' => COP1(MOVT(rd, rs, cc))
             case _ => ReservedInstruction
         }
     }

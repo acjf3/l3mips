@@ -8,7 +8,7 @@ bool hasCP1 = true
 unit COP1Init() =
 {
     fcsr.FS <- false;
-    fcsr.C <- false;
+    fcsr.FCC <- 0;
     fcsr.ABS2008 <- false;
     fcsr.NAN2008 <- true;
     fcsr.CauseE <- false;

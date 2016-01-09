@@ -121,7 +121,7 @@ define COP1 > ADD_S (fd::reg, fs::reg, ft::reg) =
 define COP1 > BC1F(i::bits(16)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if not fcsr.C then
+    else if not fcsr.FCC<0> then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
         CheckBranch
@@ -132,7 +132,7 @@ define COP1 > BC1F(i::bits(16)) =
 define COP1 > BC1FL(i::bits(16)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if not fcsr.C then
+    else if not fcsr.FCC<0> then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
     {
@@ -146,7 +146,7 @@ define COP1 > BC1FL(i::bits(16)) =
 define COP1 > BC1T(i::bits(16)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if fcsr.C then
+    else if fcsr.FCC<0> then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
         CheckBranch
@@ -157,7 +157,7 @@ define COP1 > BC1T(i::bits(16)) =
 define COP1 > BC1TL(i::bits(16)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if fcsr.C then
+    else if fcsr.FCC<0> then
         BranchTo <- Some (PC + 4 + SignExtend (i) << 2)
     else
     {
@@ -172,7 +172,7 @@ define COP1 > C_F_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- false
+        fcsr.FCC<0> <- false
 
 --------------------------------
 -- C.F.S fs, ft
@@ -181,7 +181,7 @@ define COP1 > C_F_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- false
+        fcsr.FCC<0> <- false
 
 -----------------------------------
 -- C.UN.D fs, ft
@@ -190,7 +190,7 @@ define COP1 > C_UN_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP64_Unordered(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.UN.S fs, ft
@@ -199,7 +199,7 @@ define COP1 > C_UN_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.EQ.D fs, ft
@@ -208,7 +208,7 @@ define COP1 > C_EQ_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP64_Equal(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- FP64_Equal(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.EQ.S fs, ft
@@ -217,7 +217,7 @@ define COP1 > C_EQ_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.UEQ.D fs, ft
@@ -226,7 +226,7 @@ define COP1 > C_UEQ_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP64_Equal(FGR(fs), FGR(ft)) or
+        fcsr.FCC<0> <- FP64_Equal(FGR(fs), FGR(ft)) or
             FP64_Unordered(FGR(fs), FGR(ft))
 
 -----------------------------------
@@ -236,7 +236,7 @@ define COP1 > C_UEQ_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>) or
+        fcsr.FCC<0> <- FP32_Equal(FGR(fs)<31:0>, FGR(ft)<31:0>) or
             FP32_Unordered(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
@@ -246,7 +246,7 @@ define COP1 > C_OLT_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP64_LessThan(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- FP64_LessThan(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.OLT.S fs, ft
@@ -255,7 +255,7 @@ define COP1 > C_OLT_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP32_LessThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- FP32_LessThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.ULT.D fs, ft
@@ -264,7 +264,7 @@ define COP1 > C_ULT_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- not FP64_GreaterEqual(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- not FP64_GreaterEqual(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.ULT.S fs, ft
@@ -273,7 +273,7 @@ define COP1 > C_ULT_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- not FP32_GreaterEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- not FP32_GreaterEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.OLE.D fs, ft
@@ -282,7 +282,7 @@ define COP1 > C_OLE_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP64_LessEqual(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- FP64_LessEqual(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.OLE.S fs, ft
@@ -291,7 +291,7 @@ define COP1 > C_OLE_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- FP32_LessEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- FP32_LessEqual(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- C.ULE.D fs, ft
@@ -300,7 +300,7 @@ define COP1 > C_ULE_D(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- not FP64_GreaterThan(FGR(fs), FGR(ft))
+        fcsr.FCC<0> <- not FP64_GreaterThan(FGR(fs), FGR(ft))
 
 -----------------------------------
 -- C.ULE.S fs, ft
@@ -309,7 +309,7 @@ define COP1 > C_ULE_S(fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        fcsr.C <- not FP32_GreaterThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
+        fcsr.FCC<0> <- not FP32_GreaterThan(FGR(fs)<31:0>, FGR(ft)<31:0>)
 
 -----------------------------------
 -- CEIL.L.D fd, fs
@@ -659,10 +659,10 @@ define COP1 > MOV_S (fd::reg, fs::reg) =
 -----------------------------------
 -- MOVF rd, rs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVF(rd::reg, rs::reg) =
+define COP1 > MOVF(rd::reg, rs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if not fcsr.C then
+    else if not fcsr.FCC<[cc]::nat> then
         GPR(rd) <- GPR(rs)
     else
         nothing
@@ -670,10 +670,10 @@ define COP1 > MOVF(rd::reg, rs::reg) =
 -----------------------------------
 -- MOVF.D fd, fs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVF_D(fd::reg, fs::reg) =
+define COP1 > MOVF_D(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if not fcsr.C then
+    else if not fcsr.FCC<[cc]::nat> then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -681,10 +681,10 @@ define COP1 > MOVF_D(fd::reg, fs::reg) =
 -----------------------------------
 -- MOVF.S fd, fs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVF_S(fd::reg, fs::reg) =
+define COP1 > MOVF_S(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if not fcsr.C then
+    else if not fcsr.FCC<[cc]::nat> then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -714,10 +714,10 @@ define COP1 > MOVN_S(fd::reg, fs::reg, rt::reg) =
 -----------------------------------
 -- MOVT rd, rs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVT(rd::reg, rs::reg) =
+define COP1 > MOVT(rd::reg, rs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if fcsr.C then
+    else if fcsr.FCC<[cc]::nat> then
         GPR(rd) <- GPR(rs)
     else
         nothing
@@ -725,10 +725,10 @@ define COP1 > MOVT(rd::reg, rs::reg) =
 -----------------------------------
 -- MOVT.D fd, fs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVT_D(fd::reg, fs::reg) =
+define COP1 > MOVT_D(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if fcsr.C then
+    else if fcsr.FCC<[cc]::nat> then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -736,10 +736,10 @@ define COP1 > MOVT_D(fd::reg, fs::reg) =
 -----------------------------------
 -- MOVT.S fd, fs, cc (MIPS IV)
 -----------------------------------
-define COP1 > MOVT_S(fd::reg, fs::reg) =
+define COP1 > MOVT_S(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else if fcsr.C then
+    else if fcsr.FCC<[cc]::nat> then
         FGR(fd) <- FGR(fs)
     else
         nothing
@@ -1083,7 +1083,7 @@ define COP1 > CFC1(rt::reg, fs::reg) =
         {
             -- Floating Point Condition Codes Register (not in MIPS III)
             case 0  => SignExtend(&fir)
-            case 25 => ZeroExtend([fcsr.C]`1)
+            case 25 => ZeroExtend(fcsr.FCC)
             case 31 => SignExtend(&fcsr)
             case _  => #UNPREDICTABLE("Unsupported floating point control register")
         }
@@ -1102,7 +1102,7 @@ define COP1 > CTC1(rt:: reg, fs::reg) =
             -- whether a write to it is a NOP or is UNPREDICTABLE.
             case 0 => nothing
             -- Floating Point Condition Codes Register (not in MIPS III)
-            case 25 => fcsr.C <- GPR(rt)<0>
+            case 25 => fcsr.FCC <- GPR(rt)<7:0>
             case 31 =>
             {
                 &fcsr <- GPR(rt)<31:0>;
