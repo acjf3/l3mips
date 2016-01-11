@@ -9,18 +9,21 @@ include(`cap-params.m4')dnl
 -------------------
 bool register_inaccessible(cb::reg) = allow_system_reg_access(getPerms(PCC), cb)
 
-unit register_inaccessible_write_attempt(mask::bits(16)) =
+bool register_inaccessible_write_attempt(mask::bits(16)) =
 {
+    var ret = true;
     if mask<15> and register_inaccessible(31) then
         SignalCapException_v(31)
     else if mask<14> and register_inaccessible(30) then
         SignalCapException_v(30)
-    else if mask<13> and not register_inaccessible(29) then
+    else if mask<13> and register_inaccessible(29) then
         SignalCapException_v(29)
-    else if mask<11> and not register_inaccessible(27) then
+    else if mask<11> and register_inaccessible(27) then
         SignalCapException_v(27)
-    else when mask<12> and not register_inaccessible(28) do
+    else if mask<12> and register_inaccessible(28) then
         SignalCapException_v(28)
+    else ret <- false;
+    ret
 }
 
 -- only works for non empty lists
@@ -220,17 +223,14 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
 define COP2 > CHERICOP2 > CSet > CClearRegs (regset::bits(5), mask::bits(16)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-    else
+    else match regset
     {
-        register_inaccessible_write_attempt(mask); -- XXX Spec doesn't define an exception code yet ...
-        match regset
-        {
-            case 0 => for i in  0 .. 15 do when mask<i> do GPR([i])     <- 0
-            case 1 => for i in 16 .. 31 do when mask<i-16> do GPR([i])  <- 0
-            case 2 => for i in  0 .. 15 do when mask<i> do CAPR([i])    <- nullCap
-            case 3 => for i in 16 .. 31 do when mask<i-16> do CAPR([i]) <- nullCap
-            case _ => SignalException (ResI)
-        }
+        case 0 => for i in  0 .. 15 do when mask<i> do GPR([i])     <- 0
+        case 1 => for i in 16 .. 31 do when mask<i-16> do GPR([i])  <- 0
+        case 2 => for i in  0 .. 15 do when mask<i> do CAPR([i])    <- nullCap
+        case 3 => when not register_inaccessible_write_attempt(mask) do
+                       for i in 16 .. 31 do when mask<i-16> do CAPR([i]) <- nullCap
+        case _ => SignalException (ResI)
     }
 
 -----------------------------------
