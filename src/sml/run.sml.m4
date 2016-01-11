@@ -196,13 +196,13 @@ in
        val savedProcID = mips.switchCore core
      in
         print "======   Registers   ======\n"
-      ; print ("Core = " ^ Int.toString core ^ "\n")
-      ; print ("PC     " ^ hex64 (mips.PC ()) ^ "\n")
+      ; print ("DEBUG MIPS COREID " ^ Int.toString core ^ "\n")
+      ; print ("DEBUG MIPS PC\t0x" ^ hex64 (mips.PC ()) ^ "\n")
       ; L3.for
           (0, 31,
            fn i =>
-              print ("Reg " ^ (if i < 10 then " " else "") ^
-                     Int.toString i ^ " " ^ readReg i ^ "\n"))
+              print ("DEBUG MIPS REG " ^ (if i < 10 then " " else "") ^
+                     Int.toString i ^ "\t0x" ^ readReg i ^ "\n"))
       ; mips.switchCore savedProcID
     end
 end
