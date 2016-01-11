@@ -116,7 +116,7 @@ string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string hex31 (x::bits(31)) = ToLower (PadLeft (#"0", 8, [x]))
 
 string log_cap_write (cap::Capability) =
-    "u:":(if getSealed(cap) then "1" else "0"):
+    "s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex31(&getPerms(cap)):
     " type:0x":hex24(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):

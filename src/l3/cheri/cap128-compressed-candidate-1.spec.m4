@@ -260,7 +260,7 @@ string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 
 {-
 string cap_inner_rep (cap::Capability) =
-    "u:":(if cap.tag then "1" else "0"):
+    "s:":(if cap.tag then "1" else "0"):
     " perms:0x":hex23(cap.perms):
     " base_eq_ptr:":(if cap.base_eq_pointer then "1" else "0"):
     " exp:":[[cap.exp]::nat]:
@@ -271,7 +271,7 @@ string cap_inner_rep (cap::Capability) =
 -}
 
 string log_cap_write (cap::Capability) =
-    "u:":(if getSealed(cap) then "1" else "0"):
+    "s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex23(&getPerms(cap)):
     " type:0x":hex16(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):

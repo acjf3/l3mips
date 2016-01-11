@@ -159,7 +159,7 @@ if dwordAddr<0> then
 else
     old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
 
-Capability defaultCap = -- FIXME
+Capability defaultCap =
 {
     var new_cap :: Capability;
     new_cap.tag      <- true;
@@ -352,7 +352,7 @@ string cap_inner_rep (cap::Capability) =
 -}
 
 string log_cap_write (cap::Capability) =
-    "u:":(if getSealed(cap) then "1" else "0"):
+    "s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex16(ZeroExtend(&getPerms(cap))):
     " type:0x":hex20(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):

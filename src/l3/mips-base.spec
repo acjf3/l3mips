@@ -155,10 +155,10 @@ unit CheckBranch =
 unit dumpRegs () =
 {
     mark_log (0, "======   Registers   ======")
-  ; mark_log (0, "Core = " : [[procID]::nat])
-  ; mark_log (0, "PC     " : hex64(PC))
+  ; mark_log (0, "DEBUG MIPS COREID " : [[procID]::nat])
+  ; mark_log (0, "DEBUG MIPS PC\\t0x" : hex64(PC))
   ; for i in 0 .. 31 do
-      mark_log (0, "Reg " : (if i < 10 then " " else "") : [i] : " " :
+      mark_log (0, "DEBUG MIPS REG " : (if i < 10 then " " else "") : [i] : "\\t0x" :
                 hex64(GPR([i])))
 }
 

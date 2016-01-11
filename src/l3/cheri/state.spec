@@ -40,12 +40,12 @@ unit dumpCRegs () =
 {
     mark_log (0, "======   Registers   ======")
   ; mark_log (0, "Core = " : [[procID]::nat])
-  ; mark_log (0, "DEBUG CAP PCC " : log_cap_write(c_pcc(procID)))
+  ; mark_log (0, "DEBUG CAP PCC   \\t" : log_cap_write(c_pcc(procID)))
   ; m = c_capr(procID)
   ; for i in 0 .. 31 do
-    mark_log (0, "DEBUG CAP REG          " :
+    mark_log (0, "DEBUG CAP REG " :
         (if i<10 then " " else "") : [[i]::nat] :
-        " " : log_cap_write(m([i])))
+        "\\t" : log_cap_write(m([i])))
 }
 
 component capcause :: CapCause
