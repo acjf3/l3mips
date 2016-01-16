@@ -654,7 +654,8 @@ define COP1 > MOV_S (fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- FGR(fs)
+        -- In the MIPS ISA, the upper bits of the result are UNDEFINED
+        FGR(fd) <- SignExtend(FGR(fs)<31:0>)
 
 -----------------------------------
 -- MOVF rd, rs, cc (MIPS IV)
@@ -685,7 +686,7 @@ define COP1 > MOVF_S(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else if not fcsr.FCC<[cc]::nat> then
-        FGR(fd) <- FGR(fs)
+        FGR(fd) <- SignExtend(FGR(fs)<31:0>)
     else
         nothing
 
@@ -707,7 +708,7 @@ define COP1 > MOVN_S(fd::reg, fs::reg, rt::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else if GPR(rt) <> 0 then
-        FGR(fd) <- FGR(fs)
+        FGR(fd) <- SignExtend(FGR(fs)<31:0>)
     else
         nothing
 
@@ -740,7 +741,7 @@ define COP1 > MOVT_S(fd::reg, fs::reg, cc::bits(3)) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else if fcsr.FCC<[cc]::nat> then
-        FGR(fd) <- FGR(fs)
+        FGR(fd) <- SignExtend(FGR(fs)<31:0>)
     else
         nothing
 
@@ -762,7 +763,7 @@ define COP1 > MOVZ_S(fd::reg, fs::reg, rt::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else if GPR(rt) == 0 then
-        FGR(fd) <- FGR(fs)
+        FGR(fd) <- SignExtend(FGR(fs)<31:0>)
     else
         nothing
 
