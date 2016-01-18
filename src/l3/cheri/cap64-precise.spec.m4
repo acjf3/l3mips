@@ -9,10 +9,10 @@ include(`cap-params.m4')dnl
 bool isCapAligned  (addr::bits(64))  = addr<2:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) =
-  &cap<127:64>
+  &cap<191:128>
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
-    Capability('0' : 0xFEEDF00D_DEADBABE_AA666AA_DEADBABE::bits(128) : raw : 0xFEEDBABE_DEADF00D::bits(64))
+    Capability('0' : 0xFEEDF00D_DEADBABE::bits(64) : raw : 0xFEEDBABE_DEADF00D::bits(128))
 
 dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) = raw
 
