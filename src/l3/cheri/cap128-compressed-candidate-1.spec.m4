@@ -111,31 +111,9 @@ Capability updateBounds (cap::Capability, ptr::bits(64)) =
     new_cap
 }
 
---------------------------------------
--- capability "typeclass" functions --
+---------------------------------------
+-- standard capabilities definitions --
 --------------------------------------------------------------------------------
-
-bool allow_system_reg_access(p::Perms, r::reg) =
-(  r == 31 and not p.Access_EPCC
-or r == 30 and not p.Access_KDC
-or r == 29 and not p.Access_KCC
-or r == 27 and not p.Access_KR1C
-or r == 28 and not p.Access_KR2C )
-
-bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
-
-CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
-
-Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw<63:0> : raw<127:64>) -- XXX swap dwords to match CHERI bluespec implementation
-
-dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
-if dwordAddr<0> then raw<127:64> else raw<63:0>
-
-CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
-if dwordAddr<0> then
-    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
-else
-    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
 
 Capability defaultCap =
 {
@@ -177,9 +155,10 @@ Perms    getPerms  (cap::Capability) = Perms(cap.perms)
 bool     getSealed (cap::Capability) = cap.sealed
 bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
 bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
+bits(65) getFullLength (cap::Capability) = innerGetTop(cap) - innerGetBase(cap)
 bits(64) getLength (cap::Capability) =
 {
-    len = innerGetTop(cap) - innerGetBase(cap);
+    len = getFullLength(cap);
     if len<64> then ~0 else len<63:0>
 }
 
@@ -238,17 +217,63 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 
 Capability setBounds (cap::Capability, length::bits(64)) =
 {
-    var new_cap = cap;
+    var new_cap::Capability = cap;
     -- set length (pick best representation)
-    zeros  = countLeadingZeros (length);
+    zeros::nat  = countLeadingZeros (length);
     newExp::nat = if (zeros > 50) then 0 else 50 - zeros; -- 50 is actually 65 - 15, 15 being the mantissa size minus 1 for the sign bit
     new_cap.exp <- [newExp];
-    new_cap.toTop <- ZeroExtend((length >>+ newExp)<14:0>);
-    when length && ~(~0 << newExp) <> 0 do new_cap.toTop <- new_cap.toTop + 1;
+    var new_top::bits(65) = ZeroExtend(getPtr(cap) + length);
+    when new_top && ~(~0 << newExp) <> 0 do
+        new_top <- (new_top && (~0 << newExp)) + (1 << newExp);
+    new_length::bits(65) = new_top - ZeroExtend(getPtr(cap));
+    new_cap.toTop <- ZeroExtend((new_length >>+ newExp)<14:0>);
+    when new_length && ~(~0 << newExp) <> 0 do new_cap.toTop <- new_cap.toTop + 1;
     -- set base (and offset of 0)
     new_cap.toBottom <- 0;
     -- return initialized capability
     new_cap
+}
+
+--------------------------------------
+-- capability "typeclass" functions --
+--------------------------------------------------------------------------------
+
+bool allow_system_reg_access(p::Perms, r::reg) =
+(  r == 31 and not p.Access_EPCC
+or r == 30 and not p.Access_KDC
+or r == 29 and not p.Access_KCC
+or r == 27 and not p.Access_KR1C
+or r == 28 and not p.Access_KR2C )
+
+bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
+
+CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
+
+Capability bitsToCap (raw :: CAPRAWBITS) = Capability('0' : raw<63:0> : raw<127:64>) -- XXX swap dwords to match CHERI bluespec implementation
+
+dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
+if dwordAddr<0> then raw<127:64> else raw<63:0>
+
+CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
+if dwordAddr<0> then
+    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
+else
+    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
+
+bool isCapRepresentable(sealed::bool,
+                        base::bits(64),
+                        length::bits(64),
+                        offset::bits(64)) =
+{
+    var test_cap = defaultCap;
+    test_cap <- setOffset(test_cap, base);
+    test_cap <- setBounds(test_cap, length);
+    test_cap <- setOffset(test_cap, offset);
+    test_cap <- setSealed(test_cap, sealed);
+    if getBase(test_cap)   == base   and
+       getLength(test_cap) == length and
+       getOffset(test_cap) == offset then
+       true else false
 }
 
 ---------------
@@ -260,7 +285,7 @@ string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 
 {-
 string cap_inner_rep (cap::Capability) =
-    "s:":(if cap.tag then "1" else "0"):
+    "v:":(if cap.tag then "1" else "0"):
     " perms:0x":hex23(cap.perms):
     " base_eq_ptr:":(if cap.base_eq_pointer then "1" else "0"):
     " exp:":[[cap.exp]::nat]:

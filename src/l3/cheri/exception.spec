@@ -38,7 +38,8 @@ construct CapException
     capExcAccKDC,            -- Access_KDC
     capExcAccKCC,            -- Access_KCC
     capExcAccKR1C,           -- Access_KR1C
-    capExcAccKR2C            -- Access_KR2C
+    capExcAccKR2C,           -- Access_KR2C
+    capExcInexact            -- Capability is not representable TODO add to the spec
 }
 
 bits(5) ExceptionCode (ExceptionType::ExceptionType) =
@@ -149,6 +150,7 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcAccKCC            => 0x1c
         case capExcAccKR1C           => 0x1d
         case capExcAccKR2C           => 0x1e
+        case capExcInexact           => 0x1f -- TODO add to the spec
     };
     capcause.RegNum  <- regNum;
     when 2 <= trace_level do

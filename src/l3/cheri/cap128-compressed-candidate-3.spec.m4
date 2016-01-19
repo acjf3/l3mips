@@ -106,58 +106,9 @@ nat innerZeroCount (data::bool list, acc::nat) = match data
 
 nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
 
---------------------------------------
--- capability "typeclass" functions --
+---------------------------------------
+-- standard capabilities definitions --
 --------------------------------------------------------------------------------
-
-bool allow_system_reg_access(p::Perms, r::reg) =
-((r == 31 or r == 30 or r == 29 or r == 27 or r == 28) and not p.Access_System_Registers)
-
-bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
-
-CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
-{
-    case Sealed(sf)   => cap.cursor:cap.&perms:'00':cap.exp:'1':sf.baseBits:sf.otypeHi:sf.topBits:sf.otypeLo
-    case Unsealed(uf) => cap.cursor:cap.&perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
-}
-
-Capability bitsToCap (raw :: CAPRAWBITS) =
-{
-    var new_cap :: Capability;
-    new_cap.tag      <- false;
-    new_cap.perms    <- Perms(raw<63:49>);
-    new_cap.reserved <- 0;
-    new_cap.exp      <- raw<46:41>;
-    var f;
-    if raw<40> then
-    {
-        var sf :: SealedFields;
-        sf.baseBits <- raw<39:30>;
-        sf.otypeHi  <- raw<29:20>;
-        sf.topBits  <- raw<19:10>;
-        sf.otypeLo  <- raw<9:0>;
-        f <- Sealed(sf)
-    }
-    else
-    {
-        var uf :: UnsealedFields;
-        uf.baseBits <- raw<39:20>;
-        uf.topBits  <- raw<19:0>;
-        f <- Unsealed(uf)
-    };
-    new_cap.sFields  <- f;
-    new_cap.cursor   <- raw<127:64>;
-    new_cap
-}
-
-dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
-if dwordAddr<0> then raw<127:64> else raw<63:0>
-
-CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
-if dwordAddr<0> then
-    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
-else
-    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
 
 Capability defaultCap =
 {
@@ -165,7 +116,7 @@ Capability defaultCap =
     new_cap.tag      <- true;
     new_cap.perms    <- Perms(~0);
     new_cap.reserved <- 0;
-    new_cap.exp      <- 0x2D;
+    new_cap.exp      <- 0x2D; -- 45
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
     uf.topBits  <- 0x80000;
@@ -217,12 +168,18 @@ bits(64) getBase (cap::Capability) =
 
 bits(64) getOffset (cap::Capability) = cap.cursor - getBase(cap)
 
-bits(64) getLength (cap::Capability) =
+bits(65) getFullLength (cap::Capability) =
 {
     pr, tr, br = getRepRegion(cap);
     b = getBound (cap, pr, br);
     t = getBound (cap, pr, tr);
     len = t - b;
+    return len<64:0>
+}
+
+bits(64) getLength (cap::Capability) =
+{
+    len = getFullLength(cap);
     if len<64> then ~0 else len<63:0>
 }
 
@@ -264,15 +221,16 @@ Capability setBounds (cap::Capability, length::bits(64)) =
         case Unsealed(uf) =>
         {
             -- set length (pick best representation)
-            zeros  = countLeadingZeros (length);
+            zeros = countLeadingZeros (length);
             var new_exp = if (zeros > 44) then 0 else 44 - zeros;
-            var rep_len = 1 << (new_exp + 20);
-            when not rep_len > (length+2*BUFFSIZE) do
+            var rep_len::bits(65) = 1 << (new_exp + 20);
+            when not rep_len > ZeroExtend(length+2*BUFFSIZE) do
                 new_exp <- new_exp + 1;
             new_base = cap.cursor;
-            new_top  = cap.cursor + length;
+            new_top::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
             new_baseBits = new_base<new_exp+20:new_exp>;
-            new_topBits  = new_top<new_exp+20:new_exp>;
+            var new_topBits = new_top<new_exp+20:new_exp>;
+            when (new_top && ~(~0 << new_exp)) <> 0 do new_topBits  <- new_topBits + 1;
             new_cap.exp <- [new_exp];
             var uf :: UnsealedFields;
             uf.baseBits <- new_baseBits;
@@ -327,6 +285,75 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
     case _ => UNKNOWN
 }
 
+--------------------------------------
+-- capability "typeclass" functions --
+--------------------------------------------------------------------------------
+
+bool allow_system_reg_access(p::Perms, r::reg) =
+((r == 31 or r == 30 or r == 29 or r == 27 or r == 28) and not p.Access_System_Registers)
+
+bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
+
+CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
+{
+    case Sealed(sf)   => cap.cursor:cap.&perms:'00':cap.exp:'1':sf.baseBits:sf.otypeHi:sf.topBits:sf.otypeLo
+    case Unsealed(uf) => cap.cursor:cap.&perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
+}
+
+Capability bitsToCap (raw :: CAPRAWBITS) =
+{
+    var new_cap :: Capability;
+    new_cap.tag      <- false;
+    new_cap.perms    <- Perms(raw<127:113>);
+    new_cap.reserved <- 0;
+    new_cap.exp      <- raw<110:105>;
+    var f;
+    if raw<104> then
+    {
+        var sf :: SealedFields;
+        sf.otypeHi  <- raw<103:94>;
+        sf.baseBits <- raw<93:84>;
+        sf.otypeLo  <- raw<83:74>;
+        sf.topBits  <- raw<73:64>;
+        f <- Sealed(sf)
+    }
+    else
+    {
+        var uf :: UnsealedFields;
+        uf.baseBits <- raw<103:84>;
+        uf.topBits  <- raw<83:64>;
+        f <- Unsealed(uf)
+    };
+    new_cap.sFields  <- f;
+    new_cap.cursor   <- raw<63:0>;
+    new_cap
+}
+
+dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
+if dwordAddr<0> then raw<127:64> else raw<63:0>
+
+CAPRAWBITS updateDwordInRaw (dwordAddr::bits(37), data::dword, mask::dword, old_blob::CAPRAWBITS) =
+if dwordAddr<0> then
+    (old_blob<127:64> && ~mask || data && mask) : old_blob<63:0>
+else
+    old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
+
+bool isCapRepresentable(sealed::bool,
+                        base::bits(64),
+                        length::bits(64),
+                        offset::bits(64)) =
+{
+    var test_cap = defaultCap;
+    test_cap <- setOffset(test_cap, base);
+    test_cap <- setBounds(test_cap, length);
+    test_cap <- setOffset(test_cap, offset);
+    test_cap <- setSealed(test_cap, sealed);
+    if getBase(test_cap)   == base   and
+       getLength(test_cap) == length and
+       getOffset(test_cap) == offset then
+       true else false
+}
+
 ---------------
 -- log utils --
 --------------------------------------------------------------------------------
@@ -339,7 +366,8 @@ string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 
 {-
 string cap_inner_rep (cap::Capability) =
-    "perms:0x":hex16(ZeroExtend(cap.&perms)):
+    "v:":(if cap.tag then "1" else "0"):
+    " perms:0x":hex16(ZeroExtend(cap.&perms)):
     " exp:":dec6(cap.exp):
     match cap.sFields
     {

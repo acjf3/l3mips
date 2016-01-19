@@ -174,10 +174,19 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) and GPR(rt) <> 0 then
         SignalCapException(capExcSeal,cb)
+    else if not isCapRepresentable (getSealed(CAPR(cb)),
+                                    getBase(CAPR(cb)),
+                                    getLength(CAPR(cb)),
+                                    getOffset(CAPR(cb)) + GPR(rt)) then
+    {
+        var new_cap = nullCap;
+        new_cap  <- setOffset(new_cap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- new_cap
+    }
     else
     {
-        var new_cap     = CAPR(cb);
-        new_cap <- setOffset(new_cap, getOffset(CAPR(cb)) + GPR(rt));
+        var new_cap = CAPR(cb);
+        new_cap  <- setOffset(new_cap, getOffset(CAPR(cb)) + GPR(rt));
         CAPR(cd) <- new_cap
     }
 
@@ -283,10 +292,19 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException_v(cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
+    else if not isCapRepresentable (getSealed(CAPR(cb)),
+                                    getBase(CAPR(cb)),
+                                    getLength(CAPR(cb)),
+                                    GPR(rt)) then
+    {
+        var new_cap = nullCap;
+        new_cap  <- setOffset(new_cap, getBase(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- new_cap
+    }
     else
     {
         var new_cap = CAPR(cb);
-        new_cap <- setOffset(new_cap, GPR(rt));
+        new_cap  <- setOffset(new_cap, GPR(rt));
         CAPR(cd) <- new_cap
     }
 
@@ -974,11 +992,16 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcLength,ct)
     else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ eval(2**OTYPEWIDTH) then
         SignalCapException(capExcLength,ct)
+    else if not isCapRepresentable (true,
+                                    getBase(CAPR(cs)),
+                                    getLength(CAPR(cs)),
+                                    getOffset(CAPR(cs))) then
+        SignalCapException(capExcInexact,cs)
     else
     {
         var new_cap = CAPR(cs);
-        new_cap <- setSealed(new_cap, true);
-        new_cap <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0>);
+        new_cap  <- setSealed(new_cap, true);
+        new_cap  <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0>);
         CAPR(cd) <- new_cap
     }
 
