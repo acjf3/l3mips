@@ -33,10 +33,10 @@ record UnsealedFields
 
 record SealedFields
 {
-    baseBits :: bits(10)
     otypeHi  :: bits(10)
-    topBits  :: bits(10)
+    baseBits :: bits(10)
     otypeLo  :: bits(10)
+    topBits  :: bits(10)
 }
 
 construct SFields {Sealed :: SealedFields, Unsealed :: UnsealedFields}
@@ -65,7 +65,7 @@ RepRegion * RepRegion * RepRegion getRepRegion (cap::Capability) =
     tb, bb = match cap.sFields
     {
         case Unsealed(uf) => uf.topBits, uf.baseBits
-        case Sealed(sf)   => sf.topBits:(0`10), sf.baseBits:(0`10)
+        case Sealed(sf)   => (0`10):sf.topBits, (0`10):sf.baseBits
     };
     ptr = cap.cursor<[cap.exp]+20:[cap.exp]>;
     var repBound::bits(21) = (('0':tb)+('0':bb))>>1;
@@ -254,16 +254,17 @@ Capability setSealed (cap::Capability, sealed::bool) =
         case Sealed(sf) => when not sealed do
         {
             var uf :: UnsealedFields;
-            uf.baseBits <- ZeroExtend(sf.baseBits)<<10;
-            uf.topBits  <- ZeroExtend(sf.topBits)<<10;
+            uf.baseBits <- ZeroExtend(sf.baseBits);
+            uf.topBits  <- ZeroExtend(sf.topBits);
             new_cap.sFields <- Unsealed(uf)
         }
         case Unsealed(uf)   => when sealed do
         {
+            --TODO FIXME for the upper bits of the unsealed fields to be 0
             var sf :: SealedFields;
-            sf.baseBits <- [uf.baseBits>>10];
+            sf.baseBits <- [uf.baseBits];
             sf.otypeHi  <- 0;
-            sf.topBits  <- [uf.topBits>>10];
+            sf.topBits  <- [uf.topBits];
             sf.otypeLo  <- 0;
             new_cap.sFields <- Sealed (sf)
         }
@@ -296,7 +297,7 @@ bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
 {
-    case Sealed(sf)   => cap.cursor:cap.&perms:'00':cap.exp:'1':sf.baseBits:sf.otypeHi:sf.topBits:sf.otypeLo
+    case Sealed(sf)   => cap.cursor:cap.&perms:'00':cap.exp:'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
     case Unsealed(uf) => cap.cursor:cap.&perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
 }
 
@@ -304,28 +305,28 @@ Capability bitsToCap (raw :: CAPRAWBITS) =
 {
     var new_cap :: Capability;
     new_cap.tag      <- false;
-    new_cap.perms    <- Perms(raw<127:113>);
+    new_cap.perms    <- Perms(raw<63:49>);
     new_cap.reserved <- 0;
-    new_cap.exp      <- raw<110:105>;
+    new_cap.exp      <- raw<46:41>;
     var f;
-    if raw<104> then
+    if raw<40> then
     {
         var sf :: SealedFields;
-        sf.otypeHi  <- raw<103:94>;
-        sf.baseBits <- raw<93:84>;
-        sf.otypeLo  <- raw<83:74>;
-        sf.topBits  <- raw<73:64>;
+        sf.otypeHi  <- raw<39:30>;
+        sf.baseBits <- raw<29:20>;
+        sf.otypeLo  <- raw<19:10>;
+        sf.topBits  <- raw<9:0>;
         f <- Sealed(sf)
     }
     else
     {
         var uf :: UnsealedFields;
-        uf.baseBits <- raw<103:84>;
-        uf.topBits  <- raw<83:64>;
+        uf.baseBits <- raw<39:20>;
+        uf.topBits  <- raw<19:0>;
         f <- Unsealed(uf)
     };
     new_cap.sFields  <- f;
-    new_cap.cursor   <- raw<63:0>;
+    new_cap.cursor   <- raw<127:64>;
     new_cap
 }
 
