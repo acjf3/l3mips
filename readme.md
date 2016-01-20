@@ -97,6 +97,7 @@ Further variables can be set to control parameters of the caches:
 + `L2SIZE`     : L2 cache size in bytes (default is `65536`)
 + `L2WAYS`     : number of ways in the L1 cache (default is `4`, 4-way set associative)
 + `L2LINESIZE` : L2 cache line size in bytes (default is `128`)
+
 For example, to build a simulator with caches, with a 2-way set associative L1:
 
 ```
