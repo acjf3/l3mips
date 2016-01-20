@@ -30,10 +30,9 @@ tar -xf l3.tar.bz2
 cd L3-AAAA-MM-DD/
 ```
 
-(with `L3-AAAA-MM-DD/` matching the date of your L3 release):
+(with `L3-AAAA-MM-DD/` matching the date of your L3 release).
 
-Edit the `Makefile` to specify what lib flags to use when compiling L3: the `POLYLIB` variable should be set to `-L${LIBPATH} -lpolymain -lpolyml -lpthread -lgmp -ldl -lstdc++`.
-You should now be able to build L3:
+You should now be able to build L3 with:
 
 ```
 make
