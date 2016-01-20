@@ -77,10 +77,7 @@ define COP2 > CHERICOP2 > CGet > CGetTag (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-    {
-        GPR(rd)<0> <- getTag(CAPR(cb));
-        GPR(rd)<63:1> <- 0
-    }
+        GPR(rd) <- ZeroExtend([getTag(CAPR(cb))])
 
 -----------------------------------
 -- CGetSealed rd, cb
