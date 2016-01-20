@@ -25,6 +25,7 @@ construct CapException
     capExcUnderflowTSS,      -- Underflow of trusted system stack
     capExcUser,              -- User-defined Permision Violation
     capExcTLBNoStore,        -- User-defined Permision Violation
+    capExcInexact,           -- Capability is not representable
     capExcGlobal,            -- Global Violation
     capExcPermExe,           -- Permit_Execute Violation
     capExcPermLoad,          -- Permit_Load Violation
@@ -38,8 +39,7 @@ construct CapException
     capExcAccKDC,            -- Access_KDC
     capExcAccKCC,            -- Access_KCC
     capExcAccKR1C,           -- Access_KR1C
-    capExcAccKR2C,           -- Access_KR2C
-    capExcInexact            -- Capability is not representable TODO add to the spec
+    capExcAccKR2C            -- Access_KR2C
 }
 
 bits(5) ExceptionCode (ExceptionType::ExceptionType) =
@@ -136,6 +136,7 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcUnderflowTSS      => 0x7
         case capExcUser              => 0x8
         case capExcTLBNoStore        => 0x9
+        case capExcInexact           => 0x0a
         case capExcGlobal            => 0x10
         case capExcPermExe           => 0x11
         case capExcPermLoad          => 0x12
@@ -150,7 +151,6 @@ unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
         case capExcAccKCC            => 0x1c
         case capExcAccKR1C           => 0x1d
         case capExcAccKR2C           => 0x1e
-        case capExcInexact           => 0x1f -- TODO add to the spec
     };
     capcause.RegNum  <- regNum;
     when 2 <= trace_level do
