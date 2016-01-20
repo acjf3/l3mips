@@ -186,10 +186,12 @@ Capability setSealed (cap::Capability, sealed::bool) =
 }
 Capability setOffset (cap::Capability, offset::bits(64)) =
 {
+    {-
     -- XXX experimental :
     oldbase = innerGetBase(cap);
     oldtop = innerGetTop(cap);
     ---------------------
+    -}
 
     var new_cap = cap;
     newPtr      = getBase(cap) + offset;
@@ -198,6 +200,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
 
     new_cap.base_eq_pointer <- if offset == 0 then true else false;
 
+    {-
     -- XXX experimental :
     newbase = innerGetBase(new_cap);
     newtop = innerGetTop(new_cap);
@@ -211,6 +214,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
         new_cap.tag <- false
     };
     ---------------------
+    -}
 
     new_cap
 }

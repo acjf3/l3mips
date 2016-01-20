@@ -189,14 +189,17 @@ bits(64) getLength (cap::Capability) =
 
 Capability setOffset (cap::Capability, offset::bits(64)) =
 {
+    {-
     -- XXX experimental :
     oldbase = getBase(cap);
     oldtop  = getTop(cap);
     ---------------------
+    -}
 
     var new_cap = cap;
     new_cap.cursor <- getBase(cap) + offset;
 
+    {-
     -- XXX experimental :
     newbase = getBase(new_cap);
     newtop  = getTop(new_cap);
@@ -207,6 +210,7 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
         new_cap.cursor <- offset
     };
     ---------------------
+    -}
 
     new_cap
 }
