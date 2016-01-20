@@ -66,7 +66,7 @@ you will need the [m4](https://www.gnu.org/software/m4/) macro processor install
 sudo apt-get install m4
 ```
 
-You can then build your CHERI simulator, specifying a value in the CAP variable. Possible values for this variable are :
+You can then build your CHERI simulator, specifying a value in the `CAP` variable. Possible values for this variable are :
 + `p256` : 256-bits wide precise capabilities
 + `p128` : 128-bits wide precise capabilities
 + `p64`  : 64-bits wide precise capabilities (no compiler support yet, so currently unusable)
@@ -76,6 +76,37 @@ You can then build your CHERI simulator, specifying a value in the CAP variable.
 
 ```
 make CAP=p256
+```
+
+To build the simulator with a floating point unit, set the `FPU` variable to `1`:
+
+```
+make FPU=1
+```
+
+To build the simulator with caches, set the `CACHE` variable to `1`:
+
+```
+make CACHE=1
+```
+
+Further variables can be set to control parameters of the caches:
++ `L1SIZE`     : L1 cache size in bytes (default is `16384`)
++ `L1WAYS`     : number of ways in the L1 cache (default is `1`, direct mapped)
++ `L1LINESIZE` : L1 cache line size in bytes (default is `128`)
++ `L2SIZE`     : L2 cache size in bytes (default is `65536`)
++ `L2WAYS`     : number of ways in the L1 cache (default is `4`, 4-way set associative)
++ `L2LINESIZE` : L2 cache line size in bytes (default is `128`)
+For example, to build a simulator with caches, with a 2-way set associative L1:
+
+```
+make CACHE=1 L1WAYS=2
+```
+
+To control the name of the generated simulator, set the `SIM` variable:
+
+```
+make SIM=mySimulatorName
 ```
 
 Project hierarchy
