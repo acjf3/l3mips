@@ -46,7 +46,7 @@ export PATH=__path__/__to__/L3-AAAA-MM-DD/bin:$PATH
 
 (with `__path__/__to__/` replaced with what is appropriate for your setup)
 
-Once L3 is setup, you can get the project's source code :
+Once L3 is setup, you can get this project's source code :
 
 ```
 git clone git@github.com:acjf3/l3mips.git
@@ -66,10 +66,16 @@ you will need the [m4](https://www.gnu.org/software/m4/) macro processor install
 sudo apt-get install m4
 ```
 
-You can then build your CHERI simulator, specifying a value in the CAP variable. At the moment, supported values are `128` for 128-bits wide precise capabilities and `256` for 256-bits wide precise capabilities, although any other value will default to 256:
+You can then build your CHERI simulator, specifying a value in the CAP variable. Possible values for this variable are :
++ `p256` : 256-bits wide precise capabilities
++ `p128` : 128-bits wide precise capabilities
++ `p64`  : 64-bits wide precise capabilities (no compiler support yet, so currently unusable)
++ `c128c1` : 128-bits wide compressed capabilities, candidate 1
++ `c128c2` : 128-bits wide compressed capabilities, candidate 2
++ anything else : same as `p256`
 
 ```
-make CAP=42
+make CAP=p256
 ```
 
 Project hierarchy
