@@ -44,8 +44,7 @@ register Capability :: bits (129)
 {
         128 : tag       -- 1 tag bit
     127-105 : perms     -- 23 permission bits
-        104 : base_eq_pointer
-        103 : unused    -- unused
+    104-103 : unused    -- unused
      102-97 : exp       -- 6 exponent bits
       96-81 : toTop     -- 16 bits signed mantis
       80-65 : toBottom  -- 16 bits signed mantis
@@ -68,16 +67,15 @@ else
 }
 bits(65) innerGetTop (cap::Capability) =
 {
-    top::bits(66) = (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp]);
+    top::bits(66)  = (ZeroExtend(getPtr(cap)) + (SignExtend(cap.toTop) << [cap.exp])) && (~0<<[cap.exp]);
     zero::bits(64) = 0;
     if top <64> then '1':zero else top<64:0>
 }
 bits(65) innerGetBase (cap::Capability) =
 {
     var ret::bits(66) = ZeroExtend(getPtr(cap));
-    when not cap.base_eq_pointer do
-        ret <- (ret + (SignExtend(cap.toBottom) << [cap.exp])) && (~0<<[cap.exp]);
-    (ret<64:0>)
+    ret <- (ret + (SignExtend(cap.toBottom) << [cap.exp])) && (~0<<[cap.exp]);
+    return ret<64:0>
 }
 
 nat innerZeroCount (data::bool list, acc::nat) = match data
@@ -118,30 +116,28 @@ Capability updateBounds (cap::Capability, ptr::bits(64)) =
 Capability defaultCap =
 {
     var new_cap :: Capability;
-    new_cap.tag <- true;
-    new_cap.sealed <- false;
-    new_cap.perms <- ~0;
-    new_cap.unused <- false;
-    new_cap.base_eq_pointer <- true;
-    new_cap.exp <- 0x32; -- leftshift by 50
-    new_cap.pointer <- 0;
+    new_cap.tag      <- true;
+    new_cap.sealed   <- false;
+    new_cap.perms    <- ~0;
+    new_cap.unused   <- 0;
+    new_cap.exp      <- 0x32; -- leftshift by 50
+    new_cap.pointer  <- 0;
     new_cap.toBottom <- 0;
-    new_cap.toTop <- 0x4000;
+    new_cap.toTop    <- 0x4000;
     new_cap
 }
 
 Capability nullCap =
 {
     var new_cap :: Capability;
-    new_cap.tag <- false;
-    new_cap.sealed <- false;
-    new_cap.perms <- 0;
-    new_cap.unused <- false;
-    new_cap.base_eq_pointer <- false;
-    new_cap.exp <- 0;
-    new_cap.pointer <- 0;
+    new_cap.tag      <- false;
+    new_cap.sealed   <- false;
+    new_cap.perms    <- 0;
+    new_cap.unused   <- 0;
+    new_cap.exp      <- 0;
+    new_cap.pointer  <- 0;
     new_cap.toBottom <- 0;
-    new_cap.toTop <- 0;
+    new_cap.toTop    <- 0;
     new_cap
 }
 
@@ -186,35 +182,30 @@ Capability setSealed (cap::Capability, sealed::bool) =
 }
 Capability setOffset (cap::Capability, offset::bits(64)) =
 {
-    {-
     -- XXX experimental :
     oldbase = innerGetBase(cap);
-    oldtop = innerGetTop(cap);
+    oldtop  = innerGetTop(cap);
     ---------------------
-    -}
+
+    newPtr = getBase(cap) + offset;
 
     var new_cap = cap;
-    newPtr      = getBase(cap) + offset;
     new_cap <- updateBounds(new_cap, newPtr);
     new_cap <- updatePtr(new_cap, newPtr);
 
-    new_cap.base_eq_pointer <- if offset == 0 then true else false;
-
-    {-
     -- XXX experimental :
     newbase = innerGetBase(new_cap);
-    newtop = innerGetTop(new_cap);
+    newtop  = innerGetTop(new_cap);
     when (oldbase <> newbase) or (oldtop <> newtop) do
     {
-        new_cap.exp <- 0x32; -- exp of 50
         dist = (offset >>+ 50)<14:0>;
+        new_cap.exp      <- 0x32; -- exp of 50
         new_cap.toBottom <- SignExtend(-dist); -- force base to 0
-        new_cap.toTop <- SignExtend(-(dist-1)); -- force top to 1 (length of 0)
-        new_cap.pointer <- offset; -- force offset to provided offset
-        new_cap.tag <- false
+        new_cap.toTop    <- SignExtend(-(dist-1)); -- force top to 1 (length of 0)
+        new_cap.pointer  <- offset; -- force offset to provided offset
+        new_cap.tag      <- false
     };
     ---------------------
-    -}
 
     new_cap
 }
@@ -291,7 +282,6 @@ string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
     " perms:0x":hex23(cap.perms):
-    " base_eq_ptr:":(if cap.base_eq_pointer then "1" else "0"):
     " exp:":[[cap.exp]::nat]:
     " toTop:0x":hex16(cap.toTop):
     " toBottom:0x":hex16(cap.toBottom):
