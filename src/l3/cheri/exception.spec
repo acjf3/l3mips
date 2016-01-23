@@ -112,7 +112,7 @@ unit SignalException (ExceptionType::ExceptionType) =
                                getBase(PCC),
                                getLength(PCC),
                                PC) then
-        new_epcc <- setOffset(nullCap, PC)
+        new_epcc <- setOffset(nullCap, getBase(PCC) + PC)
     else
         new_epcc <- setOffset(new_epcc, PC);
     EPCC <- new_epcc;
