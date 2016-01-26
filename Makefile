@@ -36,7 +36,9 @@ else
 L3SRCBASE+=mips-exception.spec
 endif
 L3SRCBASE+=tlb/base.spec
-ifdef CAP
+ifdef NOTRANSLATE
+L3SRCBASE+=tlb/notranslate.spec
+else ifdef CAP
 L3SRCBASE+=cheri/tlb-translate.spec
 else
 L3SRCBASE+=tlb/translate.spec
