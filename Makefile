@@ -37,11 +37,17 @@ L3SRCBASE+=mips-exception.spec
 endif
 L3SRCBASE+=tlb/base.spec
 ifdef NOTRANSLATE
+ifdef CAP
+L3SRCBASE+=cheri/tlb-notranslate.spec
+else
 L3SRCBASE+=tlb/notranslate.spec
-else ifdef CAP
+endif
+else
+ifdef CAP
 L3SRCBASE+=cheri/tlb-translate.spec
 else
 L3SRCBASE+=tlb/translate.spec
+endif
 endif
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
@@ -137,6 +143,9 @@ L2WAYS ?= 4
 L2LINESIZE ?= 128
 
 NAME_STR=l3mips
+ifdef NOTRANSLATE
+NAME_STR:=$(NAME_STR)-no_translate
+endif
 ifdef FPU
 NAME_STR:=$(NAME_STR)-fpu
 endif
