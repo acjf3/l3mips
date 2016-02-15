@@ -104,7 +104,8 @@ nat innerZeroCount (data::bool list, acc::nat) = match data
     case Cons(hd, tl) => if hd then acc else innerZeroCount (tl, acc + 1)
 }
 
-nat countLeadingZeros (data::bits(64)) = innerZeroCount ([data], 0)
+nat countLeadingZeros  (data::bits(64)) = innerZeroCount ([data], 0)
+nat countTrailingZeros (data::bits(20)) = innerZeroCount ([Reverse(data)], 0)
 
 ---------------------------------------
 -- standard capabilities definitions --
@@ -264,13 +265,18 @@ Capability setSealed (cap::Capability, sealed::bool) =
         }
         case Unsealed(uf)   => when sealed do
         {
-            --TODO FIXME for the upper bits of the unsealed fields to be 0
+            -- Trailing zeroes
+            baseZeros  = countTrailingZeros(uf.baseBits);
+            topZeros   = countTrailingZeros(uf.topBits);
+            trailZeros = Min(baseZeros, topZeros);
+
             var sf :: SealedFields;
-            sf.baseBits <- [uf.baseBits];
+            sf.baseBits <- [uf.baseBits >> trailZeros];
             sf.otypeHi  <- 0;
-            sf.topBits  <- [uf.topBits];
+            sf.topBits  <- [uf.topBits >> trailZeros];
             sf.otypeLo  <- 0;
-            new_cap.sFields <- Sealed (sf)
+            new_cap.sFields <- Sealed (sf);
+            new_cap.exp     <- cap.exp + [trailZeros]
         }
     };
     new_cap
