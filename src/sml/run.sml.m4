@@ -130,16 +130,16 @@ fun storeArrayInMem (base, marray) =
    let
       val b = IntInf.andb (base div 8, 0x1fffffffff)
    in
-      L3.for (0, Array.length marray div 2 - 1,
+      L3.for (0, IntInf.fromInt (Array.length marray div 2 - 1),
         fn i =>
            let
-              val w1 = Array.sub (marray, 2 * i)
-              val w2 = Array.sub (marray, 2 * i + 1)
+              val w1 = Array.sub (marray, 2 * IntInf.toInt i)
+              val w2 = Array.sub (marray, 2 * IntInf.toInt i + 1)
               val dw = BitsN.@@ (w1, w2)
            in
               mips.WriteDWORD(BitsN.fromInt(b + i, 37), dw)
            end
-           handle Subscript => print (Int.toString i ^ "\n"))
+           handle Subscript => print (IntInf.toString i ^ "\n"))
     ; print (Int.toString (Array.length marray) ^ " words.\n")
    end
 
@@ -147,7 +147,7 @@ fun storeArrayInMem (base, marray) =
    Loading code into memory from raw file
    -------------------------------------------------------------------------- *)
 
-fun word8ToBits8 word8 = BitsN.fromInt (Word8.toInt word8, 8)
+fun word8ToBits8 word8 = BitsN.fromInt (Word8.toLargeInt word8, 8)
 
 fun getByte v i =
   if i < Word8Vector.length v
@@ -162,7 +162,7 @@ fun storeVecInMemHelper vec base i =
     val bits256 = BitsN.concat (rev (map BitsN.concat bytes1))
   in
     if   j < Word8Vector.length vec
-    then ( mips.Write256(BitsN.fromInt(base+i, 35), bits256)
+    then ( mips.Write256(BitsN.fromInt(base + IntInf.fromInt i, 35), bits256)
          (*; print (Int.toString(base+i)^": 0x"^BitsN.toHexString(bits256)^"\n")*)
          ; storeVecInMemHelper vec base (i+1)
          )
@@ -196,13 +196,13 @@ in
        val savedProcID = mips.switchCore core
      in
         print "======   Registers   ======\n"
-      ; print ("DEBUG MIPS COREID " ^ Int.toString core ^ "\n")
+      ; print ("DEBUG MIPS COREID " ^ Nat.toString core ^ "\n")
       ; print ("DEBUG MIPS PC\t0x" ^ hex64 (mips.PC ()) ^ "\n")
       ; L3.for
           (0, 31,
            fn i =>
               print ("DEBUG MIPS REG " ^ (if i < 10 then " " else "") ^
-                     Int.toString i ^ "\t0x" ^ readReg i ^ "\n"))
+                     IntInf.toString i ^ "\t0x" ^ readReg i ^ "\n"))
       ; mips.switchCore savedProcID
     end
 end
@@ -211,9 +211,10 @@ end
    UART I/O
    ------------------------------------------------------------------------ *)
 
-val bytesToString = String.implode o List.map (Char.chr o BitsN.toNat)
+val bytesToString =
+   String.implode o List.map (Char.chr o IntInf.toInt o BitsN.toNat)
 val stringToBytes =
-   List.map (fn c => BitsN.fromInt (Char.ord c, 8)) o String.explode
+   List.map (fn c => BitsN.fromNativeInt (Char.ord c, 8)) o String.explode
 
 fun uart_output () =
    let
@@ -228,7 +229,8 @@ fun uart_output () =
 
 fun uart_input () =
    let
-      val n = 0xFFFF - BitsN.toNat (#RAVAIL (#data (!mips.JTAG_UART)))
+      val n = 0xFFFF -
+              Nat.toNativeInt (BitsN.toNat (#RAVAIL (#data (!mips.JTAG_UART))))
    in
       if n = 0
          then ()
@@ -297,9 +299,10 @@ fun end_sim i =
       val t = Timer.checkCPUTimer(!cpu_time)
    in
       if !dump_stats then print(mips.dumpStats()) else ()
-    ; print ("Completed " ^ Int.toString (i + 1) ^ " instructions in " ^
+    ; print ("Completed " ^ IntInf.toString (i + 1) ^ " instructions in " ^
              Time.toString(#usr(t)) ^ " seconds ")
-    ; print ("(" ^ Real.toString (real (i + 1) / Time.toReal (#usr(t))) ^
+    ; print ("(" ^ Real.toString
+                     (Real.fromLargeInt (i + 1) / Time.toReal (#usr(t))) ^
              " inst/sec)\n")
    end
 
@@ -340,9 +343,11 @@ local
 in
    fun run_mem mx =
       if 1 <= !trace_level then t (loop mx) 0 else t (pureLoop mx) 0
-   fun run (pc,uart) mx code raw =
-      ( List.tabulate(!nb_core,
-          fn x => (mips.switchCore x; mips.initMips (pc, (uart, !rdhwr_extra))))
+   fun run (pc, uart) mx code raw =
+      ( List.tabulate(Nat.toNativeInt (!nb_core),
+          fn x => ( mips.switchCore (Nat.fromNativeInt x)
+                  ; mips.initMips (pc, (uart, !rdhwr_extra))
+                  ))
       ; mips.totalCore := !nb_core
       ; mips.watchPaddr := !watch_paddr
       ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
@@ -364,7 +369,8 @@ in
       ; if 0 < !uart_delay then uart_output () else ()
       )
       handle mips.UNPREDICTABLE s =>
-        ( List.tabulate (!nb_core, dumpRegisters)
+        ( List.tabulate
+            (Nat.toNativeInt (!nb_core), dumpRegisters o Nat.fromNativeInt)
         ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
         )
 end
@@ -424,7 +430,7 @@ fun getNumber s =
     | NONE => failExit ("Bad number: " ^ s)
 
 fun getHexNumber s =
-   case StringCvt.scanString (Int.scan StringCvt.HEX) s of
+   case StringCvt.scanString (IntInf.scan StringCvt.HEX) s of
       SOME n => n
     | NONE => failExit ("Bad hex number: " ^ s)
 
@@ -517,7 +523,7 @@ val () =
           val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
           val (t, l) = processOption "--trace" l
           val t = Option.getOpt (Option.map getNumber t, !trace_level)
-          val () = trace_level := Int.max (0, t)
+          val () = trace_level := IntInf.max (0, t)
 ifdef(`CACHE', `dnl
           val (n, l) = processOption "--l2-replace-policy" l
           val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)dnl'
