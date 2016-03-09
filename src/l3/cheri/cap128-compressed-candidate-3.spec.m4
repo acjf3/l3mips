@@ -268,7 +268,7 @@ Capability setSealed (cap::Capability, sealed::bool) =
             -- Trailing zeroes
             baseZeros  = countTrailingZeros(uf.baseBits);
             topZeros   = countTrailingZeros(uf.topBits);
-            trailZeros = Min(baseZeros, topZeros);
+            trailZeros = Min(10,Min(baseZeros, topZeros));
 
             var sf :: SealedFields;
             sf.baseBits <- [uf.baseBits >> trailZeros];
@@ -374,7 +374,6 @@ string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
 string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
-
 {-
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
@@ -389,7 +388,6 @@ string cap_inner_rep (cap::Capability) =
     }:
     " cursor:0x":hex64(cap.cursor)
 -}
-
 string log_cap_write (cap::Capability) =
     "s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex16(ZeroExtend(&getPerms(cap))):
