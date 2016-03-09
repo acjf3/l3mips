@@ -42,6 +42,64 @@ construct CapException
     capExcAccKR2C            -- Access_KR2C
 }
 
+bits(8) capExcCode (e::CapException) = match e
+{
+    case capExcNone              => 0x0
+    case capExcLength            => 0x1
+    case capExcTag               => 0x2
+    case capExcSeal              => 0x3
+    case capExcType              => 0x4
+    case capExcCall              => 0x5
+    case capExcRet               => 0x6
+    case capExcUnderflowTSS      => 0x7
+    case capExcUser              => 0x8
+    case capExcTLBNoStore        => 0x9
+    case capExcInexact           => 0x0a
+    case capExcGlobal            => 0x10
+    case capExcPermExe           => 0x11
+    case capExcPermLoad          => 0x12
+    case capExcPermStore         => 0x13
+    case capExcPermLoadCap       => 0x14
+    case capExcPermStoreCap      => 0x15
+    case capExcPermStoreLocalCap => 0x16
+    case capExcPermSeal          => 0x17
+    case capExcPermSetType       => 0x18
+    case capExcAccEPCC           => 0x1a
+    case capExcAccKDC            => 0x1b
+    case capExcAccKCC            => 0x1c
+    case capExcAccKR1C           => 0x1d
+    case capExcAccKR2C           => 0x1e
+}
+
+string capExcStr (e::CapException) = match e
+{
+    case capExcNone              => "capExcNone"
+    case capExcLength            => "capExcLength"
+    case capExcTag               => "capExcTag"
+    case capExcSeal              => "capExcSeal"
+    case capExcType              => "capExcType"
+    case capExcCall              => "capExcCall"
+    case capExcRet               => "capExcRet"
+    case capExcUnderflowTSS      => "capExcUnderflowTSS"
+    case capExcUser              => "capExcUser"
+    case capExcTLBNoStore        => "capExcTLBNoStore"
+    case capExcInexact           => "capExcInexact"
+    case capExcGlobal            => "capExcGlobal"
+    case capExcPermExe           => "capExcPermExe"
+    case capExcPermLoad          => "capExcPermLoad"
+    case capExcPermStore         => "capExcPermStore"
+    case capExcPermLoadCap       => "capExcPermLoadCap"
+    case capExcPermStoreCap      => "capExcPermStoreCap"
+    case capExcPermStoreLocalCap => "capExcPermStoreLocalCap"
+    case capExcPermSeal          => "capExcPermSeal"
+    case capExcPermSetType       => "capExcPermSetType"
+    case capExcAccEPCC           => "capExcAccEPCC"
+    case capExcAccKDC            => "capExcAccKDC"
+    case capExcAccKCC            => "capExcAccKCC"
+    case capExcAccKR1C           => "capExcAccKR1C"
+    case capExcAccKR2C           => "capExcAccKR2C"
+}
+
 bits(5) ExceptionCode (ExceptionType::ExceptionType) =
     match ExceptionType
     {
@@ -130,38 +188,12 @@ unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
 
 unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
 {
-    capcause.ExcCode <- match capException
-    {
-        case capExcNone              => 0x0
-        case capExcLength            => 0x1
-        case capExcTag               => 0x2
-        case capExcSeal              => 0x3
-        case capExcType              => 0x4
-        case capExcCall              => 0x5
-        case capExcRet               => 0x6
-        case capExcUnderflowTSS      => 0x7
-        case capExcUser              => 0x8
-        case capExcTLBNoStore        => 0x9
-        case capExcInexact           => 0x0a
-        case capExcGlobal            => 0x10
-        case capExcPermExe           => 0x11
-        case capExcPermLoad          => 0x12
-        case capExcPermStore         => 0x13
-        case capExcPermLoadCap       => 0x14
-        case capExcPermStoreCap      => 0x15
-        case capExcPermStoreLocalCap => 0x16
-        case capExcPermSeal          => 0x17
-        case capExcPermSetType       => 0x18
-        case capExcAccEPCC           => 0x1a
-        case capExcAccKDC            => 0x1b
-        case capExcAccKCC            => 0x1c
-        case capExcAccKR1C           => 0x1d
-        case capExcAccKR2C           => 0x1e
-    };
+    capcause.ExcCode <- capExcCode(capException);
     capcause.RegNum  <- regNum;
     when 2 <= trace_level do
        mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) :
-                    ", reg: 0x" : ToLower ([capcause.RegNum]));
+                    " (" : capExcStr(capException) : "), reg: 0x" :
+                    ToLower ([capcause.RegNum]));
     SignalException(C2E)
 }
 
