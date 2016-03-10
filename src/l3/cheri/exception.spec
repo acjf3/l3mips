@@ -13,7 +13,28 @@ construct ExceptionType
     CTLBL, CTLBS, C2E, XTLBRefillL, XTLBRefillS
 }
 
-construct CapException
+bits(5) ExceptionCode (e::ExceptionType) = match e
+{
+    case Int         => 0x00 -- Interrupt
+    case Mod         => 0x01 -- TLB modification exception
+    case TLBL        => 0x02 -- TLB exception (load or fetch)
+    case TLBS        => 0x03 -- TLB exception (store)
+    case AdEL        => 0x04 -- Address error (load or fetch)
+    case AdES        => 0x05 -- Address error (store)
+    case Sys         => 0x08 -- Syscall
+    case Bp          => 0x09 -- Breakpoint
+    case ResI        => 0x0a -- Reserved instruction
+    case CpU         => 0x0b -- Coprocessor Unusable
+    case Ov          => 0x0c -- Arithmetic overflow
+    case Tr          => 0x0d -- Trap
+    case CTLBL       => 0x10 -- Capability TLB Load exception
+    case CTLBS       => 0x11 -- Capability TLB Store exception
+    case C2E         => 0x12 -- C2E coprocessor 2 exception
+    case XTLBRefillL => 0x02
+    case XTLBRefillS => 0x03
+}
+
+construct CapExceptionType
 {
     capExcNone,              -- None
     capExcLength,            -- Length Violation
@@ -42,7 +63,7 @@ construct CapException
     capExcAccKR2C            -- Access_KR2C
 }
 
-bits(8) capExcCode (e::CapException) = match e
+bits(8) capExcCode (e::CapExceptionType) = match e
 {
     case capExcNone              => 0x0
     case capExcLength            => 0x1
@@ -70,57 +91,6 @@ bits(8) capExcCode (e::CapException) = match e
     case capExcAccKR1C           => 0x1d
     case capExcAccKR2C           => 0x1e
 }
-
-string capExcStr (e::CapException) = match e
-{
-    case capExcNone              => "capExcNone"
-    case capExcLength            => "capExcLength"
-    case capExcTag               => "capExcTag"
-    case capExcSeal              => "capExcSeal"
-    case capExcType              => "capExcType"
-    case capExcCall              => "capExcCall"
-    case capExcRet               => "capExcRet"
-    case capExcUnderflowTSS      => "capExcUnderflowTSS"
-    case capExcUser              => "capExcUser"
-    case capExcTLBNoStore        => "capExcTLBNoStore"
-    case capExcInexact           => "capExcInexact"
-    case capExcGlobal            => "capExcGlobal"
-    case capExcPermExe           => "capExcPermExe"
-    case capExcPermLoad          => "capExcPermLoad"
-    case capExcPermStore         => "capExcPermStore"
-    case capExcPermLoadCap       => "capExcPermLoadCap"
-    case capExcPermStoreCap      => "capExcPermStoreCap"
-    case capExcPermStoreLocalCap => "capExcPermStoreLocalCap"
-    case capExcPermSeal          => "capExcPermSeal"
-    case capExcPermSetType       => "capExcPermSetType"
-    case capExcAccEPCC           => "capExcAccEPCC"
-    case capExcAccKDC            => "capExcAccKDC"
-    case capExcAccKCC            => "capExcAccKCC"
-    case capExcAccKR1C           => "capExcAccKR1C"
-    case capExcAccKR2C           => "capExcAccKR2C"
-}
-
-bits(5) ExceptionCode (ExceptionType::ExceptionType) =
-    match ExceptionType
-    {
-        case Int         => 0x00 -- Interrupt
-        case Mod         => 0x01 -- TLB modification exception
-        case TLBL        => 0x02 -- TLB exception (load or fetch)
-        case TLBS        => 0x03 -- TLB exception (store)
-        case AdEL        => 0x04 -- Address error (load or fetch)
-        case AdES        => 0x05 -- Address error (store)
-        case Sys         => 0x08 -- Syscall
-        case Bp          => 0x09 -- Breakpoint
-        case ResI        => 0x0a -- Reserved instruction
-        case CpU         => 0x0b -- Coprocessor Unusable
-        case Ov          => 0x0c -- Arithmetic overflow
-        case Tr          => 0x0d -- Trap
-        case CTLBL       => 0x10 -- Capability TLB Load exception
-        case CTLBS       => 0x11 -- Capability TLB Store exception
-        case C2E         => 0x12 -- C2E coprocessor 2 exception
-        case XTLBRefillL => 0x02
-        case XTLBRefillS => 0x03
-    }
 
 unit SignalException (ExceptionType::ExceptionType) =
 {
@@ -186,21 +156,21 @@ unit SignalCP1UnusableException = {CP0.Cause.CE <- '01'; SignalException(CpU)}
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
 
-unit SignalCapException_internal (capException::CapException, regNum::bits(8)) =
+unit SignalCapException_internal (capException::CapExceptionType, regNum::bits(8)) =
 {
     capcause.ExcCode <- capExcCode(capException);
     capcause.RegNum  <- regNum;
     when 2 <= trace_level do
        mark_log (2, "Cap exception - cause: 0x" : ToLower ([capcause.ExcCode]) :
-                    " (" : capExcStr(capException) : "), reg: 0x" :
+                    " (" : [capException] : "), reg: 0x" :
                     ToLower ([capcause.RegNum]));
     SignalException(C2E)
 }
 
-unit SignalCapException (capException::CapException, regNum::bits(5)) =
+unit SignalCapException (capException::CapExceptionType, regNum::bits(5)) =
     SignalCapException_internal (capException, ZeroExtend(regNum))
 
-unit SignalCapException_noReg (capException::CapException) =
+unit SignalCapException_noReg (capException::CapExceptionType) =
     SignalCapException_internal (capException, 0xff)
 
 unit SignalCapException_v (regNum::bits(5)) =
