@@ -293,7 +293,7 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
         new_cap.sFields <- Sealed(new_sf);
         new_cap
     }
-    case _ => UNKNOWN
+    case _ => cap
 }
 
 --------------------------------------
