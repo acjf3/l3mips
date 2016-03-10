@@ -191,6 +191,11 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
 -- CSetBounds
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
+{
+    base::bits(65)   = ZeroExtend(getBase(CAPR(cb)));
+    offset::bits(65) = ZeroExtend(getOffset(CAPR(cb)));
+    length::bits(65) = ZeroExtend(getLength(CAPR(cb)));
+    cursor::bits(65) = base + offset;
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
@@ -201,27 +206,13 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-{- XXX that is in the current spec
-    else if (getBase(CAPR(cb)) + getOffset(CAPR(cb))) <+ getBase(CAPR(cb)) then
+    else if cursor <+ base then
         SignalCapException(capExcLength,cb)
-    else if GPR(rt) >+ (getLength(CAPR(cb)) - getOffset(CAPR(cb))) then
-        SignalCapException(capExcLength,cb)
--}
--- XXX that is not
-    else if (getBase(CAPR(cb))+getOffset(CAPR(cb)) <+ getBase(CAPR(cb))) then
-        SignalCapException(capExcLength,cb)
-    else if getBase(CAPR(cb))+getOffset(CAPR(cb)) >+ (getBase(CAPR(cb))+getLength(CAPR(cb))) then
-        SignalCapException(capExcLength,cb)
-    else if ((getBase(CAPR(cb))+getOffset(CAPR(cb))+GPR(rt)) <+ getBase(CAPR(cb))) then
-        SignalCapException(capExcLength,cb)
-    else if ((getBase(CAPR(cb))+getOffset(CAPR(cb))+GPR(rt)) >+ (getBase(CAPR(cb))+getLength(CAPR(cb)))) then
-        SignalCapException(capExcLength,cb)
-    else if (getBase(CAPR(cb))+getOffset(CAPR(cb)) >+ getBase(CAPR(cb))+getOffset(CAPR(cb))+GPR(rt)) then
+    else if cursor + ZeroExtend(GPR(rt)) >+ base + length then
         SignalCapException(capExcLength,cb)
     else
-    {
         CAPR(cd) <- setBounds(CAPR(cb), GPR(rt))
-    }
+}
 
 -----------------------------------
 -- CClearRegs
