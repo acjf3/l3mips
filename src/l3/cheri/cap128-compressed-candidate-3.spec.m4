@@ -233,8 +233,8 @@ Capability setBounds (cap::Capability, length::bits(64)) =
                 new_exp <- new_exp + 1;
             new_base = cap.cursor;
             new_top::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
-            new_baseBits = new_base<new_exp+20:new_exp>;
-            var new_topBits = new_top<new_exp+20:new_exp>;
+            new_baseBits = new_base<new_exp+19:new_exp>;
+            var new_topBits = new_top<new_exp+19:new_exp>;
             when (new_top && ~(~0 << new_exp)) <> 0 do new_topBits  <- new_topBits + 1;
             new_cap.exp <- [new_exp];
             var uf :: UnsealedFields;
