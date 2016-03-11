@@ -67,7 +67,7 @@ RepRegion * RepRegion * RepRegion getRepRegion (cap::Capability) =
         case Unsealed(uf) => uf.topBits, uf.baseBits
         case Sealed(sf)   => (0`10):sf.topBits, (0`10):sf.baseBits
     };
-    ptr = cap.cursor<[cap.exp]+20:[cap.exp]>;
+    ptr = cap.cursor<[cap.exp]+19:[cap.exp]>;
     var repBound::bits(21) = (('0':tb)+('0':bb))>>1;
     when tb >+ bb do repBound <- repBound + (1 << 19);
     pr = if ptr <+ [repBound] then Hi (ptr) else Low (ptr);
