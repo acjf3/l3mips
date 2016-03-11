@@ -81,7 +81,7 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
 }
 changequote(`,')dnl
 
-bits(66) getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
+nat getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 {
     e::nat = [cap.exp];             -- exponent
     s::nat = 2**(e+20);             -- region size
@@ -102,7 +102,7 @@ bits(66) getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 bits(64) getTop (cap::Capability) =
 {
     pr, tr, br = getRepRegions(cap);
-    (getBound(cap, pr, tr))<63:0>
+    [getBound(cap, pr, tr)]
 }
 
 nat innerZeroCount (data::bool list, acc::nat) = match data
@@ -171,8 +171,7 @@ bool getSealed (cap::Capability) = match cap.sFields
 bits(64) getBase (cap::Capability) =
 {
     pr, tr, br = getRepRegions(cap);
-    b = (getBound(cap, pr, br));
-    return b<63:0>
+    [getBound(cap, pr, br)]
 }
 
 bits(64) getOffset (cap::Capability) = cap.cursor - getBase(cap)
@@ -183,7 +182,7 @@ bits(65) getFullLength (cap::Capability) =
     b = getBound (cap, pr, br);
     t = getBound (cap, pr, tr);
     len = t - b;
-    return len<64:0>
+    [len]
 }
 
 bits(64) getLength (cap::Capability) =
