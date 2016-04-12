@@ -20,7 +20,7 @@ define(`CAPBYTEWIDTH', 16)dnl
 define(`CAPADDR', `bits(36)')dnl
 define(`CAPRAWBITS', `bits(128)')dnl
 define(`NBPERMS', `15')dnl
-define(`OTYPEWIDTH', `20')dnl
+define(`OTYPEWIDTH', `24')dnl
 'dnl
 ,dnl
 CAP,p64,dnl params for 64 bits wide precise capabilities

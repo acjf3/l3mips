@@ -33,10 +33,10 @@ record UnsealedFields
 
 record SealedFields
 {
-    otypeHi  :: bits(10)
-    baseBits :: bits(10)
-    otypeLo  :: bits(10)
-    topBits  :: bits(10)
+    otypeHi  :: bits(12)
+    baseBits :: bits(8)
+    otypeLo  :: bits(12)
+    topBits  :: bits(8)
 }
 
 construct SFields {Sealed :: SealedFields, Unsealed :: UnsealedFields}
@@ -64,6 +64,7 @@ record Capability
 -- capability helper functions --
 --------------------------------------------------------------------------------
 changequote(!,!)dnl
+{-
 RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
 {
     tb, bb = match cap.sFields
@@ -77,6 +78,21 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
     pr = if ptr <+ [repBound] then Hi (ptr) else Low (ptr);
     tr = if tb  <+ [repBound] then Hi (tb)  else Low (tb);
     br = if bb  <+ [repBound] then Hi (bb)  else Low (bb);
+    (pr, tr, br)
+}
+-}
+RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
+{
+    tb, bb = match cap.sFields
+    {
+        case Unsealed(uf) => uf.topBits, uf.baseBits
+        case Sealed(sf)   => (0`12):sf.topBits, (0`12):sf.baseBits
+    };
+    ptr = cap.cursor<[cap.exp]+19:[cap.exp]>;
+    var repBound::bits(20) = bb - 0x1000;
+    pr = if ptr <+ repBound then Hi (ptr) else Low (ptr);
+    tr = if tb  <+ repBound then Hi (tb)  else Low (tb);
+    br = if bb  <+ repBound then Hi (bb)  else Low (bb);
     (pr, tr, br)
 }
 changequote(`,')dnl
@@ -215,7 +231,8 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             zeros = countLeadingZeros (length);
             var new_exp = Max(44-zeros, 0);
             var rep_len::bits(65) = 1 << (new_exp + 20);
-            when not rep_len > ZeroExtend(length+2*BUFFSIZE) do
+            --when not rep_len > ZeroExtend(length+2*BUFFSIZE) do
+            when not rep_len > ZeroExtend(length + (length>>7)) do -- grow length by 1/64, guarantees at least 1/128th of S on each sides
                 new_exp <- new_exp + 1;
             new_base = cap.cursor;
             new_top::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
@@ -312,10 +329,10 @@ Capability bitsToCap (raw :: CAPRAWBITS) =
     if raw<40> then
     {
         var sf :: SealedFields;
-        sf.otypeHi  <- raw<39:30>;
-        sf.baseBits <- raw<29:20>;
-        sf.otypeLo  <- raw<19:10>;
-        sf.topBits  <- raw<9:0>;
+        sf.otypeHi  <- raw<39:28>;
+        sf.baseBits <- raw<27:20>;
+        sf.otypeLo  <- raw<19:8>;
+        sf.topBits  <- raw<7:0>;
         f <- Sealed(sf)
     }
     else
@@ -358,10 +375,13 @@ bool isCapRepresentable(sealed::bool,
 ---------------
 -- log utils --
 --------------------------------------------------------------------------------
+string hex8 (x::bits(8)) = ToLower (PadLeft (#"0", 2, [x]))
 string hex10 (x::bits(10)) = ToLower (PadLeft (#"0", 3, [x]))
+string hex12 (x::bits(12)) = ToLower (PadLeft (#"0", 3, [x]))
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
 string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
+string hex20 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
@@ -370,7 +390,7 @@ string cap_inner_rep (cap::Capability) =
     match cap.sFields
     {
         case Sealed(sf)   =>
-            " sealed:1 baseBits:0x":hex10(sf.baseBits):" topBits:0x":hex10(sf.topBits):" otype:0x":hex20(sf.otypeHi:sf.otypeLo):"(hi:0x":hex10(sf.otypeHi):", lo:0x":hex10(sf.otypeLo)
+            " sealed:1 baseBits:0x":hex8(sf.baseBits):" topBits:0x":hex8(sf.topBits):" otype:0x":hex24(sf.otypeHi:sf.otypeLo):"(hi:0x":hex12(sf.otypeHi):", lo:0x":hex12(sf.otypeLo)
         case Unsealed(uf) =>
             " sealed:0 baseBits:0x":hex20(uf.baseBits):" topBits:0x":hex20(uf.topBits)
     }:
