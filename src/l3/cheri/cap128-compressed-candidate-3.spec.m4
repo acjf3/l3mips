@@ -48,7 +48,7 @@ string repRegionStr (r::RepRegion) = match r
     case Hi(b)  => "Hi(":[b]:")"
 }
 
-type OType = bits(20)
+type OType = bits(OTYPEWIDTH)
 
 record Capability
 {
@@ -261,9 +261,9 @@ Capability setSealed (cap::Capability, sealed::bool) =
     {
         case Sealed(sf) => when not sealed do
         {
-            -- construct the new base and top bits upper 10 bits
+            -- construct the new base and top bits upper 12 bits
             e::nat = [cap.exp];
-            cb::bits(10) = cap.cursor<19+e:10+e>;
+            cb::bits(12) = cap.cursor<19+e:8+e>;
             -- assemble the new unsealed fields
             var uf::UnsealedFields;
             uf.baseBits <- cb:sf.baseBits;
@@ -295,8 +295,8 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
     {
         var new_cap = cap;
         var new_sf  = sf;
-        new_sf.otypeHi  <- otype<19:10>;
-        new_sf.otypeLo  <- otype<9:0>;
+        new_sf.otypeHi  <- otype<23:12>;
+        new_sf.otypeLo  <- otype<11:0>;
         new_cap.sFields <- Sealed(new_sf);
         new_cap
     }
@@ -381,7 +381,7 @@ string hex12 (x::bits(12)) = ToLower (PadLeft (#"0", 3, [x]))
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
 string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
-string hex20 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
+string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
@@ -398,7 +398,7 @@ string cap_inner_rep (cap::Capability) =
 string log_cap_write (cap::Capability) =
     "s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex16(ZeroExtend(&getPerms(cap))):
-    " type:0x":hex20(getType(cap)):
+    " type:0x":hex24(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
     " base:0x":hex64(getBase(cap)):
     " length:0x":hex64(getLength(cap)):"\\n(":cap_inner_rep(cap):")"
