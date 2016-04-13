@@ -294,7 +294,7 @@ Capability setSealed (cap::Capability, sealed::bool) =
             -- count trailing zeroes
             baseZeros  = countTrailingZeros(uf.baseBits);
             topZeros   = countTrailingZeros(uf.topBits);
-            trailZeros = Min(10,Min(baseZeros, topZeros));
+            trailZeros = Min(12,Min(baseZeros, topZeros));
             -- assemble the new sealed fileds
             var sf::SealedFields;
             sf.baseBits <- [uf.baseBits >> trailZeros];
