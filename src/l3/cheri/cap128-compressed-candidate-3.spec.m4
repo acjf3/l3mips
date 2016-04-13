@@ -227,12 +227,31 @@ Capability setBounds (cap::Capability, length::bits(64)) =
         case Sealed(_)    => new_cap <- UNKNOWN
         case Unsealed(uf) =>
         {
+{- XXX Should work...
+            -- aranges for a minimun 2 pages (2*4K) out of bounds buffer to be present
+            inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
+            -- deriving e from the inflated length
+            e = [Log2(inflated_length >> 19)];
+            -- deriving the new base
+            newBase = cap.cursor;
+            newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
+            -- deriving the new top
+            newTop::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
+            var newTopBits = newTop<e+19:e>;
+            when (newTop && ~(~0 << e)) <> 0 do newTopBits <- newTopBits + 1; -- round up if significant bits are lost
+            -- fold the derived values back in new_cap
+            new_cap.exp <- [e];
+            var uf :: UnsealedFields;
+            uf.baseBits <- newBaseBits;
+            uf.topBits  <- newTopBits;
+            new_cap.sFields <- Unsealed(uf)
+-}
             -- set length (pick best representation)
             zeros = countLeadingZeros (length);
             var new_exp = Max(44-zeros, 0);
             var rep_len::bits(65) = 1 << (new_exp + 20);
             --when not rep_len > ZeroExtend(length+2*BUFFSIZE) do
-            when not rep_len > ZeroExtend(length + (length>>7)) do -- grow length by 1/64, guarantees at least 1/128th of S on each sides
+            when not rep_len > ZeroExtend(length + (length>>6)) do
                 new_exp <- new_exp + 1;
             new_base = cap.cursor;
             new_top::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
