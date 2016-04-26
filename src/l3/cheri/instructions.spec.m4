@@ -124,11 +124,23 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
     else if register_inaccessible(cd) then
         SignalCapException_v(cd)
     else
-    {
-        var new_cap = PCC;
-        new_cap <- setOffset(new_cap, PC);
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(PCC, PC)
+
+-----------------------------------
+-- CGetPCCSetOffset cd, rs
+-----------------------------------
+define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException_v(cd)
+    else if not isCapRepresentable (getSealed(PCC),
+                                    getBase(PCC),
+                                    getLength(PCC),
+                                    GPR(rs)) then
+        CAPR(cd) <- setOffset(nullCap, getBase(PCC) + GPR(rs))
+    else
+        CAPR(cd) <- setOffset(PCC, GPR(rs))
 
 -----------------------------------
 -- CGetCause rd
