@@ -187,17 +187,9 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
                                     getBase(CAPR(cb)),
                                     getLength(CAPR(cb)),
                                     getOffset(CAPR(cb)) + GPR(rt)) then
-    {
-        var new_cap = nullCap;
-        new_cap  <- setOffset(new_cap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt))
     else
-    {
-        var new_cap = CAPR(cb);
-        new_cap  <- setOffset(new_cap, getOffset(CAPR(cb)) + GPR(rt));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + GPR(rt))
 
 -----------------------------------
 -- CSetBounds
@@ -253,11 +245,7 @@ define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-    {
-        var new_cap = CAPR(cb);
-        new_cap <- setTag(new_cap, false);
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setTag(CAPR(cb), false)
 
 -----------------------------------
 -- CAndPerm
@@ -274,11 +262,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else
-    {
-        var new_cap = CAPR(cb);
-        new_cap <- setPerms(new_cap, Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>))
 
 -----------------------------------
 -- CSetOffset
@@ -296,17 +280,9 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
                                     getBase(CAPR(cb)),
                                     getLength(CAPR(cb)),
                                     GPR(rt)) then
-    {
-        var new_cap = nullCap;
-        new_cap  <- setOffset(new_cap, getBase(CAPR(cb)) + GPR(rt));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt))
     else
-    {
-        var new_cap = CAPR(cb);
-        new_cap  <- setOffset(new_cap, GPR(rt));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
 
 -----------------------------------
 -- CCheckPerm
@@ -363,11 +339,7 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else if not isCapRepresentable(getSealed(CAPR(cb)), getBase(CAPR(cb)), getLength(CAPR(cb)), GPR(rt)) then
-    {
-        var new_cap = nullCap;
-        new_cap  <- setOffset(new_cap, getBase(CAPR(cb)) + GPR(rt));
-        CAPR(cd) <- new_cap
-    }
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt))
     else
         CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
 
@@ -965,9 +937,7 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
         }
         else
         {
-            var new_cap = PCC;
-            new_cap <- setOffset(new_cap, PC + 8);
-            CAPR(cd) <- new_cap;
+            CAPR(cd) <- setOffset(PCC, PC + 8);
             BranchToPCC <- Some (getOffset(CAPR(cb)), CAPR(cb))
         }
     }
@@ -1046,7 +1016,7 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         new_cap <- setType(new_cap, 0);
         var p::Perms = getPerms(new_cap);
         p.Global <- getPerms(CAPR(cs)).Global and getPerms(CAPR(ct)).Global;
-        new_cap <- setPerms(new_cap, p);
+        new_cap  <- setPerms(new_cap, p);
         CAPR(cd) <- new_cap
     }
 
