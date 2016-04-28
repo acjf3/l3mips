@@ -554,7 +554,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         var access;
         var size;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
-        var addr = cursor + GPR(rt) + SignExtend(offset);
+        var addr = cursor + GPR(rt) + SignExtend([offset]::bits(10)<<[t]);
         var bytesel = '000';
         match t
         {
@@ -654,7 +654,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         var access;
         var size;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
-        var addr = cursor + GPR(rt) + SignExtend(offset);
+        var addr = cursor + GPR(rt) + SignExtend([offset]::bits(10)<<[t]);
         var bytesel = '000';
         match t
         {
