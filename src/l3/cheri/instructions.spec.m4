@@ -585,11 +585,9 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
                 access  <- DOUBLEWORD
             }
         };
-        -- XXX bug in spec
-        if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) + size >+ getLength(CAPR(cb)) then
+        if addr + size > getBase(CAPR(cb)) + getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
-        -- XXX bug in spec
-        else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) <+ getBase(CAPR(cb)) then
+        else if addr < getBase(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
         else
         {
@@ -686,11 +684,9 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
                 access  <- DOUBLEWORD
             }
         };
-        -- XXX bug in spec
-        if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) + size >+ getLength(CAPR(cb)) then
+        if addr + size > getBase(CAPR(cb)) + getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
-        -- XXX bug in spec
-        else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) <+ getBase(CAPR(cb)) then
+        else if addr < getBase(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
         else
         {
