@@ -478,21 +478,19 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         extOff = offset:'0000';
-        addr = cursor + GPR(rt) + SignExtend(extOff);
-        -- XXX bug in spec
-        if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) + CAPBYTEWIDTH >+ getLength(CAPR(cb)) then
+        addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
+        if addr + CAPBYTEWIDTH > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        -- XXX bug in spec
-        else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) <+ getBase(CAPR(cb)) then
+        else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if not isCapAligned(addr) then
+        else if not isCapAligned([addr]) then
         {
-            CP0.BadVAddr <- addr;
+            CP0.BadVAddr <- [addr];
             SignalException(AdES)
         }
         else
         {
-            _ = StoreCap(addr, CAPR(cs), false);
+            _ = StoreCap([addr], CAPR(cs), false);
             LLbit <- None
         }
     }
@@ -517,21 +515,19 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         extOff = offset:'0000';
-        addr = cursor + GPR(rt) + SignExtend(extOff);
-        -- XXX bug in spec
-        if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) + CAPBYTEWIDTH >+ getLength(CAPR(cb)) then
+        addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
+        if addr + CAPBYTEWIDTH > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        -- XXX bug in spec
-        else if getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt) + SignExtend(extOff) <+ getBase(CAPR(cb)) then
+        else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if not isCapAligned(addr) then
+        else if not isCapAligned([addr]) then
         {
-            CP0.BadVAddr <- addr;
+            CP0.BadVAddr <- [addr];
             SignalException(AdEL)
         }
         else
         {
-            tmp = LoadCap(addr, false);
+            tmp = LoadCap([addr], false);
             when not exceptionSignalled do CAPR(cd) <- tmp;
             LLbit <- None
         }
@@ -555,9 +551,9 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
     {
         var access;
         var size;
-        cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
-        extOff = [offset]::bits(11)<<[t];
-        addr = cursor + GPR(rt) + SignExtend(extOff);
+        cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+        extOff = (([offset<7>]::bits(1))^3:offset) << [t];
+        addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
         var bytesel = '000';
         match t
         {
@@ -585,13 +581,13 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
                 access  <- DOUBLEWORD
             }
         };
-        if addr + size > getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        if addr + size > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if addr < getBase(CAPR(cb)) then
+        else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else
         {
-            data = LoadMemoryCap(access, true, addr, DATA, LOAD, false);
+            data = LoadMemoryCap(access, true, [addr], DATA, LOAD, false);
             when not exceptionSignalled do
             {
                 data_list = [data]::bool list;
@@ -655,8 +651,11 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         var access;
         var size;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
-        extOff = [offset]::bits(11)<<[t];
-        addr = cursor + GPR(rt) + SignExtend(extOff);
+        extOff = (([offset<7>]::bits(1))^3:offset) << [t];
+        println("extOff = ":[extOff]);
+        tmp::bits(66) = SignExtend(extOff);
+        println("SignExtend66(extOff) = ":[tmp]);
+        addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
         var bytesel = '000';
         match t
         {
@@ -684,13 +683,13 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
                 access  <- DOUBLEWORD
             }
         };
-        if addr + size > getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+        if addr + size > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
-        else if addr < getBase(CAPR(cb)) then
+        else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else
         {
-            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, addr, DATA, STORE, false);
+            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], DATA, STORE, false);
             nothing
         }
     }
