@@ -3,11 +3,11 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-include(`cap-params.m4')dnl
+include(`cap-common.m4')dnl
 -------------------
 -- Helper functions
 -------------------
-bool register_inaccessible(cb::reg) = allow_system_reg_access(getPerms(PCC), cb)
+bool register_inaccessible(cb::reg) = allow_system_reg_access(getHwPerms(PCC), cb)
 
 bool register_inaccessible_write_attempt(mask::bits(16)) =
 {
@@ -102,7 +102,7 @@ define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-        GPR(rd) <- ZeroExtend(&getPerms(CAPR(cb)))
+        GPR(rd) <- getPerms(CAPR(cb))
 
 -----------------------------------
 -- CGetType rd, cb
@@ -262,7 +262,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else
-        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>))
+        CAPR(cd) <- setPerms(CAPR(cb), getPerms(CAPR(cb)) && GPR(rt))
 
 -----------------------------------
 -- CSetOffset
@@ -307,7 +307,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
         SignalCapException_v(cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
-    else if &getPerms(CAPR(cs)) && GPR(rt)<eval(NBPERMS-1):0> <> GPR(rt)<eval(NBPERMS-1):0> then
+    else if getPerms(CAPR(cs)) && GPR(rt) <> GPR(rt) then
         SignalCapException(capExcUser,cs)
     else
         nothing
@@ -476,10 +476,10 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store_Capability then
+    else if not getHwPerms(CAPR(cb)).Permit_Store_Capability then
         SignalCapException(capExcPermStoreCap,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
-            and getTag(CAPR(cs)) and not getPerms(CAPR(cs)).Global then
+    else if not getHwPerms(CAPR(cb)).Permit_Store_Local_Capability
+            and getTag(CAPR(cs)) and not getHwPerms(CAPR(cs)).Global then
         SignalCapException(capExcPermStoreLocalCap,cb)
     else
     {
@@ -516,7 +516,7 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load_Capability then
+    else if not getHwPerms(CAPR(cb)).Permit_Load_Capability then
         SignalCapException(capExcPermLoadCap,cb)
     else
     {
@@ -552,7 +552,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load then
+    else if not getHwPerms(CAPR(cb)).Permit_Load then
         SignalCapException(capExcPermLoad,cb)
     else
     {
@@ -622,7 +622,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load then
+    else if not getHwPerms(CAPR(cb)).Permit_Load then
         SignalCapException(capExcPermLoad,cb)
     -- XXX bug in spec
     else if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(offset) + 8 >+ getLength(CAPR(cb)) then
@@ -651,7 +651,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store then
+    else if not getHwPerms(CAPR(cb)).Permit_Store then
         SignalCapException(capExcPermStore,cb)
     else
     {
@@ -714,7 +714,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store then
+    else if not getHwPerms(CAPR(cb)).Permit_Store then
         SignalCapException(capExcPermStore,cb)
     -- XXX bug in spec
     else if getOffset(CAPR(cb)) + GPR(rt) + SignExtend(offset) + 8 >+ getLength(CAPR(cb)) then
@@ -748,7 +748,7 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load_Capability then
+    else if not getHwPerms(CAPR(cb)).Permit_Load_Capability then
         SignalCapException(capExcPermLoadCap,cb)
     else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -790,7 +790,7 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load then
+    else if not getHwPerms(CAPR(cb)).Permit_Load then
         SignalCapException(capExcPermLoad,cb)
     else if addr + size >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -827,10 +827,10 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store_Capability then
+    else if not getHwPerms(CAPR(cb)).Permit_Store_Capability then
         SignalCapException(capExcPermStoreCap,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
-            and getTag(CAPR(cs)) and not getPerms(CAPR(cs)).Global then
+    else if not getHwPerms(CAPR(cb)).Permit_Store_Local_Capability
+            and getTag(CAPR(cs)) and not getHwPerms(CAPR(cs)).Global then
         SignalCapException(capExcPermStoreLocalCap,cb)
     else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -864,7 +864,7 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store then
+    else if not getHwPerms(CAPR(cb)).Permit_Store then
         SignalCapException(capExcPermStore,cb)
     else if addr + size >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -894,9 +894,9 @@ define COP2 > CHERICOP2 > CJR (cb::reg) =
             SignalCapException(capExcTag,cb)
         else if getSealed(CAPR(cb)) then
             SignalCapException(capExcSeal,cb)
-        else if not getPerms(CAPR(cb)).Permit_Execute then
+        else if not getHwPerms(CAPR(cb)).Permit_Execute then
             SignalCapException(capExcPermExe,cb)
-        else if not getPerms(CAPR(cb)).Global then
+        else if not getHwPerms(CAPR(cb)).Global then
             SignalCapException(capExcGlobal,cb)
         else if getOffset(CAPR(cb)) + 4 >+ getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
@@ -928,9 +928,9 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
             SignalCapException(capExcTag,cb)
         else if getSealed(CAPR(cb)) then
             SignalCapException(capExcSeal,cb)
-        else if not getPerms(CAPR(cb)).Permit_Execute then
+        else if not getHwPerms(CAPR(cb)).Permit_Execute then
             SignalCapException(capExcPermExe,cb)
-        else if not getPerms(CAPR(cb)).Global then
+        else if not getHwPerms(CAPR(cb)).Global then
             SignalCapException(capExcGlobal,cb)
         else if getOffset(CAPR(cb)) + 4 >+ getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
@@ -966,7 +966,7 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcSeal,cs)
     else if getSealed(CAPR(ct)) then
         SignalCapException(capExcSeal,ct)
-    else if not getPerms(CAPR(ct)).Permit_Seal then
+    else if not getHwPerms(CAPR(ct)).Permit_Seal then
         SignalCapException(capExcPermSeal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
@@ -1007,7 +1007,7 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcSeal,ct)
     else if (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0> <> getType(CAPR(cs)) then
         SignalCapException(capExcType,ct)
-    else if not getPerms(CAPR(ct)).Permit_Seal then
+    else if not getHwPerms(CAPR(ct)).Permit_Seal then
         SignalCapException(capExcPermSeal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
@@ -1018,8 +1018,9 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         var new_cap = CAPR(cs);
         new_cap <- setSealed(new_cap, false);
         new_cap <- setType(new_cap, 0);
-        var p::Perms = getPerms(new_cap);
-        p.Global <- getPerms(CAPR(cs)).Global and getPerms(CAPR(ct)).Global;
+        var p = getPerms(new_cap);
+        -- architectural permission 0 is the Global permission
+        p<0> <- getHwPerms(CAPR(cs)).Global and getHwPerms(CAPR(ct)).Global;
         new_cap  <- setPerms(new_cap, p);
         CAPR(cd) <- new_cap
     }

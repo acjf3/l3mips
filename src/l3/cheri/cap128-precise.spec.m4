@@ -4,7 +4,7 @@
 ---------------------------------------------------------------------------
 dnl
 include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
+include(`cap-common.m4')dnl
 
 bool isCapAligned  (addr::bits(64))  = addr<3:0> == 0
 

@@ -19,16 +19,17 @@ L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 ifdef CAP
+L3SRCBASE+=cheri/cap-types-common.spec
 ifeq ($(CAP), c128c1)
 L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
 else ifeq ($(CAP), c128c3)
 L3SRCBASE+=cheri/cap128-compressed-candidate-3.spec
 else ifeq ($(CAP), p64)
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap64-precise.spec
+L3SRCBASE+=cheri/cap-precise-common.spec cheri/cap64-precise.spec
 else ifeq ($(CAP), p128)
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap128-precise.spec
+L3SRCBASE+=cheri/cap-precise-common.spec cheri/cap128-precise.spec
 else
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap256-precise.spec
+L3SRCBASE+=cheri/cap-precise-common.spec cheri/cap256-precise.spec
 endif
 L3SRCBASE+=cheri/state.spec
 L3SRCBASE+=cheri/exception.spec

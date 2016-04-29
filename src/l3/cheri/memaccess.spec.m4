@@ -4,7 +4,7 @@
 ---------------------------------------------------------------------------
 
 include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
+include(`cap-common.m4')dnl
 
 -- utils functions
 
@@ -172,7 +172,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
         then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Load
+    else if not getHwPerms(CAPR(0)).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
     else LoadMemoryCap(MemType, needAlign, final_vAddr, IorD, AccessType, link)
 }
@@ -299,7 +299,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if (final_vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
         then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Store
+    else if not getHwPerms(CAPR(0)).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN}
     else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, IorD,
                          AccessType, cond)
@@ -404,7 +404,7 @@ word option Fetch =
         -- TODO and the +4 for instruction bounds check and the +access size on data bounds check
         -- TODO and whether inequalities are large or strict in all bounds checks
         else if (('0':vAddr)+4 >+ [getBase(PCC)] + [getLength(PCC)]) then {SignalCapException_noReg(capExcLength); None}
-        else if not getPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
+        else if not getHwPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
         else {
             pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
             if exceptionSignalled then None else Some (ReadInst (pc))

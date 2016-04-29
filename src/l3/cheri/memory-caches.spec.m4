@@ -4,7 +4,7 @@
 ---------------------------------------------------------------------------
 
 include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
+include(`cap-common.m4')dnl
 
 -----------------
 -- stats utils --
