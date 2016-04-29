@@ -130,6 +130,8 @@ nat innerZeroCount (data::bool list, acc::nat) = match data
 nat countLeadingZeros  (data::bits(64)) = innerZeroCount ([data], 0)
 nat countTrailingZeros (data::bits(20)) = innerZeroCount ([Reverse(data)], 0)
 
+nat idxMSNZ (data::bits(64)) = 63-countLeadingZeros(data)
+
 ---------------------------------------
 -- standard capabilities definitions --
 --------------------------------------------------------------------------------
@@ -227,11 +229,11 @@ Capability setBounds (cap::Capability, length::bits(64)) =
         case Sealed(_)    => new_cap <- UNKNOWN
         case Unsealed(uf) =>
         {
-{- XXX Should work...
             -- aranges for a minimun 2 pages (2*4K) out of bounds buffer to be present
             inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
             -- deriving e from the inflated length
-            e = [Log2(inflated_length >> 19)];
+            --e = [Log2(inflated_length >> 19)]; XXX Don't know why this doesn't work
+            e = idxMSNZ([inflated_length >> 19]);
             -- deriving the new base
             newBase = cap.cursor;
             newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
@@ -244,24 +246,6 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             var uf :: UnsealedFields;
             uf.baseBits <- newBaseBits;
             uf.topBits  <- newTopBits;
-            new_cap.sFields <- Unsealed(uf)
--}
-            -- set length (pick best representation)
-            zeros = countLeadingZeros (length);
-            var new_exp = Max(44-zeros, 0);
-            var rep_len::bits(65) = 1 << (new_exp + 20);
-            --when not rep_len > ZeroExtend(length+2*BUFFSIZE) do
-            when not rep_len > ZeroExtend(length + (length>>6)) do
-                new_exp <- new_exp + 1;
-            new_base = cap.cursor;
-            new_top::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
-            new_baseBits = new_base<new_exp+19:new_exp>;
-            var new_topBits = new_top<new_exp+19:new_exp>;
-            when (new_top && ~(~0 << new_exp)) <> 0 do new_topBits  <- new_topBits + 1; -- XXX what if new_topBits where all Fs at the begining of the operation ?
-            new_cap.exp <- [new_exp];
-            var uf :: UnsealedFields;
-            uf.baseBits <- new_baseBits;
-            uf.topBits  <- new_topBits;
             new_cap.sFields <- Unsealed(uf)
         }
     };
