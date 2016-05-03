@@ -427,10 +427,7 @@ define COP2 > CHERICOP2 > CBTU (cb::reg, offset::bits(16)) =
         if register_inaccessible(cb) then
             SignalCapException_v(cb)
         else if not getTag(CAPR(cb)) then
-            if PC + SignExtend(offset) + 4 >+ getLength(PCC) then
-                SignalCapException_noReg(capExcLength)
-            else
-                BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
         else
             nothing
     }
@@ -447,10 +444,7 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
         if register_inaccessible(cb) then
             SignalCapException_v(cb)
         else if getTag(CAPR(cb)) then
-            if PC + SignExtend(offset) + 4 >+ getLength(PCC) then
-                SignalCapException_noReg(capExcLength)
-            else
-                BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
         else
             nothing
     }
