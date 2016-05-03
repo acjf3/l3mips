@@ -285,6 +285,19 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
 
 -----------------------------------
+-- CSub
+-----------------------------------
+define COP2 > CHERICOP2 > CSub (rd::reg, cb::reg, ct::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+        SignalCapException_v(cb)
+    else if register_inaccessible(ct) then
+        SignalCapException_v(ct)
+    else
+        GPR(rd) <- getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct)) - getOffset(CAPR(ct))
+
+-----------------------------------
 -- CCheckPerm
 -----------------------------------
 define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
