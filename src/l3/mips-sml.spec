@@ -113,7 +113,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       when 2 <= trace_level do mark_log (2, log_w_c0 (reg, value));
       match n, reg, sel
       {
-         case 0,  0, 0 => CP0.Index.Index <- value<7:0>
+         case 0,  0, 0 => CP0.Index.Index <- value<8:0>
          case 0,  2, 0 => CP0.&EntryLo0 <- value
          case 0,  3, 0 => CP0.&EntryLo1 <- value
          case 0,  4, 0 => CP0.Context.PTEBase <- value<63:23>

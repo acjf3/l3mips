@@ -24,7 +24,7 @@ exception UNPREDICTABLE :: string
 register Index :: word
 {
    31 : P         -- Probe failure
-  7-0 : Index     -- TLB index
+  8-0 : Index     -- TLB index
 }
 
 register Random :: word

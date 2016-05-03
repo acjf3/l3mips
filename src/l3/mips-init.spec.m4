@@ -56,7 +56,8 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config3.TL   <- false;   -- Trace Logic implemented?
 
    -- Configuration register 6 (mimic BERI)
-   CP0.Config6.TLBSize <- 143;
+   --CP0.Config6.TLBSize <- 143;
+   CP0.Config6.TLBSize <- 271;
    CP0.Config6.LTLB <- false;   -- Enable large TLB?
 
    CP0.&Status <- 0x0;          -- reset to kernel mode (interrupts disabled)

@@ -39,7 +39,7 @@ define TLBR =
   {
       i = CP0.Index.Index;
       match   if [i] >= TLBEntries then
-                  TLB_direct (i<6:0>)
+                  TLB_direct (i<7:0>)
               else
                   TLB_assoc ([i])
       {
@@ -74,7 +74,7 @@ define TLBWI =
       #UNPREDICTABLE ("TLB: bad mask")
   else if [CP0.Index.Index] >= TLBEntries then
   {
-      j = CP0.EntryHi.VPN2<6:0>;
+      j = CP0.EntryHi.VPN2<7:0>;
       TLB_direct (j) <- Some (CP0TLBEntry ())
   }
   else
@@ -93,7 +93,7 @@ define TLBWR =
       #UNPREDICTABLE ("TLB: bad mask")
   else if CP0.Config6.LTLB then
   {
-      j = CP0.EntryHi.VPN2<6:0>;
+      j = CP0.EntryHi.VPN2<7:0>;
       match TLB_direct (j)
       {
           case Some (old) => TLB_assoc ([CP0.Random.Random]) <- Some (old)

@@ -10,7 +10,7 @@ nat TLBEntries = 16
 -- regions.  (See BERI manual.)
 
 type TLBAssocMap = bits(4) -> TLBEntry option
-type TLBDirectMap = bits(7) -> TLBEntry option
+type TLBDirectMap = bits(8) -> TLBEntry option
 
 declare
 {
@@ -21,7 +21,7 @@ declare
 -- The following two components give read/write access to the TLB of
 -- the currently-running core.
 
-component TLB_direct (i::bits(7)) :: TLBEntry option
+component TLB_direct (i::bits(8)) :: TLBEntry option
 {
    value = { var m = c_TLB_direct(procID); m(i) }
    assign value = { var m = c_TLB_direct(procID)
@@ -37,15 +37,15 @@ component TLB_assoc (i::bits(4)) :: TLBEntry option
                   ; c_TLB_assoc(procID) <- m}
 }
 
-(bits(8) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
+(bits(9) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
 {
     var found = Nil;
-    match TLB_direct (vpn2<6:0>)
+    match TLB_direct (vpn2<7:0>)
     {
         case Some (e) =>
         {
-            index`8 = if [vpn2<6:0>] >= TLBEntries then
-                      [vpn2<6:0>] else 128 + [vpn2<6:0>];
+            index`9 = if [vpn2<7:0>] >= TLBEntries then
+                      [vpn2<7:0>] else 256 + [vpn2<7:0>];
             nmask`27 = ~[e.Mask];
             when CP0.Config6.LTLB do
                 found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
