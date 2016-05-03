@@ -116,3 +116,15 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
       Some (vAddr<39:0> - 0xFF_A000_0000, 2), true
    else
       None, 0xFFFF_FFFF_C000_0000 <=+ vAddr     -- cksseg/ckseg3
+
+nat option checkMask (mask::bits(12)) = match mask
+{
+    case 0b0000_0000_0000 => Some(12)
+    case 0b0000_0000_0011 => Some(14)
+    case 0b0000_0000_1111 => Some(16)
+    case 0b0000_0011_1111 => Some(18)
+    case 0b0000_1111_1111 => Some(20)
+    case 0b0011_1111_1111 => Some(22)
+    case 0b1111_1111_1111 => Some(24)
+    case _                => None
+}

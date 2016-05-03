@@ -70,6 +70,8 @@ define TLBR =
 define TLBWI =
   if !CP0.Status.CU0 and !KernelMode then
       SignalException(CpU)
+  else if not IsSome(checkMask(CP0.PageMask.Mask)) then
+      #UNPREDICTABLE ("TLB: bad mask")
   else if [CP0.Index.Index] >= TLBEntries then
   {
       j = CP0.EntryHi.VPN2<6:0>;
@@ -87,6 +89,8 @@ define TLBWI =
 define TLBWR =
   if !CP0.Status.CU0 and !KernelMode then
       SignalException(CpU)
+  else if not IsSome(checkMask(CP0.PageMask.Mask)) then
+      #UNPREDICTABLE ("TLB: bad mask")
   else if CP0.Config6.LTLB then
   {
       j = CP0.EntryHi.VPN2<6:0>;
