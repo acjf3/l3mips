@@ -659,9 +659,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         var size;
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
-        println("extOff = ":[extOff]);
         tmp::bits(66) = SignExtend(extOff);
-        println("SignExtend66(extOff) = ":[tmp]);
         addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
         var bytesel = '000';
         match t
