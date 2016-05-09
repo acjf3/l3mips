@@ -289,6 +289,7 @@ fun scheduleNext () =
 
 val () = mips.UNPREDICTABLE_LO := (fn _ => raise mips.UNPREDICTABLE "LO")
 val () = mips.UNPREDICTABLE_HI := (fn _ => raise mips.UNPREDICTABLE "HI")
+val () = mips.UNPREDICTABLE_TLB := (fn _ => raise mips.UNPREDICTABLE "TLB")
 
 (* ------------------------------------------------------------------------
    Run code
@@ -490,6 +491,7 @@ val () =
                      case x of
                          "HI" => mips.UNPREDICTABLE_HI := (fn _ => ())
                        | "LO" => mips.UNPREDICTABLE_LO := (fn _ => ())
+                       | "TLB" => mips.UNPREDICTABLE_TLB := (fn _ => ())
                        | _    => failExit "Unknown argument to --ignore"
                    ) igns
           val (w, l) = processOption "--watch-paddr" l

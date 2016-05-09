@@ -10,7 +10,7 @@
 construct ExceptionType
 {
     Int, Mod, TLBL, TLBS, AdEL, AdES, Sys, Bp, ResI, CpU, Ov, Tr,
-    CTLBL, CTLBS, C2E, XTLBRefillL, XTLBRefillS
+    CTLBL, CTLBS, C2E, MCheck, XTLBRefillL, XTLBRefillS
 }
 
 bits(5) ExceptionCode (e::ExceptionType) = match e
@@ -30,6 +30,7 @@ bits(5) ExceptionCode (e::ExceptionType) = match e
     case CTLBL       => 0x10 -- Capability TLB Load exception
     case CTLBS       => 0x11 -- Capability TLB Store exception
     case C2E         => 0x12 -- C2E coprocessor 2 exception
+    case MCheck      => 0x18 -- Machine Check (i.e. TLB state is invalid)
     case XTLBRefillL => 0x02
     case XTLBRefillS => 0x03
 }

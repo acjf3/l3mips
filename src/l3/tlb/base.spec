@@ -16,6 +16,7 @@ declare
 {
    c_TLB_direct :: id -> TLBDirectMap
    c_TLB_assoc  :: id -> TLBAssocMap
+   UNPREDICTABLE_TLB :: unit -> unit
 }
 
 -- The following two components give read/write access to the TLB of
