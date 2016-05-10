@@ -74,7 +74,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.PRId <- 0x400;           -- processor ID
    CP0.Index.P <- false;
    CP0.Index.Index <- 0x0;
-   CP0.Random.Random <- [TLBEntries-1];
+   CP0.Random.Random <- [TLBAssocEntries-1];
    CP0.Wired.Wired <- 0;
    CP0.&HWREna <- 0;
    when rdhwr_extra do
@@ -83,7 +83,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
       CP0.HWREna.RS <- true;
       CP0.HWREna.DS <- true
    };
-   for i in 0 .. (TLBEntries-1) do TLB_assoc([i]) <- None;
+   for i in 0 .. (TLBAssocEntries-1) do TLB_assoc([i]) <- None;
    BranchDelay <- None;
    BranchTo <- None;
    LLbit <- None;

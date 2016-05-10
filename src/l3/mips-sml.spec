@@ -121,7 +121,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0,  5, 0 => CP0.PageMask.Mask <- value<24:13>
          case 0,  6, 0 => {
                             CP0.Wired.Wired <- value<7:0>;
-                            CP0.Random.Random <- [TLBEntries-1]
+                            CP0.Random.Random <- [TLBAssocEntries-1]
                           }
          case 0,  7, 0 => {
                             CP0.HWREna.CPUNum <- value<0>;

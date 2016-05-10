@@ -4,7 +4,9 @@
 -- (c) Aleaxndre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-nat TLBEntries = 16
+nat TLBAssocEntries = 16
+nat TLBDirectEntries = 256
+nat TLBEntries = TLBAssocEntries + TLBDirectEntries
 
 -- Each core has its own TLB, with both associative and direct-mapped
 -- regions.  (See BERI manual.)
@@ -45,8 +47,8 @@ component TLB_assoc (i::bits(4)) :: TLBEntry option
     {
         case Some (e) =>
         {
-            index`9 = if [vpn2<7:0>] >= TLBEntries then
-                      [vpn2<7:0>] else 256 + [vpn2<7:0>];
+            index`9 = if [vpn2<7:0>] >= TLBAssocEntries then
+                      [vpn2<7:0>] else [TLBDirectEntries] + [vpn2<7:0>];
             nmask`27 = ~[e.Mask];
             when CP0.Config6.LTLB do
                 found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
@@ -56,7 +58,7 @@ component TLB_assoc (i::bits(4)) :: TLBEntry option
         }
         case _ => found <- Nil
     };
-    for i in 0 .. TLBEntries - 1 do
+    for i in 0 .. TLBAssocEntries - 1 do
     {
         match TLB_assoc ([i])
         {

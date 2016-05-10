@@ -224,7 +224,7 @@ unit Fetch =
    currentInst <- None;
 
    CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired then
-                           [TLBEntries - 1]
+                           [TLBAssocEntries - 1]
                         else
                            CP0.Random.Random - 1;
 

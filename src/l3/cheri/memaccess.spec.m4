@@ -386,7 +386,7 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 word option Fetch =
 {
     CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired
-                            then [TLBEntries - 1]
+                            then [TLBAssocEntries - 1]
                             else CP0.Random.Random - 1;
     when CP0.Compare == CP0.Count do
     {

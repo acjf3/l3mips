@@ -38,7 +38,7 @@ define TLBR =
   else
   {
       i = CP0.Index.Index;
-      match   if [i] >= TLBEntries then
+      match   if [i] >= TLBAssocEntries then
                   TLB_direct (i<7:0>)
               else
                   TLB_assoc ([i])
@@ -75,15 +75,20 @@ define TLBWI =
       UNPREDICTABLE_TLB ();
       SignalException (MCheck)
   }
-  else if [CP0.Index.Index] >= TLBEntries then
+  else if [CP0.Index.Index] < TLBAssocEntries then
+  {
+      i`4 = [CP0.Index.Index];
+      TLB_assoc (i) <- Some (CP0TLBEntry ())
+  }
+  else if [CP0.Index.Index] < TLBEntries then
   {
       j = CP0.EntryHi.VPN2<7:0>;
       TLB_direct (j) <- Some (CP0TLBEntry ())
   }
   else
   {
-      i`4 = [CP0.Index.Index];
-      TLB_assoc (i) <- Some (CP0TLBEntry ())
+      UNPREDICTABLE_TLB ();
+      SignalException (MCheck)
   }
 
 -----------------------------------
