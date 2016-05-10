@@ -83,7 +83,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
       CP0.HWREna.RS <- true;
       CP0.HWREna.DS <- true
    };
-   for i in 0 .. 127 do TLB_assoc([i]) <- None;
+   for i in 0 .. (TLBEntries-1) do TLB_assoc([i]) <- None;
    BranchDelay <- None;
    BranchTo <- None;
    LLbit <- None;
