@@ -196,10 +196,10 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
 {
-    base::bits(65)   = ZeroExtend(getBase(CAPR(cb)));
-    offset::bits(65) = ZeroExtend(getOffset(CAPR(cb)));
-    length::bits(65) = ZeroExtend(getLength(CAPR(cb)));
-    cursor::bits(65) = base + offset;
+    base   = getBase(CAPR(cb));
+    offset = getOffset(CAPR(cb));
+    length = getLength(CAPR(cb));
+    cursor = getBase(CAPR(cb))+getOffset(CAPR(cb));
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
@@ -212,7 +212,7 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else if cursor <+ base then
         SignalCapException(capExcLength,cb)
-    else if cursor + ZeroExtend(GPR(rt)) >+ base + length then
+    else if ('0':cursor) + ('0':GPR(rt)) >+ ('0':base) + ('0':length) then
         SignalCapException(capExcLength,cb)
     else
         CAPR(cd) <- setBounds(CAPR(cb), GPR(rt))
