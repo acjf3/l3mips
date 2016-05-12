@@ -104,6 +104,18 @@ For example, to build a simulator with caches, with a 2-way set associative L1:
 make CACHE=1 L1WAYS=2
 ```
 
+To build the simulator without virtual memory, set the `NOTRANSLATE` variable to `1`:
+
+```
+make NOTRANSLATE=1
+```
+
+To build the simulator without peripherals and without memory translation (simplifies export to HOL, but does not support logging or stats mechanisms), set the `SIMPLEMEM` variable to `1`:
+
+```
+make SIMPLEMEM=1
+```
+
 To control the name of the generated simulator, set the `SIM` variable:
 
 ```

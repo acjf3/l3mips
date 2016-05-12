@@ -52,6 +52,9 @@ endif
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
 ifdef CAP
+ifdef SIMPLEMEM
+L3SRCBASE+=cheri/memaccess-simple.spec
+else
 ifdef CACHE
 L3SRCBASE+=cheri/memory-caches.spec
 else
@@ -59,6 +62,10 @@ L3SRCBASE+=cheri/memory.spec
 endif
 L3SRCBASE+=cheri/memory-sml-helpers.spec
 L3SRCBASE+=cheri/memaccess.spec
+endif
+else
+ifdef SIMPLEMEM
+L3SRCBASE+=mips-memaccess-simple.spec
 else
 ifdef CACHE
 L3SRCBASE+=mips-memory-caches.spec
@@ -66,6 +73,7 @@ else
 L3SRCBASE+=mips-memory.spec
 endif
 L3SRCBASE+=mips-memaccess.spec
+endif
 endif
 L3SRCBASE+=mips-sml.spec
 ifdef FPU
