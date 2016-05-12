@@ -154,6 +154,9 @@ NAME_STR=l3mips
 ifdef NOTRANSLATE
 NAME_STR:=$(NAME_STR)-no_translate
 endif
+ifdef SIMPLEMEM
+NAME_STR:=$(NAME_STR)-simple_mem
+endif
 ifdef FPU
 NAME_STR:=$(NAME_STR)-fpu
 endif
