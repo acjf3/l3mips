@@ -86,7 +86,7 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
     tb, bb = match cap.sFields
     {
         case Unsealed(uf) => uf.topBits, uf.baseBits
-        case Sealed(sf)   => (0`12):sf.topBits, (0`12):sf.baseBits
+        case Sealed(sf)   => sf.topBits:(0`12), sf.baseBits:(0`12)
     };
     ptr = cap.cursor<[cap.exp]+19:[cap.exp]>;
     var repBound::bits(20) = bb - 0x1000;
@@ -275,18 +275,12 @@ Capability setSealed (cap::Capability, sealed::bool) =
         }
         case Unsealed(uf) => when sealed do
         {
-            -- count trailing zeroes
-            baseZeros  = countTrailingZeros(uf.baseBits);
-            topZeros   = countTrailingZeros(uf.topBits);
-            trailZeros = Min(12,Min(baseZeros, topZeros));
-            -- assemble the new sealed fileds
             var sf::SealedFields;
-            sf.baseBits <- [uf.baseBits >> trailZeros];
+            sf.baseBits <- uf.baseBits<19:12>;
             sf.otypeHi  <- 0;
-            sf.topBits  <- [uf.topBits >> trailZeros];
+            sf.topBits  <- uf.topBits<19:12>;
             sf.otypeLo  <- 0;
-            new_cap.sFields <- Sealed (sf);
-            new_cap.exp     <- cap.exp + [trailZeros]
+            new_cap.sFields <- Sealed (sf)
         }
     };
     new_cap
