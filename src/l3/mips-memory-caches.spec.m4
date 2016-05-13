@@ -10,26 +10,26 @@
 record MemStats
 {
     -- data / inst measures
-	data_reads                     :: nat
-	data_writes                    :: nat
-	inst_reads                     :: nat
+       data_reads                     :: nat
+       data_writes                    :: nat
+       inst_reads                     :: nat
     -- hit / miss measures
-	l2_read                        :: nat
-	l2_read_hit                    :: nat
-	l2_read_miss                   :: nat
-	l2_write                       :: nat
-	l2_write_hit                   :: nat
-	l2_write_miss                  :: nat
+       l2_read                        :: nat
+       l2_read_hit                    :: nat
+       l2_read_miss                   :: nat
+       l2_write                       :: nat
+       l2_write_hit                   :: nat
+       l2_write_miss                  :: nat
     -- prefetch measures
-	l2_mandatory_fetch             :: nat
-	l2_prefetch                    :: nat
-	l2_tlb_hit                     :: nat
-	l2_tlb_miss                    :: nat
-	l2_prefetch_alias              :: nat
+       l2_mandatory_fetch             :: nat
+       l2_prefetch                    :: nat
+       l2_tlb_hit                     :: nat
+       l2_tlb_miss                    :: nat
+       l2_prefetch_alias              :: nat
     -- eviction measures
-	l2_evict                       :: nat
-	l2_mandatory_evict             :: nat
-	l2_prefetch_evict              :: nat
+       l2_evict                       :: nat
+       l2_mandatory_evict             :: nat
+       l2_prefetch_evict              :: nat
 }
 
 declare memStats :: MemStats
@@ -37,26 +37,26 @@ declare memStats :: MemStats
 unit initMemStats =
 {
     -- data / inst measures
-	memStats.data_reads                    <- 0;
-	memStats.data_writes                   <- 0;
-	memStats.inst_reads                    <- 0;
+       memStats.data_reads                    <- 0;
+       memStats.data_writes                   <- 0;
+       memStats.inst_reads                    <- 0;
     -- hit / miss measures
-	memStats.l2_read                       <- 0;
-	memStats.l2_read_hit                   <- 0;
-	memStats.l2_read_miss                  <- 0;
-	memStats.l2_write                      <- 0;
-	memStats.l2_write_hit                  <- 0;
-	memStats.l2_write_miss                 <- 0;
+       memStats.l2_read                       <- 0;
+       memStats.l2_read_hit                   <- 0;
+       memStats.l2_read_miss                  <- 0;
+       memStats.l2_write                      <- 0;
+       memStats.l2_write_hit                  <- 0;
+       memStats.l2_write_miss                 <- 0;
     -- prefetch measures
-	memStats.l2_mandatory_fetch            <- 0;
-	memStats.l2_prefetch                   <- 0;
-	memStats.l2_tlb_hit                    <- 0;
-	memStats.l2_tlb_miss                   <- 0;
-	memStats.l2_prefetch_alias             <- 0;
+       memStats.l2_mandatory_fetch            <- 0;
+       memStats.l2_prefetch                   <- 0;
+       memStats.l2_tlb_hit                    <- 0;
+       memStats.l2_tlb_miss                   <- 0;
+       memStats.l2_prefetch_alias             <- 0;
     -- eviction measures
-	memStats.l2_evict                      <- 0;
-	memStats.l2_mandatory_evict            <- 0;
-	memStats.l2_prefetch_evict             <- 0
+       memStats.l2_evict                      <- 0;
+       memStats.l2_mandatory_evict            <- 0;
+       memStats.l2_prefetch_evict             <- 0
 }
 
 string MemStateLine (s::string, n::nat) =
@@ -85,28 +85,52 @@ string printMemStats =
        MemStateLine ("l2_mandatory_evict", memStats.l2_mandatory_evict) :
        MemStateLine ("l2_prefetch_evict",  memStats.l2_prefetch_evict)
 
-dnl -- math utils
-define(`log2', `ifelse($1, 1, 0, `eval(1 + log2(eval($1 / 2)))')')dnl -- compute log2
 
-dnl -- L1 compile time values (direct mapped L1)
-define(`L1SIZE', ifdef(`L1SIZE', L1SIZE, 16384))dnl -- L1 cache size in bytes (default 16KB)
-define(`L1LINESIZE', ifdef(`L1LINESIZE', L1LINESIZE, 32))dnl -- L1 line size in bytes (default 32B)
-define(`L1ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
-define(`L1OFFSETWIDTH', log2(L1LINESIZE))dnl -- size of offset feild in bits
-define(`L1INDEXWIDTH', eval(log2(eval(L1SIZE/L1LINESIZE))))dnl -- size of index feild in bits
-define(`L1TAGWIDTH', eval(L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH))dnl -- size of tag feild in bits
-define(`L1LINENUMBERWIDTH', eval(L1ADDRWIDTH-L1OFFSETWIDTH))dnl -- size of linenumber feild in bits
-dnl
-dnl -- L2 compile time values
-define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
-define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
-define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
-define(`L1LINEPERL2LINE', eval(L2LINESIZE/L1LINESIZE))dnl -- number of L1 line(s) per L2 line
-define(`L2ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
-define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
-define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
-define(`L2TAGWIDTH', eval(L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH))dnl -- size of tag feild in bits
-define(`L2LINENUMBERWIDTH', eval(L2ADDRWIDTH-L2OFFSETWIDTH))dnl -- size of linenumber feild in bits
+-- L1 compile time values (direct mapped L1)
+
+-- L1 cache size in bytes (default 16KB)
+nat `L1SIZE' = L1SIZE
+-- L1 associativity (default direct mapped)
+nat `L1WAYS' = L1WAYS
+-- L1 line size in bytes (default 32B)
+nat `L1LINESIZE' = L1LINESIZE
+
+-- address size in bits (40 bits)
+nat L1ADDRWIDTH = 40
+-- size of offset feild in bits
+nat L1OFFSETWIDTH = Log2 (L1LINESIZE)
+-- size of index feild in bits
+nat L1INDEXWIDTH = Log2 (L1SIZE div L1LINESIZE)
+-- size of tag feild in bits
+nat L1TAGWIDTH = L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH
+-- size of linenumber feild in bits
+nat L1LINENUMBERWIDTH = L1ADDRWIDTH-L1OFFSETWIDTH
+
+-- L2 compile time values
+
+-- L2 cache size in bytes (default 64KB)
+nat `L2SIZE' = L2SIZE
+-- L2 associativity (default direct mapped)
+nat `L2WAYS' = L2WAYS
+-- L2 line size in bytes (default 32B)
+nat `L2LINESIZE' = L2LINESIZE
+
+-- number of L1 line(s) per L2 line
+nat L1LINEPERL2LINE = L2LINESIZE div L1LINESIZE
+-- address size in bits (40 bits)
+nat L2ADDRWIDTH = 40
+-- size of offset feild in bits
+nat L2OFFSETWIDTH = Log2 (L2LINESIZE)
+-- size of index feild in bits
+nat L2INDEXWIDTH = Log2 (L2SIZE div (L2WAYS * L2LINESIZE))
+-- size of tag feild in bits
+nat L2TAGWIDTH = L2ADDRWIDTH - L2INDEXWIDTH - L2OFFSETWIDTH
+-- size of linenumber feild in bits
+nat L2LINENUMBERWIDTH = L2ADDRWIDTH - L2OFFSETWIDTH
+
+nat DATASIZE1 = L1LINESIZE*8
+nat DATASIZE2 = L2LINESIZE*8
+
 ifelse(eval(L2LINESIZE%L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be a multiple of the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
 ifelse(eval(L2LINESIZE<L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be  greater than or equal to the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
 dnl
@@ -119,8 +143,8 @@ dnl
 
 type dwordAddr = bits(37)
 type MemAddr = bits(L2LINENUMBERWIDTH)
-type MemData = bits(eval(L2LINESIZE*8))
-MemAddr MemAddrFromDwordAddr (addr::dwordAddr) = addr<36:eval(log2(L2LINESIZE)-3)>
+type MemData = bits(DATASIZE2)
+MemAddr MemAddrFromDwordAddr (addr::dwordAddr) = addr<36:Log2(L2LINESIZE)-3>
 
 -- mem log utils --
 
@@ -142,7 +166,7 @@ type L1Index = bits(L1INDEXWIDTH)
 type L1Tag = bits(L1TAGWIDTH)
 type L1LineNumber = bits(L1LINENUMBERWIDTH)
 type L1Addr = bits(L1ADDRWIDTH)
-type L1Data = bits(eval(L1LINESIZE*8))
+type L1Data = bits(DATASIZE1)
 record L1Entry {valid::bool tag::L1Tag data::L1Data}
 type DirectMappedL1 = L1Index -> L1Entry
 type L1Cache = DirectMappedL1
@@ -164,7 +188,7 @@ type L2Index = bits(L2INDEXWIDTH)
 type L2Tag = bits(L2TAGWIDTH)
 type L2LineNumber = bits(L2LINENUMBERWIDTH)
 type L2Addr = bits(L2ADDRWIDTH)
-type L2Data = bits(eval(L2LINESIZE*8))
+type L2Data = bits(DATASIZE2)
 record L2Entry {valid::bool tag::L2Tag sharers::L1Id list data::L2Data}
 type DirectMappedL2 = L2Index -> L2Entry
 type L2Cache = nat -> DirectMappedL2
@@ -228,26 +252,26 @@ declare MEM :: MemAddr -> MemData -- physical memory
 
 -- general l1 utils --
 
-L1Index l1_hash_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1-L1TAGWIDTH):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
-L1Tag l1_tag_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH)>
+L1Index l1_hash_default(addr::L1Addr) = addr<L1ADDRWIDTH-1-L1TAGWIDTH:L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH>
+L1Tag l1_tag_default(addr::L1Addr) = addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1TAGWIDTH>
 
 L1Index L1Idx(addr::L1Addr) = l1_hash_default(addr)
 L1Tag L1Tag(addr::L1Addr) = l1_tag_default(addr)
-L1LineNumber L1LineNumber(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
+L1LineNumber L1LineNumber(addr::L1Addr) = addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH>
 
 L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
 
 L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = ifelse(eval(L2LINESIZE>L1LINESIZE), 0, `addr',`addr:0')
 
-L1LineNumber L1LineNumberFromDwordAddr (addr::dwordAddr) = addr<36:eval(37-L1LINENUMBERWIDTH)>
+L1LineNumber L1LineNumberFromDwordAddr (addr::dwordAddr) = addr<36:37-L1LINENUMBERWIDTH>
 
-nat L1LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L1LINESIZE/8)-1):0>]
+nat L1LineDwordIdx (addr::dwordAddr) = [addr<Log2(L1LINESIZE div 8)-1:0>]
 
 word list L1DataToWordList (data::L1Data) =
 {
     var word_list = Nil;
-    for i in eval(L1LINESIZE/4) .. 1 do
+    for i in L1LINESIZE div 4 .. 1 do
         word_list <- Cons (data<(i*32)-1:(i-1)*32>, word_list);
     word_list
 }
@@ -255,7 +279,7 @@ word list L1DataToWordList (data::L1Data) =
 dword list L1DataToDwordList (data::L1Data) =
 {
     var dword_list = Nil;
-    for i in eval(L1LINESIZE/8) .. 1 do
+    for i in L1LINESIZE div 8 .. 1 do
         dword_list <- Cons (data<(i*64)-1:(i-1)*64>, dword_list);
     dword_list
 }
@@ -264,7 +288,7 @@ L1Data DwordListToL1Data (dword_list::dword list) =
 {
     var data;
     var tmp_list = dword_list;
-    for i in 1 .. eval(L1LINESIZE/8) do
+    for i in 1 .. L1LINESIZE div 8 do
     {
         data<(i*64)-1:(i-1)*64> <- Head(tmp_list);
         tmp_list <- Drop(1, tmp_list)
@@ -276,21 +300,17 @@ L1Addr L1AddrFromL2Addr(addr::L2Addr) = addr
 
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
     var out::L2Data = 0;
-    offset::nat = OFFSET;
-    out<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)> <- data;
+    offset::nat = ifdef(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
+    out<(offset+1)*DATASIZE1-1:offset*DATASIZE1> <- data;
     out
-undefine(`OFFSET')dnl
 }
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
-    offset::nat = OFFSET;
-    out = data<((offset+1)*eval(L1LINESIZE*8))-1:offset*eval(L1LINESIZE*8)>;
+    offset::nat = ifdef(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
+    out = data<(offset+1)*DATASIZE1-1:offset*DATASIZE1>;
     out
-undefine(`OFFSET')dnl
 }
 
 L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) = old && ~mask || new && mask
@@ -311,15 +331,15 @@ L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
 string l1addr_str (addr::L1Addr) =
     "0x" : hex40(addr)
 string l1addr_line_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", eval((L1LINENUMBERWIDTH+3)/4), [addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1LINENUMBERWIDTH)>])
+    "0x" : PadLeft (`#'"0", (L1LINENUMBERWIDTH+3) div 4, [addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1LINENUMBERWIDTH>])
 string l1addr_tag_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", eval((L1TAGWIDTH+3)/4), [L1Tag(addr)])
+    "0x" : PadLeft (`#'"0", (L1TAGWIDTH+3) div 4, [L1Tag(addr)])
 string l1addr_idx_str (addr::L1Addr) =
     [[L1Idx(addr)]::nat]
 string l1line_str (line::L1LineNumber) =
-    "0x" : PadLeft (`#'"0", eval((L1LINENUMBERWIDTH+3)/4), [line])
+    "0x" : PadLeft (`#'"0", (L1LINENUMBERWIDTH+3) div 4, [line])
 string l1tag_str (tag::L1Tag) =
-    "0x" : PadLeft (`#'"0", eval((L1TAGWIDTH+3)/4), [tag])
+    "0x" : PadLeft (`#'"0", (L1TAGWIDTH+3) div 4, [tag])
 string l1idx_str (idx::L1Index) =
     [[idx]::nat]
 
@@ -340,23 +360,23 @@ string l1data_str (data::L1Data) =
 
 -- general l2 utils --
 
-L2Index l2_hash_default(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1-L2TAGWIDTH):eval(L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH)>
-L2Tag l2_tag_default(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2TAGWIDTH)>
+L2Index l2_hash_default(addr::L2Addr) = addr<L2ADDRWIDTH-1-L2TAGWIDTH:L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH>
+L2Tag l2_tag_default(addr::L2Addr) = addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2TAGWIDTH>
 
 L2Index L2Idx(addr::L2Addr) = l2_hash_default(addr)
 L2Tag L2Tag(addr::L2Addr) = l2_tag_default(addr)
-L2LineNumber L2LineNumber(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH)>
+L2LineNumber L2LineNumber(addr::L2Addr) = addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH>
 
 MemAddr MemAddrFromL2Addr (addr::L2Addr) = L2LineNumber(addr)
 
 L2Data L2MergeData (old::L2Data, new::L2Data, mask::L2Data) = old && ~mask || new && mask
 
-nat L2LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L2LINESIZE/8)-1):0>]
+nat L2LineDwordIdx (addr::dwordAddr) = [addr<Log2(L2LINESIZE div 8)-1:0>]
 
 dword list L2DataToDwordList (data::L2Data) =
 {
     var dword_list = Nil;
-    for i in eval(L2LINESIZE/8) .. 1 do
+    for i in L2LINESIZE div 8 .. 1 do
         dword_list <- Cons (data<(i*64)-1:(i-1)*64>, dword_list);
     dword_list
 }
@@ -365,7 +385,7 @@ L2Data DwordListToL2Data (dword_list::dword list) =
 {
     var data;
     var tmp_list = dword_list;
-    for i in 1 .. eval(L2LINESIZE/8) do
+    for i in 1 .. L2LINESIZE div 8 do
     {
         data<(i*64)-1:(i-1)*64> <- Head(tmp_list);
         tmp_list <- Drop(1, tmp_list)
@@ -390,15 +410,15 @@ DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, U
 string l2addr_str (addr::L2Addr) =
     "0x" : hex40(addr)
 string l2addr_line_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", eval((L2LINENUMBERWIDTH+3)/4), [addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2LINENUMBERWIDTH)>])
+    "0x" : PadLeft (`#'"0", (L2LINENUMBERWIDTH+3) div 4, [addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2LINENUMBERWIDTH>])
 string l2addr_tag_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", eval((L2TAGWIDTH+3)/4), [L2Tag(addr)])
+    "0x" : PadLeft (`#'"0", (L2TAGWIDTH+3) div 4, [L2Tag(addr)])
 string l2addr_idx_str (addr::L2Addr) =
     [[L2Idx(addr)]::nat]
 string l2line_str (line::L2LineNumber) =
-    "0x" : PadLeft (`#'"0", eval((L2LINENUMBERWIDTH+3)/4), [line])
+    "0x" : PadLeft (`#'"0", (L2LINENUMBERWIDTH+3) div 4, [line])
 string l2tag_str (tag::L2Tag) =
-    "0x" : PadLeft (`#'"0", eval((L2TAGWIDTH+3)/4), [tag])
+    "0x" : PadLeft (`#'"0", (L2TAGWIDTH+3) div 4, [tag])
 string l2idx_str (idx::L2Index) =
     [[idx]::nat]
 
@@ -421,7 +441,7 @@ string l2data_str (data::L2Data) =
     var ret = "{";
     for i in L1LINEPERL2LINE .. 1 do
     {
-        ret <- ret : [i-1] : "." : l1data_str(data<(i*eval(L1LINESIZE*8))-1:(i-1)*eval(L1LINESIZE*8)>);
+        ret <- ret : [i-1] : "." : l1data_str(data<i*DATASIZE1-1:(i-1)*DATASIZE1>);
         when i > 1 do ret <- ret : ", "
     };
     ret <- ret : "}";
@@ -659,7 +679,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
            mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         MEM(mem_addr) <- old_entry.data;
         -- take care of coherence --
-        for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+        for i in 0 .. L1LINEPERL2LINE - 1 do
             invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], old_entry.sharers, true)
     };
 
@@ -725,7 +745,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-  for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+  for i in 0 .. L1LINEPERL2LINE - 1 do
     invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], entry.sharers, false)
 
 L2Data L2Read (addr::L2Addr) =

@@ -14,15 +14,16 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config.AT  <- 2;         -- MIPS64 with access to all address segments
 
    -- Configuration register 1 (mimic BERI)
-   include(`helpers.m4')dnl
    CP0.Config1.M  <- true;      -- true if config register 2 exists
    CP0.Config1.MMUSize <- 15;   -- TLB has MMUSize+1 entries
-   CP0.Config1.IS <- eval(log2(((L1SIZE/L1LINESIZE)/L1WAYS)/64)); -- Icache sets per way
-   CP0.Config1.IL <- eval(log2(L1LINESIZE/2));                    -- Icache line size
-   CP0.Config1.IA <- eval(L1WAYS-1);                              -- Icache associativity
-   CP0.Config1.DS <- eval(log2(((L1SIZE/L1LINESIZE)/L1WAYS)/64)); -- Dcache sets per way
-   CP0.Config1.DL <- eval(log2(L1LINESIZE/2));                    -- Dcache line size
-   CP0.Config1.DA <- eval(L1WAYS-1);                              -- Dcache associativity
+   CP0.Config1.IS <- [Log2(L1SIZE div L1LINESIZE div L1WAYS div 64)];
+                                                -- Icache sets per way
+   CP0.Config1.IL <- [Log2(L1LINESIZE div 2)];  -- Icache line size
+   CP0.Config1.IA <- [L1WAYS-1];                -- Icache associativity
+   CP0.Config1.DS <- [Log2(L1SIZE div L1LINESIZE div L1WAYS div 64)];
+                                                -- Dcache sets per way
+   CP0.Config1.DL <- [Log2(L1LINESIZE div 2)];  -- Dcache line size
+   CP0.Config1.DA <- [Log2(L1WAYS-1)];          -- Dcache associativity
    CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
    CP0.Config1.PCR <- false;    -- Performance counter registers implemented?
@@ -38,9 +39,10 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config2.TL <- 0;         -- Tertiary cache line size
    CP0.Config2.TA <- 0;         -- Tertiary cache associativity
    CP0.Config2.SU <- 3;         -- Secondary cache control
-   CP0.Config2.SS <- eval(log2(((L2SIZE/L2LINESIZE)/L2WAYS)/64)); -- Secondary cache sets per way
-   CP0.Config2.SL <- eval(log2(L2LINESIZE/2));                    -- Secondary cache line size
-   CP0.Config2.SA <- eval(L2WAYS-1);                              -- Secondary cache associativity
+   CP0.Config2.SS <- [Log2(L2SIZE div L2LINESIZE div L2WAYS div 64)];
+                                               -- Secondary cache sets per way
+   CP0.Config2.SL <- [Log2(L2LINESIZE div 2)]; -- Secondary cache line size
+   CP0.Config2.SA <- [L2WAYS-1];               -- Secondary cache associativity
 
    -- Configuration register 3 (mimic BERI)
    CP0.Config3.M  <- true;      -- true if config register 4 exists
