@@ -232,8 +232,8 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             -- aranges for a minimun 2 pages (2*4K) out of bounds buffer to be present
             inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
             -- deriving e from the inflated length
-            --e = [Log2(inflated_length >> 19)]; XXX Don't know why this doesn't work
-            e = idxMSNZ(ZeroExtend(inflated_length<64:19>));
+            --e = [Log2(inflated_length >>+ 19)]; XXX Don't know why this doesn't work
+            e = idxMSNZ([inflated_length >>+ 19]);
             -- deriving the new base
             newBase = cap.cursor;
             newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
