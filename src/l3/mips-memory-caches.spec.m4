@@ -331,15 +331,15 @@ L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
 string l1addr_str (addr::L1Addr) =
     "0x" : hex40(addr)
 string l1addr_line_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", (L1LINENUMBERWIDTH+3) div 4, [addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1LINENUMBERWIDTH>])
+    "0x" : PadLeft (#"0", (L1LINENUMBERWIDTH+3) div 4, [addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1LINENUMBERWIDTH>])
 string l1addr_tag_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", (L1TAGWIDTH+3) div 4, [L1Tag(addr)])
+    "0x" : PadLeft (#"0", (L1TAGWIDTH+3) div 4, [L1Tag(addr)])
 string l1addr_idx_str (addr::L1Addr) =
     [[L1Idx(addr)]::nat]
 string l1line_str (line::L1LineNumber) =
-    "0x" : PadLeft (`#'"0", (L1LINENUMBERWIDTH+3) div 4, [line])
+    "0x" : PadLeft (#"0", (L1LINENUMBERWIDTH+3) div 4, [line])
 string l1tag_str (tag::L1Tag) =
-    "0x" : PadLeft (`#'"0", (L1TAGWIDTH+3) div 4, [tag])
+    "0x" : PadLeft (#"0", (L1TAGWIDTH+3) div 4, [tag])
 string l1idx_str (idx::L1Index) =
     [[idx]::nat]
 
@@ -410,15 +410,15 @@ DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, U
 string l2addr_str (addr::L2Addr) =
     "0x" : hex40(addr)
 string l2addr_line_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", (L2LINENUMBERWIDTH+3) div 4, [addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2LINENUMBERWIDTH>])
+    "0x" : PadLeft (#"0", (L2LINENUMBERWIDTH+3) div 4, [addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2LINENUMBERWIDTH>])
 string l2addr_tag_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", (L2TAGWIDTH+3) div 4, [L2Tag(addr)])
+    "0x" : PadLeft (#"0", (L2TAGWIDTH+3) div 4, [L2Tag(addr)])
 string l2addr_idx_str (addr::L2Addr) =
     [[L2Idx(addr)]::nat]
 string l2line_str (line::L2LineNumber) =
-    "0x" : PadLeft (`#'"0", (L2LINENUMBERWIDTH+3) div 4, [line])
+    "0x" : PadLeft (#"0", (L2LINENUMBERWIDTH+3) div 4, [line])
 string l2tag_str (tag::L2Tag) =
-    "0x" : PadLeft (`#'"0", (L2TAGWIDTH+3) div 4, [tag])
+    "0x" : PadLeft (#"0", (L2TAGWIDTH+3) div 4, [tag])
 string l2idx_str (idx::L2Index) =
     [[idx]::nat]
 
