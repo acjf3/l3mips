@@ -262,7 +262,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else
-        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>))
+        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && ZeroExtend(GPR(rt)<eval(NBPERMS-1):0>)))
 
 -----------------------------------
 -- CSetOffset
@@ -307,7 +307,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
         SignalCapException_v(cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
-    else if &getPerms(CAPR(cs)) && GPR(rt)<eval(NBPERMS-1):0> <> GPR(rt)<eval(NBPERMS-1):0> then
+    else if &getPerms(CAPR(cs)) && ZeroExtend(GPR(rt)<eval(NBPERMS-1):0>) <> ZeroExtend(GPR(rt)<eval(NBPERMS-1):0>) then
         SignalCapException(capExcUser,cs)
     else
         nothing
