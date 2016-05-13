@@ -233,7 +233,7 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
             -- deriving e from the inflated length
             --e = [Log2(inflated_length >> 19)]; XXX Don't know why this doesn't work
-            e = idxMSNZ([inflated_length >> 19]);
+            e = idxMSNZ(ZeroExtend(inflated_length<64:19>));
             -- deriving the new base
             newBase = cap.cursor;
             newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
