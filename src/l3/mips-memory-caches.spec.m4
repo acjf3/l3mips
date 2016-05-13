@@ -279,14 +279,14 @@ L1Addr L1AddrFromL2Addr(addr::L2Addr) = addr
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
     var out::L2Data = 0;
-    offset::nat = ifdef(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
+    offset::nat = ifelse(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
     out<(offset+1)*DATASIZE1-1:offset*DATASIZE1> <- data;
     out
 }
 
 L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
 {
-    offset::nat = ifdef(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
+    offset::nat = ifelse(eval(L2LINESIZE/L1LINESIZE),1,0,`[addr<Log2(L1LINEPERL2LINE)+Log2(L1LINESIZE)-1:Log2(L1LINESIZE)>]');
     out = data<(offset+1)*DATASIZE1-1:offset*DATASIZE1>;
     out
 }
