@@ -23,7 +23,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config1.DS <- [Log2(L1SIZE div L1LINESIZE div L1WAYS div 64)];
                                                 -- Dcache sets per way
    CP0.Config1.DL <- [Log2(L1LINESIZE div 2)];  -- Dcache line size
-   CP0.Config1.DA <- [Log2(L1WAYS-1)];          -- Dcache associativity
+   CP0.Config1.DA <- [L1WAYS-1];                -- Dcache associativity
    CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
    CP0.Config1.PCR <- false;    -- Performance counter registers implemented?
