@@ -86,15 +86,6 @@ string printMemStats =
        MemStateLine ("l2_prefetch_evict",  memStats.l2_prefetch_evict)
 
 
--- L1 compile time values (direct mapped L1)
-
--- L1 cache size in bytes (default 16KB)
-nat `L1SIZE' = L1SIZE
--- L1 associativity (default direct mapped)
-nat `L1WAYS' = L1WAYS
--- L1 line size in bytes (default 32B)
-nat `L1LINESIZE' = L1LINESIZE
-
 -- address size in bits (40 bits)
 nat L1ADDRWIDTH = 40
 -- size of offset feild in bits
@@ -105,15 +96,6 @@ nat L1INDEXWIDTH = Log2 (L1SIZE div L1LINESIZE)
 nat L1TAGWIDTH = L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH
 -- size of linenumber feild in bits
 nat L1LINENUMBERWIDTH = L1ADDRWIDTH-L1OFFSETWIDTH
-
--- L2 compile time values
-
--- L2 cache size in bytes (default 64KB)
-nat `L2SIZE' = L2SIZE
--- L2 associativity (default direct mapped)
-nat `L2WAYS' = L2WAYS
--- L2 line size in bytes (default 32B)
-nat `L2LINESIZE' = L2LINESIZE
 
 -- number of L1 line(s) per L2 line
 nat L1LINEPERL2LINE = L2LINESIZE div L1LINESIZE
@@ -130,10 +112,6 @@ nat L2LINENUMBERWIDTH = L2ADDRWIDTH - L2OFFSETWIDTH
 
 nat DATASIZE1 = L1LINESIZE*8
 nat DATASIZE2 = L2LINESIZE*8
-
-ifelse(eval(L2LINESIZE%L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be a multiple of the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
-ifelse(eval(L2LINESIZE<L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be  greater than or equal to the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
-dnl
 
 -----------------
 -- basic types --

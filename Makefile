@@ -51,6 +51,7 @@ endif
 endif
 L3SRCBASE+=tlb/instructions.spec
 L3SRCBASE+=mips-encode-utils.spec
+L3SRCBASE+=mips-cache-sizes.spec
 ifdef CAP
 ifdef SIMPLEMEM
 L3SRCBASE+=cheri/memaccess-simple.spec
