@@ -65,7 +65,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Status.BEV <- true;
    CP0.Status.KSU <- '00';
    CP0.Status.EXL <- false;
-   CP0.Status.ERL <- false;
+   CP0.Status.ERL <- true;
    CP0.Status.KX <- true;
    CP0.Status.SX <- true;
    CP0.Status.UX <- true;
