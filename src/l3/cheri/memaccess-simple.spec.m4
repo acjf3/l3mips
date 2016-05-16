@@ -176,15 +176,14 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
     L = false; -- XXX usually comes from the MMU
-    pAddr = [vAddr];
     if link then
     {
         LLbit <- Some (true);
-        CP0.LLAddr <- [pAddr]
+        CP0.LLAddr <- vAddr
     }
     else
         LLbit <- None;
-    var cap = ReadCap(pAddr);
+    var cap = ReadCap(vAddr<39:5>);
     when L do cap <- setTag(cap, false);
     return cap
 }
@@ -264,14 +263,13 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 {
     var sc_success = false;
     S = false; -- XXX usually comes from the MMU
-    pAddr = vAddr;
 
     when cond do match LLbit
     {
         case None => #UNPREDICTABLE("conditional store of capability: LLbit not set")
         case Some (false) => sc_success <- false
         case Some (true) =>
-            if CP0.LLAddr == [pAddr] then
+            if CP0.LLAddr == vAddr then
                 sc_success <- true
             else #UNPREDICTABLE("conditional store of capability: address does not match previous LL address")
     };
@@ -289,11 +287,11 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
             when i <> procID and
                 (not cond or sc_success) and
                 st.c_LLbit == Some (true) and
-                st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
+                st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == vAddr<39:log2(CAPBYTEWIDTH)> do
                     all_state(i).c_LLbit <- Some (false)
         };
         when not cond or sc_success do
-            WriteCap(pAddr<39:log2(CAPBYTEWIDTH)>, cap)
+            WriteCap(vAddr<39:log2(CAPBYTEWIDTH)>, cap)
     };
     return sc_success
 }
@@ -330,10 +328,7 @@ word option Fetch =
         -- TODO and whether inequalities are large or strict in all bounds checks
         else if (('0':vAddr)+4 >+ [getBase(PCC)] + [getLength(PCC)]) then {SignalCapException_noReg(capExcLength); None}
         else if not getPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
-        else {
-            pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
-            if exceptionSignalled then None else Some (ReadInst (pc))
-        }
+        else if exceptionSignalled then None else Some (ReadInst ([vAddr]))
     }
     else
     {
