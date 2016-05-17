@@ -107,9 +107,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
-        when 2 <= trace_level do
-            mark_log
-                (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
+        mark_log (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdEL);
         UNKNOWN
@@ -152,9 +150,8 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD
                 ret <- ReadData (a);
 
             memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
-            when 2 <= trace_level do
-               mark_log (2, "Load of " : [[MemType]::nat+1] :
-                            " byte(s) from vAddr 0x":hex64(vAddr));
+            mark_log (2, "Load of " : [[MemType]::nat+1] :
+                         " byte(s) from vAddr 0x":hex64(vAddr));
 
             watchForLoad(pAddr, ret);
             ret
@@ -210,9 +207,8 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
         when L do cap <- setTag(cap, false);
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + CAPBYTEWIDTH;
-        when 2 <= trace_level do
-           mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) :
-                        " from vAddr 0x":hex64(vAddr));
+        mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) :
+                     " from vAddr 0x":hex64(vAddr));
 
         watchForCapLoad(pAddr, cap);
         return cap
@@ -225,9 +221,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
-        when 2 <= trace_level do
-            mark_log
-                (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
+        mark_log (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdES);
         return UNKNOWN
@@ -284,10 +278,9 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
                     WriteData(a, MemElem, mask)
             };
             memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-            when 2 <= trace_level do
-               mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
-                            hex64(mask) : " (" : [[AccessLength]::nat+1] :
-                            " byte(s)) at vAddr 0x" : hex64(vAddr));
+            mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
+                         hex64(mask) : " (" : [[AccessLength]::nat+1] :
+                         " byte(s)) at vAddr 0x" : hex64(vAddr));
             watchForStore(pAddr, MemElem, mask)
         };
         return sc_success
@@ -367,9 +360,8 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
             };
 
             memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;
-            when 2 <= trace_level do
-               mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) :
-                            " at vAddr 0x":hex64(vAddr));
+            mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) :
+                         " at vAddr 0x":hex64(vAddr));
 
             watchForCapStore(pAddr, cap);
             when not cond or sc_success do
@@ -420,9 +412,7 @@ word option Fetch =
     }
     else
     {
-        when 2 <= trace_level do
-            mark_log
-                (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(getBase(PCC) + PC));
+        mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(getBase(PCC) + PC));
         CP0.BadVAddr <- getBase(PCC) + PC;
         SignalException (AdEL);
         None

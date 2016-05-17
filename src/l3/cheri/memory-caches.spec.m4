@@ -585,7 +585,7 @@ unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
     foreach sharer in sharers do
     when (invalCurrent or [sharer] <> currentL1Id) do
     {
-        when 4 <= trace_level do mark_log (4, log_inval_l1 (sharer, addr));
+        mark_log (4, log_inval_l1 (sharer, addr));
         procID          <- [sharer::nat div 2];
         current_l1_type <- if (sharer mod 2) == 0 then Inst else Data;
         entry = L1Cache(L1IdxFromLineNumber(addr));
@@ -694,8 +694,7 @@ match firstptr (L2DataToDwordList (data))
             {
                 case None =>
                 {
-                    when 5 <= trace_level do
-                        mark_log (5, "firstPtr prefetcher triggered");
+                    mark_log (5, "firstPtr prefetcher triggered");
                     _ = L2ServeMiss (ptr, past_addr_list);
                     nothing
                 }
@@ -714,8 +713,7 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
                 {
                     case None =>
                     {
-                        when 5 <= trace_level do
-                            mark_log (5, "allPtr prefetcher triggered");
+                        mark_log (5, "allPtr prefetcher triggered");
                         _ = L2ServeMiss (ptr, past_addr_list);
                         nothing
                     }
@@ -737,8 +735,7 @@ match firstcap (data)
                     {
                         case None =>
                         {
-                            when 5 <= trace_level do
-                                mark_log (5, "firstCap prefetcher triggered");
+                            mark_log (5, "firstCap prefetcher triggered");
                             _ = L2ServeMiss (paddr, past_addr_list);
                             nothing
                         }
@@ -763,8 +760,7 @@ foreach elem in data do match elem
                     {
                         case None =>
                         {
-                            when 5 <= trace_level do
-                                mark_log (5, "allCap prefetcher triggered");
+                            mark_log (5, "allCap prefetcher triggered");
                             _ = L2ServeMiss (paddr, past_addr_list);
                             nothing
                         }
@@ -807,8 +803,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         else
             memStats.l2_prefetch_evict <- memStats.l2_prefetch_evict + 1;
         -- implementation --
-        when 4 <= trace_level do
-           mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
+        mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         var tmp_data = old_entry.data;
         for i in 0 .. eval(CAPPERL2LINE - 1) do
         {
@@ -823,8 +818,7 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
     };
 
     -- update cache --
-    when 4 <= trace_level do
-       mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
+    mark_log (4, log_l2_fill (addr, victimWay, old_entry, new_entry));
     L2Cache(victimWay,L2Idx(addr)) <- new_entry;
 
     -- prefetch stats --
@@ -864,14 +858,13 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
             var new_data = L2MergeData (cacheEntry.data, data, mask);
             new_entry = mkL2CacheEntry(true, cacheEntry.tag, cacheEntry.sharers, new_data);
             L2Cache(way,L2Idx(addr)) <- new_entry;
-            when 4 <= trace_level do
-               mark_log (4, log_l2_write_hit (addr, way, new_entry));
+            mark_log (4, log_l2_write_hit (addr, way, new_entry));
             L2Cache(way,L2Idx(addr))
         }
         case None =>
         {
             memStats.l2_write_miss <- memStats.l2_write_miss + 1;
-            when 4 <= trace_level do mark_log (4, log_l2_write_miss (addr));
+            mark_log (4, log_l2_write_miss (addr));
             cacheLine = L2ServeMiss (addr, list{});
             var retEntry;
             match L2Hit (addr)
@@ -903,20 +896,16 @@ L2Data L2Read (addr::L2Addr) =
             memStats.l2_read_hit <- memStats.l2_read_hit + 1;
             new_sharers = L2UpdateSharers(L1ID, true, cacheEntry.sharers);
             L2Cache(way,L2Idx(addr)) <- mkL2CacheEntry(true, cacheEntry.tag, new_sharers, cacheEntry.data);
-            when 4 <= trace_level do
-            {
-               mark_log
-                (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
-               mark_log
-                (4, log_l2_updt_sharers(addr, cacheEntry.sharers, new_sharers))
-            };
+            mark_log (4, log_l2_read_hit(addr, way, L2Cache(way,L2Idx(addr))));
+            mark_log
+              (4, log_l2_updt_sharers(addr, cacheEntry.sharers, new_sharers));
             l2LRUBits(L2Idx(addr)) <- way @ l2LRUBits(L2Idx(addr));
             cacheLine <- cacheEntry.data
         }
         case None =>
         {
             memStats.l2_read_miss <- memStats.l2_read_miss + 1;
-            when 4 <= trace_level do mark_log (4, log_l2_read_miss(addr));
+            mark_log (4, log_l2_read_miss(addr));
             cacheLine <- L2ServeMiss (addr, list{})
         }
     };
@@ -990,12 +979,9 @@ L1Data L1ServeMiss (addr::L1Addr) =
     data = L2DataToL1Data (addr, L2Read (L2AddrFromL1Addr(addr)));
     new_entry = mkL1CacheEntry(true, L1Tag(addr), data);
     old_entry = L1Cache(L1Idx(addr));
-    when 3 <= trace_level do
-    {
-      when old_entry.valid do
-          mark_log (3, log_l1_evict(addr, old_entry, new_entry));
-      mark_log (3, log_l1_fill(addr, old_entry, new_entry))
-    };
+    when old_entry.valid do
+      mark_log (3, log_l1_evict(addr, old_entry, new_entry));
+    mark_log (3, log_l1_fill(addr, old_entry, new_entry));
     L1Cache(L1Idx(addr)) <- new_entry;
     data
 }
@@ -1007,9 +993,9 @@ match L1Hit (addr)
     {
         var new_data = L1MergeData (cacheEntry.data, data, mask);
         L1Cache(L1Idx(addr)) <- mkL1CacheEntry(true, cacheEntry.tag, new_data);
-        when 3 <= trace_level do mark_log (3, log_l1_write_hit(addr, new_data))
+        mark_log (3, log_l1_write_hit(addr, new_data))
     }
-    case None => when 3 <= trace_level do mark_log (3, log_l1_write_miss(addr))
+    case None => mark_log (3, log_l1_write_miss(addr))
 }
 
 unit L1ServeWrite (addr::L1Addr, data::L1Data, mask::L1Data) =
@@ -1023,12 +1009,11 @@ L1Data L1Read (addr::L1Addr) =
         case Some (cacheEntry) =>
         {
             cacheLine <- cacheEntry.data;
-            when 3 <= trace_level do
-               mark_log (3, log_l1_read_hit (addr, cacheLine))
+            mark_log (3, log_l1_read_hit (addr, cacheLine))
         }
         case None =>
         {
-            when 3 <= trace_level do mark_log (3, log_l1_read_miss (addr));
+            mark_log (3, log_l1_read_miss (addr));
             cacheLine <- L1ServeMiss (addr)
         }
     };
@@ -1104,9 +1089,8 @@ define(`ELEM', `ifelse(CAPPERL1LINE,1,
         case Raw (raw) => bitsToCap(raw)
     };
 undefine(`ELEM')dnl
-    when 4 <= trace_level do
-       mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
-                   " cap from 0x" : hex40(capAddr:0));
+    mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
+                " cap from 0x" : hex40(capAddr:0));
     data
 }
 
@@ -1123,7 +1107,6 @@ define(`OFFSET', `ifelse(CAPPERL1LINE,1,0,`[capAddr<eval(log2(CAPPERL1LINE)-1):0
 undefine(`OFFSET')dnl
     current_l1_type <- Data;
     L1Write(capAddr:0, l1_data, l1_mask);
-    when 4 <= trace_level do
-       mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
-                   " cap @ 0x" : hex40(capAddr:0))
+    mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
+                " cap @ 0x" : hex40(capAddr:0))
 }

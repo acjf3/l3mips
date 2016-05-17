@@ -46,7 +46,7 @@ component HI :: dword
                       case None => { UNPREDICTABLE_HI (); UNKNOWN }
                     }
    assign value = { hi <- Some (value);
-                    when 2 <= trace_level do mark_log (2, log_w_hi (value))
+                    mark_log (2, log_w_hi (value))
                   }
 }
 
@@ -56,7 +56,7 @@ component LO :: dword
                       case None => { UNPREDICTABLE_LO (); UNKNOWN }
                     }
    assign value = { lo <- Some (value);
-                    when 2 <= trace_level do mark_log (2, log_w_lo (value))
+                    mark_log (2, log_w_lo (value))
                   }
 }
 
@@ -110,7 +110,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
       }
    assign value =
    {
-      when 2 <= trace_level do mark_log (2, log_w_c0 (reg, value));
+      mark_log (2, log_w_c0 (reg, value));
       match n, reg, sel
       {
          case 0,  0, 0 => CP0.Index.Index <- value<8:0>
@@ -148,7 +148,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
          case 0, 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 0, 30, 0 => CP0.ErrorEPC <- value
-         case _ => when 2 <= trace_level do unmark_log(2)
+         case _ => unmark_log (2)
       }
    }
 }

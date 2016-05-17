@@ -63,7 +63,7 @@ dword ReadData (pAddr::dwordAddr) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     data = MEM(pAddr);
-    when 4 <= trace_level do mark_log (4, log_mem_read (pAddr, data));
+    mark_log (4, log_mem_read (pAddr, data));
     data
 }
 
@@ -71,7 +71,7 @@ unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
     MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
-    when 4 <= trace_level do mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
+    mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
 }
 
 word ReadInst (a::pAddr) =

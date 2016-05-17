@@ -54,6 +54,6 @@ component FGR(n::reg)::dword
     assign value =
     {
         fgr(n) <- value;
-        when 2 <= trace_level do mark_log (2, log_w_fgr (n, value))
+        mark_log (2, log_w_fgr (n, value))
     }
 }

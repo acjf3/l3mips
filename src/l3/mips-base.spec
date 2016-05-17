@@ -75,7 +75,7 @@ component GPR (n::reg) :: dword
    assign value =
       when n <> 0 do
       { gpr(n) <- value;
-        when 2 <= trace_level do mark_log (2, log_w_gpr (n, value))
+        mark_log (2, log_w_gpr (n, value))
       }
 }
 

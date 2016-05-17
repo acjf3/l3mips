@@ -40,15 +40,13 @@ unit SignalException (ExceptionType::ExceptionType) =
    {
       if IsSome (BranchDelay) then
       {
-         when 2 <= trace_level do
-            mark_log (2, "EPC <- ":hex64(PC - 4):" (in branch delay slot => PC - 4 )");
+         mark_log (2, "EPC <- ":hex64(PC - 4):" (in branch delay slot => PC - 4 )");
          CP0.EPC <- PC - 4;
          CP0.Cause.BD <- true
       }
       else
       {
-         when 2 <= trace_level do
-            mark_log (2, "EPC <- ":hex64(PC));
+         mark_log (2, "EPC <- ":hex64(PC));
          CP0.EPC <- PC;
          CP0.Cause.BD <- false
       }
@@ -70,8 +68,7 @@ unit SignalException (ExceptionType::ExceptionType) =
    BranchTo <- None;
    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
    exceptionSignalled <- true;
-   when 2 <= trace_level do
-      mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
+   mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 
 unit SignalCP1UnusableException = {CP0.Cause.CE <- '01'; SignalException(CpU)}

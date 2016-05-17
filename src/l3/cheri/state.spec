@@ -60,7 +60,7 @@ component PCC :: Capability
     assign value =
     {
         c_pcc(procID) <- value;
-        when 2 <= trace_level do mark_log (2, log_cpp_write (value))
+        mark_log (2, log_cpp_write (value))
     }
 }
 
@@ -72,7 +72,7 @@ component CAPR (n::reg) :: Capability
         var m = c_capr(procID);
         m(n) <- value;
         c_capr(procID) <- m;
-        when 2 <= trace_level do mark_log (2, log_creg_write (n, value))
+        mark_log (2, log_creg_write (n, value))
     }
 }
 

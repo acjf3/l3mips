@@ -80,9 +80,7 @@ dword LoadMemory
     IorD::IorD, AccessType::AccessType, link::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
-    when 2 <= trace_level do
-      mark_log
-        (2, "Bad load, CP0.BadVAddr <-" : hex64(vAddr));
+    mark_log (2, "Bad load, CP0.BadVAddr <-" : hex64(vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdEL);
     return UNKNOWN
@@ -123,9 +121,7 @@ dword LoadMemory
         LLbit <- None;
       b = [MemType] + 0n1;
       memAccessStats.bytes_read <- memAccessStats.bytes_read + b;
-      when 2 <= trace_level do
-        mark_log
-          (2, "Load of " : [b] : " byte(s) from vAddr 0x" : hex64(vAddr));
+      mark_log (2, "Load of " : [b] : " byte(s) from vAddr 0x" : hex64(vAddr));
       watchForLoad (pAddr, ret);
       return ret
     }
@@ -139,9 +135,7 @@ bool StoreMemory
     vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
-    when 2 <= trace_level do
-      mark_log
-        (2, "Bad store, CP0.BadVAddr <-" : hex64(vAddr));
+    mark_log (2, "Bad store, CP0.BadVAddr <-" : hex64(vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdES);
     return false
@@ -197,10 +191,8 @@ bool StoreMemory
       };
       LLbit <- None;
       memAccessStats.bytes_written <- memAccessStats.bytes_written + b;
-      when 2 <= trace_level do
-         mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
-                      hex64(mask) : " (" : [b] : " byte(s)) at vAddr 0x" :
-                      hex64(vAddr));
+      mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" : hex64(mask) :
+                   " (" : [b] : " byte(s)) at vAddr 0x" : hex64(vAddr));
       watchForStore(pAddr, MemElem, mask)
     };
     sc_success
@@ -251,9 +243,7 @@ unit Fetch =
    }
    else
    {
-      when 2 <= trace_level do
-        mark_log
-          (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(PC));
+      mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(PC));
       CP0.BadVAddr <- PC;
       SignalException (AdEL)
    }
