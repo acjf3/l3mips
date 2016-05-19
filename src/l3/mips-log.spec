@@ -47,9 +47,9 @@ string cpr (r::reg) =
 
 string hexN (w::nat, x::bits(N)) = PadLeft (#"0", w, ToLower ([x]))
 
-string hex32 (x::bits(32)) = hexN (8, x)
-string hex40 (x::bits(40)) = hexN (10, x)
-string hex64 (x::bits(64)) = hexN (16, x)
+inline string hex32 (x::bits(32)) = hexN (8, x)
+inline string hex40 (x::bits(40)) = hexN (10, x)
+inline string hex64 (x::bits(64)) = hexN (16, x)
 
 string log_sig_exception (ExceptionCode::bits(5)) =
    "MIPS exception 0x" : hexN (2, ExceptionCode)

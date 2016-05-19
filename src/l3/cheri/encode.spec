@@ -3,7 +3,7 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-string pad (s::string) = PadRight (#" ", 12, s)
+inline string pad (s::string) = PadRight (#" ", 12, s)
 string gr (n::reg) = "$" : [[n]::nat]
 string cr (n::reg) = "c" : [[n]::nat]
 string imm (n::bits(N)) = if n <+ 10 then [n] else "0x":ToLower([n])
