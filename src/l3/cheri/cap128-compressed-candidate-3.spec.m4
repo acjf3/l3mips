@@ -233,7 +233,8 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
             -- deriving e from the inflated length
             --e = [Log2(inflated_length >>+ 19)]; XXX Don't know why this doesn't work
-            e = idxMSNZ([inflated_length >>+ 19]);
+            var e = idxMSNZ([inflated_length >>+ 19]);
+            when e mod 4 <> 0 do e <- e + (4 - (e mod 4));
             -- deriving the new base
             newBase = cap.cursor;
             newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
@@ -266,11 +267,11 @@ Capability setSealed (cap::Capability, sealed::bool) =
         {
             -- construct the new base and top bits upper 12 bits
             e::nat = [cap.exp];
-            cb::bits(12) = cap.cursor<19+e:8+e>;
+            lowbits::bits(12) = cap.cursor<11+e:e>;
             -- assemble the new unsealed fields
             var uf::UnsealedFields;
-            uf.baseBits <- cb:sf.baseBits;
-            uf.topBits  <- cb:sf.topBits;
+            uf.baseBits <- sf.baseBits:lowbits;
+            uf.topBits  <- sf.topBits:lowbits;
             new_cap.sFields <- Unsealed(uf)
         }
         case Unsealed(uf) => when sealed do
@@ -393,7 +394,8 @@ string cap_inner_rep (cap::Capability) =
     }:
     " cursor:0x":hex64(cap.cursor)
 string log_cap_write (cap::Capability) =
-    "s:":(if getSealed(cap) then "1" else "0"):
+    --"v:":(if getTag(cap) then "1" else "0"):
+    " s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex16(ZeroExtend(&getPerms(cap))):
     " type:0x":hex24(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
