@@ -19,6 +19,7 @@ L3SRCBASE+=mips-base.spec
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
 ifdef CAP
+L3SRCBASE+=cheri/cap-params.spec
 ifeq ($(CAP), c128c1)
 L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
 else ifeq ($(CAP), c128c3)
@@ -57,6 +58,7 @@ ifdef SIMPLEMEM
 L3SRCBASE+=cheri/memaccess-simple.spec
 else
 ifdef CACHE
+L3SRCBASE+=cheri/cache-sizes.spec
 L3SRCBASE+=cheri/memory-caches.spec
 else
 L3SRCBASE+=cheri/memory.spec

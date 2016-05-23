@@ -3,9 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
-
 -----------------
 -- stats utils --
 -----------------
@@ -118,7 +115,7 @@ string MemAddr_str (addr::MemAddr) =
 string RawMemData_str (data::CAPRAWBITS) =
 {
     var ret = "[";
-    for i in eval((CAPBYTEWIDTH*8)/32) .. 1 do
+    for i in ((CAPBYTEWIDTH*8) div 32) .. 1 do
     {
         tmp::bits(32) = data<(i*32)-1:(i-1)*32>;
         ret <- ret : hex32 (tmp);
@@ -154,17 +151,19 @@ string log_mem_write (addr::MemAddr, data::MemData) =
 string log_mem_read (addr::MemAddr, data::MemData) =
     "read MEM[" : MemAddr_str (addr) : "]: " : MemData_str (data)
 
-dnl -- L1 compile time values (direct mapped L1)
-define(`L1SIZE', ifdef(`L1SIZE', L1SIZE, 16384))dnl -- L1 cache size in bytes (default 16KB)
-define(`L1LINESIZE', ifdef(`L1LINESIZE', L1LINESIZE, 32))dnl -- L1 line size in bytes (default 32B)
-define(`CAPPERL1LINE', eval(L1LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L1 line
-define(`L1ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
-define(`L1OFFSETWIDTH', log2(L1LINESIZE))dnl -- size of offset feild in bits
-define(`L1INDEXWIDTH', eval(log2(eval(L1SIZE/L1LINESIZE))))dnl -- size of index feild in bits
-define(`L1TAGWIDTH', eval(L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH))dnl -- size of tag feild in bits
-define(`L1LINENUMBERWIDTH', eval(L1ADDRWIDTH-L1OFFSETWIDTH))dnl -- size of linenumber feild in bits
-ifelse(eval(L1LINESIZE%CAPBYTEWIDTH), 0, ,`errprint(`The L1 line size('L1LINESIZE` bytes) must be a multiple of the capability size('CAPBYTEWIDTH` bytes)') m4exit(1)')dnl
-dnl
+-- L1 compile time values (direct mapped L1)
+nat L1LINEPERL2LINE = L2LINESIZE div L1LINESIZE
+-- address size in bits (40 bits)
+nat L1ADDRWIDTH = 40
+-- size of offset feild in bits
+nat L1OFFSETWIDTH = Log2(L1LINESIZE)
+-- size of index feild in bits
+nat L1INDEXWIDTH = Log2(L1SIZE div L1LINESIZE)
+-- size of tag feild in bits
+nat L1TAGWIDTH = L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH
+-- size of linenumber feild in bits
+nat L1LINENUMBERWIDTH = L1ADDRWIDTH-L1OFFSETWIDTH
+
 type L1Offset = bits(L1OFFSETWIDTH)
 type L1Index = bits(L1INDEXWIDTH)
 type L1Tag = bits(L1TAGWIDTH)
@@ -185,21 +184,18 @@ string l1type_str (cacheType::L1Type) = match cacheType
     case Inst => "ICache"
 }
 
-dnl -- L2 compile time values
-define(`L2SIZE', ifdef(`L2SIZE', L2SIZE, 65536))dnl -- L2 cache size in bytes (default 64KB)
-define(`L2WAYS', ifdef(`L2WAYS', L2WAYS, 1))dnl -- L2 associativity (default direct mapped)
-define(`L2LINESIZE', ifdef(`L2LINESIZE', L2LINESIZE, 32))dnl -- L2 line size in bytes (default 32B)
-define(`CAPPERL2LINE', eval(L2LINESIZE/CAPBYTEWIDTH))dnl -- number of capability per L2 line
-define(`L1LINEPERL2LINE', eval(L2LINESIZE/L1LINESIZE))dnl -- number of L1 line per L2 line
-define(`L2ADDRWIDTH', 40)dnl -- address size in bits (40 bits)
-define(`L2OFFSETWIDTH', log2(L2LINESIZE))dnl -- size of offset feild in bits
-define(`L2INDEXWIDTH', eval(log2(eval(L2SIZE/(L2WAYS*L2LINESIZE)))))dnl -- size of index feild in bits
-define(`L2TAGWIDTH', eval(L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH))dnl -- size of tag feild in bits
-define(`L2LINENUMBERWIDTH', eval(L2ADDRWIDTH-L2OFFSETWIDTH))dnl -- size of linenumber feild in bits
-ifelse(eval(L2LINESIZE%CAPBYTEWIDTH), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be a multiple of the capability size('CAPBYTEWIDTH` bytes)') m4exit(1)')dnl
-ifelse(eval(L2LINESIZE%L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be a multiple of the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
-ifelse(eval(L2LINESIZE<L1LINESIZE), 0, ,`errprint(`The L2 line size('L2LINESIZE` bytes) must be  greater than or equal to the L1 line size('L1LINESIZE` bytes)') m4exit(1)')dnl
-dnl
+-- L2 compile time values
+-- address size in bits (40 bits)
+nat L2ADDRWIDTH = 40
+-- size of offset feild in bits
+nat L2OFFSETWIDTH = Log2(L2LINESIZE)
+-- size of index feild in bits
+nat L2INDEXWIDTH = Log2(L2SIZE div (L2WAYS*L2LINESIZE))
+-- size of tag feild in bits
+nat L2TAGWIDTH = L2ADDRWIDTH-L2INDEXWIDTH-L2OFFSETWIDTH
+-- size of linenumber feild in bits
+nat L2LINENUMBERWIDTH = L2ADDRWIDTH-L2OFFSETWIDTH
+
 type L2Offset = bits(L2OFFSETWIDTH)
 type L2Index = bits(L2INDEXWIDTH)
 type L2Tag = bits(L2TAGWIDTH)
@@ -269,19 +265,19 @@ declare MEM :: MemAddr -> MemData -- physical memory
 
 -- general l1 utils --
 
-L1Index l1_hash_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-L1TAGWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
-L1Tag l1_tag_default(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH)>
+L1Index l1_hash_default(addr::L1Addr) = addr<(L1ADDRWIDTH-L1TAGWIDTH-1):(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
+L1Tag l1_tag_default(addr::L1Addr) = addr<(L1ADDRWIDTH-1):(L1ADDRWIDTH-L1TAGWIDTH)>
 
 L1Index L1Idx(addr::L1Addr) = l1_hash_default(addr)
 L1Tag L1Tag(addr::L1Addr) = l1_tag_default(addr)
-L1LineNumber L1LineNumber(addr::L1Addr) = addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
+L1LineNumber L1LineNumber(addr::L1Addr) = addr<(L1ADDRWIDTH-1):(L1ADDRWIDTH-L1TAGWIDTH-L1INDEXWIDTH)>
 
 L1Index L1IdxFromLineNumber(addr::L1LineNumber) = l1_hash_default(addr:0)
 L1Tag L1TagFromLineNumber(addr::L1LineNumber) = l1_tag_default(addr:0)
 
-L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = addr<eval(40-log2(CAPBYTEWIDTH)-1):eval(40-log2(CAPBYTEWIDTH)-L1LINENUMBERWIDTH)>
+L1LineNumber L1LineNumberFromMemAddr (addr::MemAddr) = addr<(40-Log2(CAPBYTEWIDTH)-1):(40-Log2(CAPBYTEWIDTH)-L1LINENUMBERWIDTH)>
 
-nat L1LineDwordIdx (addr::dwordAddr) = [addr<eval(log2(L1LINESIZE/8)-1):0>]
+nat L1LineDwordIdx (addr::dwordAddr) = [addr<(Log2(L1LINESIZE div 8)-1):0>]
 
 L1Addr L1AddrFromL2Addr(addr::L2Addr) = addr
 
@@ -291,7 +287,7 @@ dword list L1DataToDwordList (data::L1Data) =
     foreach elem in Reverse (data) do
     {
         raw = RawMemData(elem);
-        for i in eval(CAPBYTEWIDTH/8) .. 1 do
+        for i in (CAPBYTEWIDTH div 8) .. 1 do
             dword_list <- Cons (raw<(i*64)-1:(i-1)*64>, dword_list)
     };
     dword_list
@@ -304,7 +300,7 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     var tmp_elem::CAPRAWBITS;
     for i in CAPPERL1LINE .. 1 do
     {
-        for j in eval(CAPBYTEWIDTH/8) .. 1 do
+        for j in (CAPBYTEWIDTH div 8) .. 1 do
         {
             tmp_elem<(j*64)-1:(j-1)*64> <- Head(tmp_list);
             tmp_list <- Drop(1, tmp_list)
@@ -314,14 +310,18 @@ L1Data DwordListToL1Data (dword_list::dword list) =
     data
 }
 
+nat OFFSET (addr::L1Addr) =
+{
+    mask::L1Addr = [L1LINEPERL2LINE-1];
+    if L1LINEPERL2LINE == 1 then 0 else [mask && (addr >>+ Log2(L1LINESIZE))]
+}
+
 L2Data L1DataToL2Data (addr::L1Addr, data::L1Data) =
 {
-define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
-    offset::nat = OFFSET;
     var inpt = Reverse(data);
     var out = Nil;
-    for i in eval(L1LINEPERL2LINE-1) .. 0 do
-        if i == offset then for j in 1 .. CAPPERL1LINE do
+    for i in (L1LINEPERL2LINE-1) .. 0 do
+        if i == OFFSET(addr) then for j in 1 .. CAPPERL1LINE do
         {
             out <- Cons(Head(inpt), out);
             inpt <- Drop(1,inpt)
@@ -329,17 +329,9 @@ define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+l
         else for j in 1 .. CAPPERL1LINE do
             out <- Cons(Raw(0), out);
     out
-undefine(`OFFSET')dnl
 }
 
-L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) =
-{
-define(`OFFSET', `ifelse(L1LINEPERL2LINE,1,0,`[addr<eval(log2(L1LINEPERL2LINE)+log2(L1LINESIZE)-1):eval(log2(L1LINESIZE))>]')')dnl
-    offset::nat = OFFSET;
-    out = Drop(offset*CAPPERL1LINE, data);
-    Take(CAPPERL1LINE, out)
-undefine(`OFFSET')dnl
-}
+L1Data L2DataToL1Data (addr::L1Addr, data::L2Data) = Take(CAPPERL1LINE, Drop(OFFSET(addr)*CAPPERL1LINE, data))
 
 L1Data L1MergeData (old::L1Data, new::L1Data, mask::L1Data) =
 {
@@ -382,15 +374,15 @@ L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
 string l1addr_str (addr::L1Addr) =
     "0x" : hex40(addr)
 string l1addr_line_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", eval((L1LINENUMBERWIDTH+3)/4), [addr<eval(L1ADDRWIDTH-1):eval(L1ADDRWIDTH-L1LINENUMBERWIDTH)>])
+    "0x" : PadLeft (`#'"0", ((L1LINENUMBERWIDTH+3) div 4), [addr<(L1ADDRWIDTH-1):(L1ADDRWIDTH-L1LINENUMBERWIDTH)>])
 string l1addr_tag_str (addr::L1Addr) =
-    "0x" : PadLeft (`#'"0", eval((L1TAGWIDTH+3)/4), [L1Tag(addr)])
+    "0x" : PadLeft (`#'"0", ((L1TAGWIDTH+3) div 4), [L1Tag(addr)])
 string l1addr_idx_str (addr::L1Addr) =
     [[L1Idx(addr)]::nat]
 string l1line_str (line::L1LineNumber) =
-    "0x" : PadLeft (`#'"0", eval((L1LINENUMBERWIDTH+3)/4), [line])
+    "0x" : PadLeft (`#'"0", ((L1LINENUMBERWIDTH+3) div 4), [line])
 string l1tag_str (tag::L1Tag) =
-    "0x" : PadLeft (`#'"0", eval((L1TAGWIDTH+3)/4), [tag])
+    "0x" : PadLeft (`#'"0", ((L1TAGWIDTH+3) div 4), [tag])
 string l1idx_str (idx::L1Index) =
     [[idx]::nat]
 
@@ -410,14 +402,14 @@ string l1data_str (data::L1Data) =
 
 -- general l2 utils --
 
-L2Index l2_hash_default(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1-L2TAGWIDTH):eval(L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH)>
-L2Tag l2_tag_default(addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2TAGWIDTH)>
+L2Index l2_hash_default(addr::L2Addr) = addr<(L2ADDRWIDTH-1-L2TAGWIDTH):(L2ADDRWIDTH-L2TAGWIDTH-L2INDEXWIDTH)>
+L2Tag l2_tag_default(addr::L2Addr) = addr<(L2ADDRWIDTH-1):(L2ADDRWIDTH-L2TAGWIDTH)>
 
 L2Index L2Idx(addr::L2Addr) = l2_hash_default(addr)
 L2Tag L2Tag(addr::L2Addr) = l2_tag_default(addr)
 
 L2Addr L2AddrFromL1Addr (addr::L1Addr) = addr
-MemAddr MemAddrFromL2Addr (addr::L2Addr) = addr<eval(L2ADDRWIDTH-1):eval(log2(CAPBYTEWIDTH))>
+MemAddr MemAddrFromL2Addr (addr::L2Addr) = addr<(L2ADDRWIDTH-1):Log2(CAPBYTEWIDTH)>
 
 L2Data L2MergeData (old::L2Data, new::L2Data, mask::L2Data) =
 {
@@ -450,7 +442,7 @@ dword list L2DataToDwordList (data::L2Data) =
     foreach elem in Reverse (data) do
     {
         raw = RawMemData(elem);
-        for i in eval(CAPBYTEWIDTH/8) .. 1 do
+        for i in (CAPBYTEWIDTH div 8) .. 1 do
             dword_list <- Cons (raw<(i*64)-1:(i-1)*64>, dword_list)
     };
     dword_list
@@ -473,9 +465,9 @@ DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, U
 string l2addr_str (addr::L2Addr) =
     "0x" : hex40(addr)
 string l2addr_line_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", eval((L2LINENUMBERWIDTH+3)/4), [addr<eval(L2ADDRWIDTH-1):eval(L2ADDRWIDTH-L2LINENUMBERWIDTH)>])
+    "0x" : PadLeft (`#'"0", ((L2LINENUMBERWIDTH+3) div 4), [addr<(L2ADDRWIDTH-1):(L2ADDRWIDTH-L2LINENUMBERWIDTH)>])
 string l2addr_tag_str (addr::L2Addr) =
-    "0x" : PadLeft (`#'"0", eval((L2TAGWIDTH+3)/4), [L2Tag(addr)])
+    "0x" : PadLeft (`#'"0", ((L2TAGWIDTH+3) div 4), [L2Tag(addr)])
 string l2addr_idx_str (addr::L2Addr) =
     [[L2Idx(addr)]::nat]
 string l2addr_details_str (addr::L2Addr) =
@@ -483,9 +475,9 @@ string l2addr_details_str (addr::L2Addr) =
     "(tag " : l2addr_tag_str(addr) :
     ", idx " : l2addr_idx_str(addr) : ")"
 string l2line_str (line::L2LineNumber) =
-    "0x" : PadLeft (`#'"0", eval((L2LINENUMBERWIDTH+3)/4), [line])
+    "0x" : PadLeft (`#'"0", ((L2LINENUMBERWIDTH+3) div 4), [line])
 string l2tag_str (tag::L2Tag) =
-    "0x" : PadLeft (`#'"0", eval((L2TAGWIDTH+3)/4), [tag])
+    "0x" : PadLeft (`#'"0", ((L2TAGWIDTH+3) div 4), [tag])
 string l2idx_str (idx::L2Index) =
     [[idx]::nat]
 
@@ -777,9 +769,9 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
 {
     -- read data from memory --
     var data = Nil;
-    for i in eval(CAPPERL2LINE - 1) .. 0 do
+    for i in (CAPPERL2LINE - 1) .. 0 do
     {
-        chunck_addr = MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-1):eval(log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
+        chunck_addr = MemAddrFromL2Addr(addr)<(40-Log2(CAPBYTEWIDTH)-1):(Log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
         data <- Cons(MEM(chunck_addr), data)
     };
 
@@ -805,11 +797,11 @@ L2Data L2ServeMiss (addr::L2Addr, past_addr::L2Addr list) =
         -- implementation --
         mark_log (4, log_l2_evict (addr, victimWay, old_entry, new_entry));
         var tmp_data = old_entry.data;
-        for i in 0 .. eval(CAPPERL2LINE - 1) do
+        for i in 0 .. (CAPPERL2LINE - 1) do
         {
             -- write cache line back to memory --
             -- when old_entry.dirty do
-            mem_addr = old_entry.tag : MemAddrFromL2Addr(addr)<eval(40-log2(CAPBYTEWIDTH)-L2TAGWIDTH-1):eval(log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
+            mem_addr = old_entry.tag : MemAddrFromL2Addr(addr)<(40-Log2(CAPBYTEWIDTH)-L2TAGWIDTH-1):(Log2(CAPPERL2LINE))> ifelse(CAPPERL2LINE,1,,`: [i]');
             MEM(mem_addr) <- Head(tmp_data);
             tmp_data <- Drop(1, tmp_data);
             -- take care of coherence --
@@ -882,7 +874,7 @@ L2Entry L2Update (addr::L2Addr, data::L2Data, mask::L2Data) =
     }
 
 unit L2HandleCoherence (addr::L2Addr, data::L2Data, mask::L2Data, entry::L2Entry) =
-for i in 0 .. eval(L1LINEPERL2LINE - 1) do
+for i in 0 .. (L1LINEPERL2LINE - 1) do
     invalL1(L1LineNumber(L1AddrFromL2Addr(addr)) + [i], entry.sharers, false)
 
 L2Data L2Read (addr::L2Addr) =
@@ -1080,15 +1072,12 @@ Capability ReadCap (capAddr::CAPADDR) =
 {
     memStats.cap_reads <- memStats.cap_reads + 1;
     current_l1_type <- Data;
-define(`ELEM', `ifelse(CAPPERL1LINE,1,
-`Head(L1Read(capAddr:0))',dnl
-`Element([capAddr<eval(log2(CAPPERL1LINE)-1):0>],L1Read(capAddr:0))')')dnl
-    data = match ELEM
+    elem = if CAPPERL1LINE == 1 then Head(L1Read(capAddr:0)) else Element([capAddr<(Log2(CAPPERL1LINE)-1):0>],L1Read(capAddr:0));
+    data = match elem
     {
         case Cap (cap) => cap
         case Raw (raw) => bitsToCap(raw)
     };
-undefine(`ELEM')dnl
     mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
                 " cap from 0x" : hex40(capAddr:0));
     data
@@ -1101,10 +1090,9 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
     for i in 1 .. CAPPERL1LINE do zeros <- Cons (Raw(0), zeros);
     var l1_data = zeros;
     var l1_mask = zeros;
-define(`OFFSET', `ifelse(CAPPERL1LINE,1,0,`[capAddr<eval(log2(CAPPERL1LINE)-1):0>]')')dnl
-    l1_data <- Update(Cap(cap), OFFSET, l1_data);
-    l1_mask <- Update(Raw(~0), OFFSET, l1_mask);
-undefine(`OFFSET')dnl
+    offst::nat = if CAPPERL1LINE == 1 then 0 else [capAddr<(Log2(CAPPERL1LINE)-1):0>];
+    l1_data <- Update(Cap(cap), offst, l1_data);
+    l1_mask <- Update(Raw(~0), offst, l1_mask);
     current_l1_type <- Data;
     L1Write(capAddr:0, l1_data, l1_mask);
     mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :

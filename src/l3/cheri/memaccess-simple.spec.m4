@@ -3,9 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
-
 -- utils functions
 ---------------------------------------------------------------------------
 
@@ -41,7 +38,7 @@ declare mem :: CAPADDR -> DataType
 
 unit InitMEM = mem <- InitMap (Raw(UNKNOWN))
 
-dword ReadData (dwordAddr::bits(37)) = match mem(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+dword ReadData (dwordAddr::bits(37)) = match mem(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
 {
     case Cap (cap) => readDwordFromRaw (dwordAddr, capToBits(cap))
     case Raw (raw) => readDwordFromRaw (dwordAddr, raw)
@@ -49,18 +46,18 @@ dword ReadData (dwordAddr::bits(37)) = match mem(dwordAddr<36:eval(log2(CAPBYTEW
 
 unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
 {
-    old_blob = match mem(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+    old_blob = match mem(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
     {
         case Cap (cap) => capToBits(cap)
         case Raw (raw) => raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, mask, old_blob);
-    mem(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
+    mem(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
 }
 
 word ReadInst (a::pAddr) =
 {
-    inst_pair = match mem(a<39:log2(CAPBYTEWIDTH)>)
+    inst_pair = match mem(a<39:Log2(CAPBYTEWIDTH)>)
     {
         case Cap (cap) => readDwordFromRaw (a<39:3>, capToBits(cap))
         case Raw (raw) => readDwordFromRaw (a<39:3>, raw)
@@ -80,7 +77,7 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) = mem(capAddr) <- Cap (cap)
 ---------------------------------------------------------------------------
 
 ifelse(dnl
-CAPBYTEWIDTH, 8,dnl
+regexp(CAP,p64),0,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
     mem(dwordAddr) <- Raw(data)
 
@@ -92,7 +89,7 @@ unit Write256 (addr::bits(35), data::bits(256)) =
     mem(addr:'00') <- Raw (data<63:0>)
 }
 ,dnl
-CAPBYTEWIDTH, 16,dnl
+regexp(CAP,c128c\|c128c3\|p128),0,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
     var fill = 0;
@@ -113,13 +110,13 @@ unit Write256 (addr::bits(35), data::bits(256)) =
 ,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
-    old_blob = match mem(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+    old_blob = match mem(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
     {
         case Cap (cap) => [&cap]
         case Raw (raw) => raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, ~0, old_blob);
-    mem(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
+    mem(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
 }
 
 unit Write256 (addr::bits(35), data::bits(256)) =
@@ -183,7 +180,7 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
     }
     else
         LLbit <- None;
-    var cap = ReadCap(vAddr<39:5>);
+    var cap = ReadCap(vAddr<39:Log2(CAPBYTEWIDTH)>);
     when L do cap <- setTag(cap, false);
     return cap
 }
@@ -287,11 +284,11 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
             when i <> procID and
                 (not cond or sc_success) and
                 st.c_LLbit == Some (true) and
-                st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == vAddr<39:log2(CAPBYTEWIDTH)> do
+                st.c_CP0.LLAddr<39:Log2(CAPBYTEWIDTH)> == vAddr<39:Log2(CAPBYTEWIDTH)> do
                     all_state(i).c_LLbit <- Some (false)
         };
         when not cond or sc_success do
-            WriteCap(vAddr<39:log2(CAPBYTEWIDTH)>, cap)
+            WriteCap(vAddr<39:Log2(CAPBYTEWIDTH)>, cap)
     };
     return sc_success
 }

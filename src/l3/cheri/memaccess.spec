@@ -3,9 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
-
 -- utils functions
 
 word flip_endian_word (w::word) =
@@ -13,9 +10,7 @@ word flip_endian_word (w::word) =
    c, d = QuotRem ([[w]::nat], 256);
    b, c = QuotRem (c, 256);
    a, b = QuotRem (b, 256);
-   changequote(!,!)dnl
    return ([d]`8 : [c]`8 : [b]`8 : [a]`8)
-   changequote(`,')dnl
 }
 
 bool isAligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
@@ -73,7 +68,7 @@ unit watchForCapLoad (addr::bits(40), cap::Capability) = match watchPaddr
 {
     case Some(watch_paddr) =>
     {
-        when addr<39:log2(CAPBYTEWIDTH)> == watch_paddr<39:log2(CAPBYTEWIDTH)> do
+        when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
             println ("watching --> load " : log_cap_write (cap) : " from 0x" :
                      hex40 (addr))
     }
@@ -92,7 +87,7 @@ unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 {
     case Some(watch_paddr) =>
-       when addr<39:log2(CAPBYTEWIDTH)> == watch_paddr<39:log2(CAPBYTEWIDTH)> do
+       when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
         println ("watching --> Store 0x" : log_cap_write (cap) : ") at 0x" :
                  hex40 (addr))
     case None => nothing
@@ -177,22 +172,22 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
     else LoadMemoryCap(MemType, needAlign, final_vAddr, IorD, AccessType, link)
 }
 
+inline nat capbottom = Log2(CAPBYTEWIDTH)-3
+
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
     if not exceptionSignalled then
     {
-        a = pAddr<39:log2(CAPBYTEWIDTH)>;
+        a = pAddr<39:Log2(CAPBYTEWIDTH)>;
 
-        define(BOTTOM, eval(log2(CAPBYTEWIDTH)-3))dnl
-        if a == JTAG_UART.base_address<36:BOTTOM> then
+        if a == JTAG_UART.base_address<36:capbottom> then
             #UNPREDICTABLE ("Capability load attempted on UART")
         else
             for core in 0 .. (totalCore - 1) do
-                when a >=+ PIC_base_address([core])<36:BOTTOM>
-                     and a <+ (PIC_base_address([core])+1072)<36:BOTTOM> do
+                when a >=+ PIC_base_address([core])<36:capbottom>
+                     and a <+ (PIC_base_address([core])+1072)<36:capbottom> do
                     #UNPREDICTABLE ("Capability load attempted on PIC");
-        undefine(BOTTOM)dnl
 
         if link then
         {
@@ -320,17 +315,15 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
     pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
     when not exceptionSignalled do
     {
-        a = pAddr<39:log2(CAPBYTEWIDTH)>;
+        a = pAddr<39:Log2(CAPBYTEWIDTH)>;
 
-        define(BOTTOM, eval(log2(CAPBYTEWIDTH)-3))dnl
-        if a == JTAG_UART.base_address<36:BOTTOM> then
+        if a == JTAG_UART.base_address<36:capbottom> then
             #UNPREDICTABLE ("Capability store attempted on UART")
         else
             for core in 0 .. (totalCore - 1) do
-                when a >=+ PIC_base_address([core])<36:BOTTOM>
-                     and a <+ (PIC_base_address([core])+1072)<36:BOTTOM> do
+                when a >=+ PIC_base_address([core])<36:capbottom>
+                     and a <+ (PIC_base_address([core])+1072)<36:capbottom> do
                     #UNPREDICTABLE ("Capability store attempted on PIC");
-        undefine(BOTTOM)dnl
 
         when cond do match LLbit
         {
@@ -355,7 +348,7 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
                 when i <> procID and
                     (not cond or sc_success) and
                     st.c_LLbit == Some (true) and
-                    st.c_CP0.LLAddr<39:log2(CAPBYTEWIDTH)> == pAddr<39:log2(CAPBYTEWIDTH)> do
+                    st.c_CP0.LLAddr<39:Log2(CAPBYTEWIDTH)> == pAddr<39:Log2(CAPBYTEWIDTH)> do
                         all_state(i).c_LLbit <- Some (false)
             };
 

@@ -2,9 +2,6 @@
 -- CHERI types for 128-bits candidate 3
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
-dnl
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
 
 -----------------------
 -- types definitions --
@@ -63,7 +60,6 @@ record Capability
 ---------------------------------
 -- capability helper functions --
 --------------------------------------------------------------------------------
-changequote(!,!)dnl
 {-
 RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
 {
@@ -95,7 +91,6 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
     br = if bb  <+ repBound then Hi (bb)  else Low (bb);
     (pr, tr, br)
 }
-changequote(`,')dnl
 
 nat getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 {
@@ -220,7 +215,6 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
     new_cap
 }
 
-define(`BUFFSIZE', `4096')dnl
 Capability setBounds (cap::Capability, length::bits(64)) =
 {
     var new_cap = cap;

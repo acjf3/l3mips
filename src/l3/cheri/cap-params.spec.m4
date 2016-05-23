@@ -1,9 +1,8 @@
-dnl---------------------------------------------------------------------------
-dnl-- CHERI capability params
-dnl-- (c) Alexandre Joannou, University of Cambridge
-dnl---------------------------------------------------------------------------
-dnl
-ifdef(`m4_cap_params',,`define(`m4_cap_params',1)dnl multi-inclusion protection
+---------------------------------------------------------------------------
+-- CHERI capability params
+-- (c) Alexandre Joannou, University of Cambridge
+---------------------------------------------------------------------------
+
 ifelse(dnl
 CAP,c128c1,dnl params for 128 bits wide compressed capabilities
 `dnl
@@ -49,4 +48,8 @@ define(`NBPERMS', `31')dnl
 define(`OTYPEWIDTH', `24')dnl
 'dnl
 )dnl
-')dnl
+nat `CAPBYTEWIDTH'  = CAPBYTEWIDTH
+type `CAPADDR'      = CAPADDR
+type `CAPRAWBITS'   = CAPRAWBITS
+nat `NBPERMS'       = NBPERMS
+nat `OTYPEWIDTH'    = OTYPEWIDTH

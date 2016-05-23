@@ -3,10 +3,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 --------------------------------------------------------------------------------
 
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
 ifelse(dnl
-CAPBYTEWIDTH, 8,dnl
+regexp(CAP,p64),0,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
     MEM(dwordAddr) <- Raw(data)
 
@@ -18,7 +16,7 @@ unit Write256 (addr::bits(35), data::bits(256)) =
     MEM(addr:'00') <- Raw (data<63:0>)
 }
 ,dnl
-CAPBYTEWIDTH, 16,dnl
+regexp(CAP,c128c\|c128c3\|p128),0,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
     var fill = 0;
@@ -39,13 +37,13 @@ unit Write256 (addr::bits(35), data::bits(256)) =
 ,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
-    old_blob = match MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+    old_blob = match MEM(dwordAddr<36:Log2(CAPBYTEWIDTH)-3>)
     {
         case Cap (cap) => [&cap]
         case Raw (raw) => raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, ~0, old_blob);
-    MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
+    MEM(dwordAddr<36:Log2(CAPBYTEWIDTH)-3>) <- Raw(new_blob)
 }
 
 unit Write256 (addr::bits(35), data::bits(256)) =

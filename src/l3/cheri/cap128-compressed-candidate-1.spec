@@ -2,9 +2,6 @@
 -- CHERI types for 128-bits candidate 1
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
-dnl
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
 
 -----------------------
 -- types definitions --

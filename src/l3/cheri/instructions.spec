@@ -3,7 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-include(`cap-params.m4')dnl
 -------------------
 -- Helper functions
 -------------------
@@ -262,7 +261,7 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else
-        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<eval(NBPERMS-1):0>))
+        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<(NBPERMS-1):0>))
 
 -----------------------------------
 -- CSetOffset
@@ -307,7 +306,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
         SignalCapException_v(cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
-    else if &getPerms(CAPR(cs)) && GPR(rt)<eval(NBPERMS-1):0> <> GPR(rt)<eval(NBPERMS-1):0> then
+    else if &getPerms(CAPR(cs)) && GPR(rt)<(NBPERMS-1):0> <> GPR(rt)<(NBPERMS-1):0> then
         SignalCapException(capExcUser,cs)
     else
         nothing
@@ -486,7 +485,7 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         extOff = offset:'0000';
         addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
-        if addr + CAPBYTEWIDTH > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+        if addr + [CAPBYTEWIDTH] > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
@@ -523,7 +522,7 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
         extOff = offset:'0000';
         addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
-        if addr + CAPBYTEWIDTH > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+        if addr + [CAPBYTEWIDTH] > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if addr < ZeroExtend(getBase(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
@@ -750,7 +749,7 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
         SignalCapException(capExcSeal,cb)
     else if not getPerms(CAPR(cb)).Permit_Load_Capability then
         SignalCapException(capExcPermLoadCap,cb)
-    else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+    else if addr + [CAPBYTEWIDTH] >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
     else if addr <+ getBase(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -832,7 +831,7 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
     else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
             and getTag(CAPR(cs)) and not getPerms(CAPR(cs)).Global then
         SignalCapException(capExcPermStoreLocalCap,cb)
-    else if addr + CAPBYTEWIDTH >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
+    else if addr + [CAPBYTEWIDTH] >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
     else if addr <+ getBase(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
@@ -970,7 +969,7 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcPermSeal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
-    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ eval(2**OTYPEWIDTH) then
+    else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ [2**OTYPEWIDTH] then
         SignalCapException(capExcLength,ct)
     else if not isCapRepresentable (true,
                                     getBase(CAPR(cs)),
@@ -981,7 +980,7 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
     {
         var new_cap = CAPR(cs);
         new_cap  <- setSealed(new_cap, true);
-        new_cap  <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<eval(OTYPEWIDTH-1):0>);
+        new_cap  <- setType(new_cap, (getBase(CAPR(ct)) + getOffset(CAPR(ct)))<(OTYPEWIDTH-1):0>);
         CAPR(cd) <- new_cap
     }
 

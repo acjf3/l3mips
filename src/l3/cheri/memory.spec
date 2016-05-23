@@ -3,8 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 --------------------------------------------------------------------------------
 
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
 -----------------
 -- stats utils --
 -----------------
@@ -63,7 +61,7 @@ dword ReadData (dwordAddr::bits(37)) =
 {
     memStats.data_reads <- memStats.data_reads + 1;
     var data;
-    match MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+    match MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
     {
         case Cap (cap) =>
         {
@@ -82,7 +80,7 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
     var old_blob;
-    match MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>)
+    match MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
     {
         case Cap (cap) =>
         {
@@ -94,14 +92,14 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
     };
     new_blob = updateDwordInRaw (dwordAddr, data, mask, old_blob);
     mark_log(3, "write data 0x":hex64(data):" @ 0x":hex40(dwordAddr:0));
-    MEM(dwordAddr<36:eval(log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
+    MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
 }
 
 word ReadInst (a::pAddr) =
 {
     memStats.inst_reads <- memStats.inst_reads + 1;
     var inst_pair;
-    match MEM(a<39:log2(CAPBYTEWIDTH)>)
+    match MEM(a<39:Log2(CAPBYTEWIDTH)>)
     {
         case Cap (cap) =>
         {

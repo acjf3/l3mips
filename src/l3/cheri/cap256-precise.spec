@@ -2,9 +2,6 @@
 -- 256-bits wrapper for precice capabilities
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
-dnl
-include(`helpers.m4')dnl
-include(`cap-params.m4')dnl
 
 bool isCapAligned  (addr::bits(64))  = addr<4:0> == 0
 

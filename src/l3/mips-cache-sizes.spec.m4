@@ -4,6 +4,7 @@
 ---------------------------------------------------------------------------
 
 -- L1 compile time values (direct mapped L1)
+---------------------------------------------------------------------------
 
 -- L1 cache size in bytes (default 16KB)
 nat `L1SIZE' = L1SIZE
@@ -13,6 +14,7 @@ nat `L1WAYS' = L1WAYS
 nat `L1LINESIZE' = L1LINESIZE
 
 -- L2 compile time values
+---------------------------------------------------------------------------
 
 -- L2 cache size in bytes (default 64KB)
 nat `L2SIZE' = L2SIZE
