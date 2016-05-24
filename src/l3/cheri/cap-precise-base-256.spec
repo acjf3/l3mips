@@ -7,32 +7,13 @@
 -- types definitions --
 --------------------------------------------------------------------------------
 
-register Perms :: bits (31)
-{
-    30-15 : soft
-       14 : Access_KR2C
-       13 : Access_KR1C
-       12 : Access_KCC
-       11 : Access_KDC
-       10 : Access_EPCC
-        9 : Reserved
-        8 : Permit_Set_Type
-        7 : Permit_Seal
-        6 : Permit_Store_Local_Capability
-        5 : Permit_Store_Capability
-        4 : Permit_Load_Capability
-        3 : Permit_Store
-        2 : Permit_Load
-        1 : Permit_Execute
-        0 : Global
-}
-
 register Capability :: bits (257)
 {
         256 : tag       -- 1 tag bit
     255-248 : reserved  -- 8 Reserved bits
     247-224 : otype     -- 24 type bits
-    223-193 : perms     -- 31 permission bits
+    223-208 : uperms    -- 16 user permission bits
+    207-193 : perms     -- 15 permission bits
         192 : sealed    -- 1 sealed bit
     191-128 : offset    -- 64 offset bits
      127-64 : base      -- 64 base bits
@@ -43,23 +24,17 @@ register Capability :: bits (257)
 -- capability "typeclass" functions --
 --------------------------------------------------------------------------------
 
-bool allow_system_reg_access(p::Perms, r::reg) =
-(  r == 31 and not p.Access_EPCC
-or r == 30 and not p.Access_KDC
-or r == 29 and not p.Access_KCC
-or r == 27 and not p.Access_KR1C
-or r == 28 and not p.Access_KR2C )
-
 Capability defaultCap =
 {
     var new_cap :: Capability;
-    new_cap.tag <- true;
-    new_cap.sealed <- false;
-    new_cap.offset <- 0;
-    new_cap.base <- 0;
-    new_cap.length <- ~0;
-    new_cap.otype <- 0;
-    new_cap.perms <- ~0;
+    new_cap.tag      <- true;
+    new_cap.sealed   <- false;
+    new_cap.offset   <- 0;
+    new_cap.base     <- 0;
+    new_cap.length   <- ~0;
+    new_cap.otype    <- 0;
+    new_cap.uperms   <- ~0;
+    new_cap.perms    <- ~0;
     new_cap.reserved <- 0;
     new_cap
 }
@@ -67,13 +42,14 @@ Capability defaultCap =
 Capability nullCap =
 {
     var new_cap :: Capability;
-    new_cap.tag <- false;
-    new_cap.sealed <- false;
-    new_cap.offset <- 0;
-    new_cap.base <- 0;
-    new_cap.length <- 0;
-    new_cap.otype <- 0;
-    new_cap.perms <- 0;
+    new_cap.tag      <- false;
+    new_cap.sealed   <- false;
+    new_cap.offset   <- 0;
+    new_cap.base     <- 0;
+    new_cap.length   <- 0;
+    new_cap.otype    <- 0;
+    new_cap.uperms   <- 0;
+    new_cap.perms    <- 0;
     new_cap.reserved <- 0;
     new_cap
 }
@@ -89,8 +65,9 @@ bool isCapRepresentable(sealed::bool,
 --------------------------------------------------------------------------------
 
 bool     getTag    (cap::Capability) = cap.tag
-bits(24) getType   (cap::Capability) = cap.otype -- 16 bits in 128-bits mode
-Perms    getPerms  (cap::Capability) = Perms(cap.perms) -- 8 bits in 128-bits mode
+bits(24) getType   (cap::Capability) = cap.otype
+Perms    getPerms  (cap::Capability) = Perms(ZeroExtend(cap.perms))
+UPerms   getUPerms (cap::Capability) = UPerms(ZeroExtend(cap.uperms))
 bool     getSealed (cap::Capability) = cap.sealed
 bits(64) getOffset (cap::Capability) = cap.offset
 bits(64) getBase   (cap::Capability) = cap.base
@@ -102,7 +79,8 @@ bits(64) getLength (cap::Capability) = cap.length
 
 Capability setTag    (cap::Capability, tag::bool)        = {var new_cap = cap; new_cap.tag    <- tag;    new_cap}
 Capability setType   (cap::Capability, otype::bits(24))  = {var new_cap = cap; new_cap.otype  <- otype;  new_cap}
-Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms  <- &perms; new_cap}
+Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms  <- &perms<14:0>; new_cap}
+Capability setUPerms (cap::Capability, uperms::UPerms)   = {var new_cap = cap; new_cap.uperms <- &uperms<15:0>; new_cap}
 Capability setSealed (cap::Capability, sealed::bool)     = {var new_cap = cap; new_cap.sealed <- sealed; new_cap}
 Capability setOffset (cap::Capability, offset::bits(64)) = {var new_cap = cap; new_cap.offset <- offset; new_cap}
 Capability setBounds (cap::Capability, length::bits(64)) =
@@ -123,7 +101,7 @@ string hex31 (x::bits(31)) = ToLower (PadLeft (#"0", 8, [x]))
 
 string log_cap_write (cap::Capability) =
     "s:":(if getSealed(cap) then "1" else "0"):
-    " perms:0x":hex31(&getPerms(cap)):
+    " perms:0x":hex31(cap.uperms:cap.perms): -- TODO report 2 fields
     " type:0x":hex24(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
     " base:0x":hex64(getBase(cap)):

@@ -46,8 +46,8 @@ construct CapExceptionType
     capExcRet,               -- Return Trap
     capExcUnderflowTSS,      -- Underflow of trusted system stack
     capExcUser,              -- User-defined Permision Violation
-    capExcTLBNoStore,        -- User-defined Permision Violation
-    capExcInexact,           -- Capability is not representable
+    capExcTLBNoStore,        -- TLB prohibits store capability
+    capExcInexact,           -- Requested bounds cannot be represented exactly
     capExcGlobal,            -- Global Violation
     capExcPermExe,           -- Permit_Execute Violation
     capExcPermLoad,          -- Permit_Load Violation

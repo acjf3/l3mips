@@ -7,21 +7,6 @@
 -- types definitions --
 --------------------------------------------------------------------------------
 
-register Perms :: bits (15)
-{
-    14-11 : soft
-       10 : Access_System_Registers
-      9-8 : Reserved
-        7 : Permit_Seal
-        6 : Permit_Store_Local_Capability
-        5 : Permit_Store_Capability
-        4 : Permit_Load_Capability
-        3 : Permit_Store
-        2 : Permit_Load
-        1 : Permit_Execute
-        0 : Global
-}
-
 record UnsealedFields
 {
     baseBits :: bits(20)
@@ -50,7 +35,8 @@ type OType = bits(OTYPEWIDTH)
 record Capability
 {
     tag      :: bool
-    perms    :: Perms
+    uperms   :: bits(4)
+    perms    :: bits(11)
     reserved :: bits(2)
     exp      :: bits(6)
     sFields  :: SFields
@@ -135,7 +121,8 @@ Capability defaultCap =
 {
     var new_cap :: Capability;
     new_cap.tag      <- true;
-    new_cap.perms    <- Perms(~0);
+    new_cap.uperms   <- ~0;
+    new_cap.perms    <- ~0;
     new_cap.reserved <- 0;
     new_cap.exp      <- 0x2D; -- 45
     var uf :: UnsealedFields;
@@ -150,7 +137,8 @@ Capability nullCap = -- FIXME
 {
     var new_cap :: Capability;
     new_cap.tag      <- false;
-    new_cap.perms    <- Perms(0);
+    new_cap.uperms   <- 0;
+    new_cap.perms    <- 0;
     new_cap.reserved <- 0;
     new_cap.exp      <- 0;
     var uf :: UnsealedFields;
@@ -173,7 +161,9 @@ OType  getType (cap::Capability) = match cap.sFields
     case _          => 0
 }
 
-Perms getPerms (cap::Capability) = cap.perms
+UPerms getUPerms (cap::Capability) = UPerms(ZeroExtend(cap.uperms))
+
+Perms getPerms (cap::Capability) = Perms(SignExtend(cap.perms))
 
 bool getSealed (cap::Capability) = match cap.sFields
 {
@@ -249,8 +239,19 @@ Capability setBounds (cap::Capability, length::bits(64)) =
 Capability setTag (cap::Capability, tag::bool) =
 { var new_cap = cap; new_cap.tag <- tag; new_cap }
 
+Capability setUPerms (cap::Capability, uperms::UPerms) =
+{
+    var new_cap = cap;
+    new_cap.uperms <- &uperms<3:0>;
+    new_cap
+}
+
 Capability setPerms (cap::Capability, perms::Perms) =
-{ var new_cap = cap; new_cap.perms <- perms; new_cap }
+{
+    var new_cap = cap;
+    new_cap.perms <- &perms<10:0>;
+    new_cap
+}
 
 Capability setSealed (cap::Capability, sealed::bool) =
 {
@@ -299,22 +300,20 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
 -- capability "typeclass" functions --
 --------------------------------------------------------------------------------
 
-bool allow_system_reg_access(p::Perms, r::reg) =
-((r == 31 or r == 30 or r == 29 or r == 27 or r == 28) and not p.Access_System_Registers)
-
 bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
 {
-    case Sealed(sf)   => cap.cursor:cap.&perms:'00':cap.exp:'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
-    case Unsealed(uf) => cap.cursor:cap.&perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
+    case Sealed(sf)   => cap.cursor:cap.uperms:cap.perms:'00':cap.exp:'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
+    case Unsealed(uf) => cap.cursor:cap.uperms:cap.perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
 }
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
 {
     var new_cap :: Capability;
     new_cap.tag      <- false;
-    new_cap.perms    <- Perms(raw<63:49>);
+    new_cap.uperms   <- raw<63:60>;
+    new_cap.perms    <- raw<59:49>;
     new_cap.reserved <- 0;
     new_cap.exp      <- raw<46:41>;
     var f;
@@ -371,13 +370,15 @@ string hex8 (x::bits(8)) = ToLower (PadLeft (#"0", 2, [x]))
 string hex10 (x::bits(10)) = ToLower (PadLeft (#"0", 3, [x]))
 string hex12 (x::bits(12)) = ToLower (PadLeft (#"0", 3, [x]))
 string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
+string hex19 (x::bits(19)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
 string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
 string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
-    " perms:0x":hex16(ZeroExtend(cap.&perms)):
+    " uperms:0x":[cap.uperms]:
+    " perms:0x":hex16(ZeroExtend(cap.perms)):
     " exp:":dec6(cap.exp):
     match cap.sFields
     {
@@ -390,7 +391,7 @@ string cap_inner_rep (cap::Capability) =
 string log_cap_write (cap::Capability) =
     --"v:":(if getTag(cap) then "1" else "0"):
     " s:":(if getSealed(cap) then "1" else "0"):
-    " perms:0x":hex16(ZeroExtend(&getPerms(cap))):
+    " perms:0x":hex19(cap.uperms:SignExtend(cap.perms)): -- TODO report 2 architectural fields
     " type:0x":hex24(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
     " base:0x":hex64(getBase(cap)):

@@ -7,26 +7,6 @@
 -- types definitions --
 --------------------------------------------------------------------------------
 
-register Perms :: bits (23)
-{
-    22-15 : soft
-       14 : Access_KR2C
-       13 : Access_KR1C
-       12 : Access_KCC
-       11 : Access_KDC
-       10 : Access_EPCC
-        9 : Reserved
-        8 : Permit_Set_Type
-        7 : Permit_Seal
-        6 : Permit_Store_Local_Capability
-        5 : Permit_Store_Capability
-        4 : Permit_Load_Capability
-        3 : Permit_Store
-        2 : Permit_Load
-        1 : Permit_Execute
-        0 : Global
-}
-
 type OType = bits(16)
 
 register TypedPointer :: bits (64)
@@ -40,7 +20,8 @@ register TypedPointer :: bits (64)
 register Capability :: bits (129)
 {
         128 : tag       -- 1 tag bit
-    127-105 : perms     -- 23 permission bits
+    127-120 : uperms    -- 8 user permission bits
+    119-105 : perms     -- 15 permission bits
     104-103 : unused    -- unused
      102-97 : exp       -- 6 exponent bits
       96-81 : toTop     -- 16 bits signed mantis
@@ -115,6 +96,7 @@ Capability defaultCap =
     var new_cap :: Capability;
     new_cap.tag      <- true;
     new_cap.sealed   <- false;
+    new_cap.uperms   <- ~0;
     new_cap.perms    <- ~0;
     new_cap.unused   <- 0;
     new_cap.exp      <- 0x32; -- leftshift by 50
@@ -129,6 +111,7 @@ Capability nullCap =
     var new_cap :: Capability;
     new_cap.tag      <- false;
     new_cap.sealed   <- false;
+    new_cap.uperms   <- 0;
     new_cap.perms    <- 0;
     new_cap.unused   <- 0;
     new_cap.exp      <- 0;
@@ -144,7 +127,8 @@ Capability nullCap =
 
 bool     getTag    (cap::Capability) = cap.tag
 OType    getType   (cap::Capability) = if cap.sealed then TypedPointer(cap.pointer).otype else 0
-Perms    getPerms  (cap::Capability) = Perms(cap.perms)
+Perms    getPerms  (cap::Capability) = Perms(ZeroExtend(cap.perms))
+UPerms   getUPerms (cap::Capability) = UPerms(ZeroExtend(cap.uperms))
 bool     getSealed (cap::Capability) = cap.sealed
 bits(64) getBase (cap::Capability) = innerGetBase(cap)<63:0>
 bits(64) getOffset (cap::Capability) = getPtr(cap) - getBase(cap)
@@ -167,7 +151,18 @@ Capability setType   (cap::Capability, otype::OType)     =
         TypedPointer(new_cap.pointer).otype <- otype;
     new_cap
 }
-Capability setPerms  (cap::Capability, perms::Perms)     = {var new_cap = cap; new_cap.perms    <- &perms; new_cap}
+Capability setPerms  (cap::Capability, perms::Perms) =
+{
+    var new_cap = cap;
+    new_cap.perms <- &perms<14:0>;
+    new_cap
+}
+Capability setUPerms  (cap::Capability, uperms::UPerms) =
+{
+    var new_cap = cap;
+    new_cap.uperms <- &uperms<7:0>;
+    new_cap
+}
 Capability setSealed (cap::Capability, sealed::bool) =
 {
     var new_cap = cap;
@@ -230,13 +225,6 @@ Capability setBounds (cap::Capability, length::bits(64)) =
 -- capability "typeclass" functions --
 --------------------------------------------------------------------------------
 
-bool allow_system_reg_access(p::Perms, r::reg) =
-(  r == 31 and not p.Access_EPCC
-or r == 30 and not p.Access_KDC
-or r == 29 and not p.Access_KCC
-or r == 27 and not p.Access_KR1C
-or r == 28 and not p.Access_KR2C )
-
 bool isCapAligned    (addr::bits(64))  = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) = &cap<63:0> : &cap<127:64> -- XXX swap dwords to match CHERI bluespec implementation
@@ -288,7 +276,7 @@ string cap_inner_rep (cap::Capability) =
 
 string log_cap_write (cap::Capability) =
     "s:":(if getSealed(cap) then "1" else "0"):
-    " perms:0x":hex23(&getPerms(cap)):
+    " perms:0x":hex23(cap.uperms:cap.perms): -- TODO report 2 architectural fields
     " type:0x":hex16(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
     " base:0x":hex64(getBase(cap)):

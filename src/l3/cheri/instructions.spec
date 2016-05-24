@@ -101,7 +101,12 @@ define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException_v(cb)
     else
-        GPR(rd) <- ZeroExtend(&getPerms(CAPR(cb)))
+    {
+        var perms = 0;
+        perms<14:0> <- &getPerms(CAPR(cb))<14:0>;
+        perms<(UPERMS+14):15> <- &getUPerms(CAPR(cb))<(UPERMS-1):0>;
+        GPR(rd) <- perms
+    }
 
 -----------------------------------
 -- CGetType rd, cb
@@ -261,7 +266,12 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else
-        CAPR(cd) <- setPerms(CAPR(cb), Perms(&getPerms(CAPR(cb)) && GPR(rt)<(NBPERMS-1):0>))
+    {
+        var new_cap = CAPR(cb);
+        new_cap  <- setPerms(new_cap, Perms([&getPerms(CAPR(cb))<14:0> && GPR(rt)<14:0>]));
+        new_cap  <- setUPerms(new_cap, UPerms([&getUPerms(CAPR(cb))<(UPERMS-1):0> && GPR(rt)<(UPERMS+14):15>]));
+        CAPR(cd) <- new_cap
+    }
 
 -----------------------------------
 -- CSetOffset
@@ -306,7 +316,12 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
         SignalCapException_v(cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
-    else if &getPerms(CAPR(cs)) && GPR(rt)<(NBPERMS-1):0> <> GPR(rt)<(NBPERMS-1):0> then
+    -- TODO spec should move to uperms in rt<63:32> and perms in rt<31:0>, and no bit-slicing
+    else if &getPerms(CAPR(cs))<14:0> && GPR(rt)<14:0> <> GPR(rt)<14:0> then
+        SignalCapException(capExcUser,cs)
+    else if &getUPerms(CAPR(cs))<(UPERMS-1):0> && GPR(rt)<(UPERMS+14):15> <> GPR(rt)<(UPERMS+14):15> then
+        SignalCapException(capExcUser,cs)
+    else if GPR(rt)<63:(UPERMS+15)> <> 0 then
         SignalCapException(capExcUser,cs)
     else
         nothing
