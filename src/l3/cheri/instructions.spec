@@ -12,15 +12,15 @@ bool register_inaccessible_write_attempt(mask::bits(16)) =
 {
     var ret = true;
     if mask<15> and register_inaccessible(31) then
-        SignalCapException_v(31)
+        SignalCapException(capExcAccessSysReg,31)
     else if mask<14> and register_inaccessible(30) then
-        SignalCapException_v(30)
+        SignalCapException(capExcAccessSysReg,30)
     else if mask<13> and register_inaccessible(29) then
-        SignalCapException_v(29)
+        SignalCapException(capExcAccessSysReg,29)
     else if mask<11> and register_inaccessible(27) then
-        SignalCapException_v(27)
+        SignalCapException(capExcAccessSysReg,27)
     else if mask<12> and register_inaccessible(28) then
-        SignalCapException_v(28)
+        SignalCapException(capExcAccessSysReg,28)
     else ret <- false;
     ret
 }
@@ -41,7 +41,7 @@ define COP2 > CHERICOP2 > CGet > CGetBase (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         GPR(rd) <- getBase(CAPR(cb))
 
@@ -52,7 +52,7 @@ define COP2 > CHERICOP2 > CGet > CGetOffset (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         GPR(rd) <- getOffset(CAPR(cb))
 
@@ -63,7 +63,7 @@ define COP2 > CHERICOP2 > CGet > CGetLen (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         GPR(rd) <- getLength(CAPR(cb))
 
@@ -74,7 +74,7 @@ define COP2 > CHERICOP2 > CGet > CGetTag (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         GPR(rd) <- ZeroExtend([getTag(CAPR(cb))])
 
@@ -85,7 +85,7 @@ define COP2 > CHERICOP2 > CGet > CGetSealed (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
     {
         GPR(rd)<0> <- getSealed(CAPR(cb));
@@ -99,7 +99,7 @@ define COP2 > CHERICOP2 > CGet > CGetPerm (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
     {
         var perms = 0;
@@ -115,7 +115,7 @@ define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         GPR(rd) <- ZeroExtend(getType(CAPR(cb)))
 
@@ -126,7 +126,7 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else
         CAPR(cd) <- setOffset(PCC, PC)
 
@@ -137,7 +137,7 @@ define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if not isCapRepresentable (getSealed(PCC),
                                     getBase(PCC),
                                     getLength(PCC),
@@ -152,8 +152,8 @@ define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
 define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-    else if register_inaccessible({-EPCC-}31) then
-        SignalCapException_noReg(capExcAccEPCC)
+    else if not getPerms(PCC).Access_System_Registers then
+        SignalCapException_noReg(capExcAccessSysReg)
     else
     {
         GPR(rd)<7:0> <- capcause.RegNum;
@@ -167,8 +167,8 @@ define COP2 > CHERICOP2 > CGet > CGetCause (rd::reg) =
 define COP2 > CHERICOP2 > CSet > CSetCause (rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
-    else if register_inaccessible({-EPCC-}31) then
-        SignalCapException_noReg(capExcAccEPCC)
+    else if not getPerms(PCC).Access_System_Registers then
+        SignalCapException_noReg(capExcAccessSysReg)
     else
     {
         capcause.ExcCode <- GPR(rt)<15:8>;
@@ -182,9 +182,9 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) and GPR(rt) <> 0 then
         SignalCapException(capExcSeal,cb)
     else if not isCapRepresentable (getSealed(CAPR(cb)),
@@ -207,9 +207,9 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -245,9 +245,9 @@ define COP2 > CHERICOP2 > CSet > CClearTag (cd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else
         CAPR(cd) <- setTag(CAPR(cb), false)
 
@@ -258,9 +258,9 @@ define COP2 > CHERICOP2 > CSet > CAndPerm (cd::reg, cb::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -280,9 +280,9 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else if not isCapRepresentable (getSealed(CAPR(cb)),
@@ -300,9 +300,9 @@ define COP2 > CHERICOP2 > CSub (rd::reg, cb::reg, ct::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if register_inaccessible(ct) then
-        SignalCapException_v(ct)
+        SignalCapException(capExcAccessSysReg,ct)
     else
         GPR(rd) <- getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct)) - getOffset(CAPR(ct))
 
@@ -313,7 +313,7 @@ define COP2 > CHERICOP2 > CCheck > CCheckPerm (cs::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
     -- TODO spec should move to uperms in rt<63:32> and perms in rt<31:0>, and no bit-slicing
@@ -333,9 +333,9 @@ define COP2 > CHERICOP2 > CCheck > CCheckType (cs::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
     else if not getTag(CAPR(cb)) then
@@ -356,9 +356,9 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if GPR(rt) == 0 then
         CAPR(cd) <- nullCap
     else if not getTag(CAPR(cb)) then
@@ -377,9 +377,9 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if register_inaccessible(ct) then
-        SignalCapException_v(ct)
+        SignalCapException(capExcAccessSysReg,ct)
     else if not getTag(CAPR(ct)) then
         SignalCapException(capExcTag,ct)
     else if not getTag(CAPR(cb)) then
@@ -401,9 +401,9 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
         var lessu;
         var greateru;
         if register_inaccessible(cb) then
-            SignalCapException_v(cb)
+            SignalCapException(capExcAccessSysReg,cb)
         else if register_inaccessible(ct) then
-            SignalCapException_v(ct)
+            SignalCapException(capExcAccessSysReg,ct)
         else if getTag(CAPR(cb)) <> getTag(CAPR(ct)) then
             if getTag(CAPR(cb)) then
             {
@@ -452,7 +452,7 @@ define COP2 > CHERICOP2 > CBTU (cb::reg, offset::bits(16)) =
     {
         CheckBranch;
         if register_inaccessible(cb) then
-            SignalCapException_v(cb)
+            SignalCapException(capExcAccessSysReg,cb)
         else if not getTag(CAPR(cb)) then
             BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
         else
@@ -469,7 +469,7 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
     {
         CheckBranch;
         if register_inaccessible(cb) then
-            SignalCapException_v(cb)
+            SignalCapException(capExcAccessSysReg,cb)
         else if getTag(CAPR(cb)) then
             BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
         else
@@ -483,9 +483,9 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -523,9 +523,9 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -561,7 +561,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -631,7 +631,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -660,7 +660,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -723,7 +723,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -755,9 +755,9 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -799,7 +799,7 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -834,9 +834,9 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -873,7 +873,7 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
-        SignalCapException_v(cb)
+        SignalCapException(capExcAccessSysReg,cb)
     else if not getTag(CAPR(cb)) then
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
@@ -903,7 +903,7 @@ define COP2 > CHERICOP2 > CJR (cb::reg) =
     {
         CheckBranch;
         if register_inaccessible(cb) then
-            SignalCapException_v(cb)
+            SignalCapException(capExcAccessSysReg,cb)
         else if not getTag(CAPR(cb)) then
             SignalCapException(capExcTag,cb)
         else if getSealed(CAPR(cb)) then
@@ -935,9 +935,9 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
     {
         CheckBranch;
         if register_inaccessible(cd) then
-            SignalCapException_v(cd)
+            SignalCapException(capExcAccessSysReg,cd)
         else if register_inaccessible(cb) then
-            SignalCapException_v(cb)
+            SignalCapException(capExcAccessSysReg,cb)
         else if not getTag(CAPR(cb)) then
             SignalCapException(capExcTag,cb)
         else if getSealed(CAPR(cb)) then
@@ -967,11 +967,11 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if register_inaccessible(ct) then
-        SignalCapException_v(ct)
+        SignalCapException(capExcAccessSysReg,ct)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
     else if not getTag(CAPR(ct)) then
@@ -1006,11 +1006,11 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
-        SignalCapException_v(cd)
+        SignalCapException(capExcAccessSysReg,cd)
     else if register_inaccessible(cs) then
-        SignalCapException_v(cs)
+        SignalCapException(capExcAccessSysReg,cs)
     else if register_inaccessible(ct) then
-        SignalCapException_v(ct)
+        SignalCapException(capExcAccessSysReg,ct)
     else if not getTag(CAPR(cs)) then
         SignalCapException(capExcTag,cs)
     else if not getTag(CAPR(ct)) then

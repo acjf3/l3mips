@@ -56,12 +56,7 @@ construct CapExceptionType
     capExcPermStoreCap,      -- Permit_Store_Capability Violation
     capExcPermStoreLocalCap, -- Permit_Store_Local_Capability Violation
     capExcPermSeal,          -- Permit_Seal Violation
-    capExcPermSetType,       -- Permit_Set_Type Violation
-    capExcAccEPCC,           -- Access_EPCC
-    capExcAccKDC,            -- Access_KDC
-    capExcAccKCC,            -- Access_KCC
-    capExcAccKR1C,           -- Access_KR1C
-    capExcAccKR2C            -- Access_KR2C
+    capExcAccessSysReg       -- Access_System_Registers Violation
 }
 
 bits(8) capExcCode (e::CapExceptionType) = match e
@@ -85,12 +80,7 @@ bits(8) capExcCode (e::CapExceptionType) = match e
     case capExcPermStoreCap      => 0x15
     case capExcPermStoreLocalCap => 0x16
     case capExcPermSeal          => 0x17
-    case capExcPermSetType       => 0x18
-    case capExcAccEPCC           => 0x1a
-    case capExcAccKDC            => 0x1b
-    case capExcAccKCC            => 0x1c
-    case capExcAccKR1C           => 0x1d
-    case capExcAccKR2C           => 0x1e
+    case capExcAccessSysReg      => 0x18
 }
 
 unit SignalException (ExceptionType::ExceptionType) =
@@ -169,17 +159,6 @@ unit SignalCapException (capException::CapExceptionType, regNum::bits(5)) =
 
 unit SignalCapException_noReg (capException::CapExceptionType) =
     SignalCapException_internal (capException, 0xff)
-
-unit SignalCapException_v (regNum::bits(5)) =
-   match regNum
-   {
-     case 31 => SignalCapException(capExcAccEPCC, ZeroExtend(regNum))
-     case 30 => SignalCapException(capExcAccKDC, ZeroExtend(regNum))
-     case 29 => SignalCapException(capExcAccKCC, ZeroExtend(regNum))
-     case 27 => SignalCapException(capExcAccKR1C, ZeroExtend(regNum))
-     case 28 => SignalCapException(capExcAccKR2C, ZeroExtend(regNum))
-     case _ => ()
-   }
 
 -----------------------------------
 -- ERET instruction
