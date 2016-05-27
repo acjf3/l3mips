@@ -1042,6 +1042,26 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
 define COP2 > CHERICOP2 > CCall (cs::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
+    else if register_inaccessible(cs) then
+        SignalCapException(capExcAccessSysReg,cs)
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if not getTag(CAPR(cs)) then
+        SignalCapException(capExcTag,cs)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if not getSealed(CAPR(cs)) then
+        SignalCapException(capExcSeal,cs)
+    else if not getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if getType(CAPR(cs)) <> getType(CAPR(cb)) then
+        SignalCapException(capExcType,cs)
+    else if not getPerms(CAPR(cs)).Permit_Execute then
+        SignalCapException(capExcPermExe,cs)
+    else if getPerms(CAPR(cb)).Permit_Execute then
+        SignalCapException(capExcPermExe,cb)
+    else if getOffset(CAPR(cs)) >= getLength(CAPR(cs)) then
+        SignalCapException(capExcLength,cs)
     else SignalCapException(capExcCall,cs)
 
 -----------------------------------
