@@ -304,8 +304,8 @@ bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
 {
-    case Sealed(sf)   => cap.cursor:cap.uperms:cap.perms:'00':cap.exp:'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
-    case Unsealed(uf) => cap.cursor:cap.uperms:cap.perms:'00':cap.exp:'0':uf.baseBits:uf.topBits
+    case Sealed(sf)   => cap.cursor:cap.uperms:cap.perms:cap.reserved:cap.exp:'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
+    case Unsealed(uf) => cap.cursor:cap.uperms:cap.perms:cap.reserved:cap.exp:'0':uf.baseBits:uf.topBits
 }
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
@@ -314,7 +314,7 @@ Capability bitsToCap (raw :: CAPRAWBITS) =
     new_cap.tag      <- false;
     new_cap.uperms   <- raw<63:60>;
     new_cap.perms    <- raw<59:49>;
-    new_cap.reserved <- 0;
+    new_cap.reserved <- raw<48:47>;
     new_cap.exp      <- raw<46:41>;
     var f;
     if raw<40> then
