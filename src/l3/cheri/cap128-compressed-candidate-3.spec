@@ -140,10 +140,10 @@ Capability nullCap = -- FIXME
     new_cap.uperms   <- 0;
     new_cap.perms    <- 0;
     new_cap.reserved <- 0;
-    new_cap.exp      <- 0;
+    new_cap.exp      <- 0x2D;
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
-    uf.topBits  <- 0;
+    uf.topBits  <- 0x80000;
     new_cap.sFields  <- Unsealed(uf);
     new_cap.cursor   <- 0;
     new_cap
