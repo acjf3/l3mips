@@ -3,8 +3,6 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-changequote(<!,!>)
-
 instruction COP2Decode (v::bits(26)) =
    COP2(CHERICOP2
       (match v
