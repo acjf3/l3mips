@@ -12,8 +12,13 @@ record MemStats
     data_reads  :: nat
     data_writes :: nat
     inst_reads  :: nat
-    cap_reads   :: nat
-    cap_writes  :: nat
+    valid_cap_reads     :: nat
+    invalid_cap_reads   :: nat
+    valid_cap_writes    :: nat
+    invalid_cap_writes  :: nat
+    working_set         :: nat
+    tags_set            :: nat
+    tags_working_set    :: nat
 }
 
 declare memStats :: MemStats
@@ -23,21 +28,34 @@ unit initMemStats =
     memStats.data_reads  <- 0;
     memStats.data_writes <- 0;
     memStats.inst_reads  <- 0;
-    memStats.cap_reads   <- 0;
-    memStats.cap_writes  <- 0
+    memStats.valid_cap_reads    <- 0;
+    memStats.invalid_cap_reads  <- 0;
+    memStats.valid_cap_writes   <- 0;
+    memStats.invalid_cap_writes <- 0;
+    memStats.working_set        <- 0;
+    memStats.tags_set           <- 0
 }
 
 string printMemStats =
-    PadRight (#" ", 16, "data_reads")  : " = " :
+    PadRight (#" ", 19, "data_reads")  : " = " :
     PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
-    PadRight (#" ", 16, "data_writes") : " = " :
+    PadRight (#" ", 19, "data_writes") : " = " :
     PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
-    PadRight (#" ", 16, "inst_reads")  : " = " :
+    PadRight (#" ", 19, "inst_reads")  : " = " :
     PadLeft (#" ", 9, [memStats.inst_reads])  : "\\n" :
-    PadRight (#" ", 16, "cap_reads")   : " = " :
-    PadLeft (#" ", 9, [memStats.cap_reads])   : "\\n" :
-    PadRight (#" ", 16, "cap_writes")  : " = " :
-    PadLeft (#" ", 9, [memStats.cap_writes])
+    PadRight (#" ", 19, "valid_cap_reads")   : " = " :
+    PadLeft (#" ", 9, [memStats.valid_cap_reads])   : "\\n" :
+    PadRight (#" ", 19, "invalid_cap_reads")   : " = " :
+    PadLeft (#" ", 9, [memStats.invalid_cap_reads])   : "\\n" :
+    PadRight (#" ", 19, "valid_cap_writes")   : " = " :
+    PadLeft (#" ", 9, [memStats.valid_cap_writes])   : "\\n" :
+    PadRight (#" ", 19, "invalid_cap_writes")  : " = " :
+    PadLeft (#" ", 9, [memStats.invalid_cap_writes]) : "\\n" :
+    PadRight (#" ", 19, "working_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.working_set]) : " (" : [memStats.working_set * CAPBYTEWIDTH] : " bytes)\\n" :
+    PadRight (#" ", 19, "tags_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.tags_set]) : " (one tag per " : [CAPBYTEWIDTH] : " bytes)\\n"
+
 
 ----------------------------
 -- types and declarations --
@@ -45,7 +63,119 @@ string printMemStats =
 
 construct DataType {Cap :: Capability, Raw :: CAPRAWBITS}
 
-declare MEM :: CAPADDR -> DataType -- physical memory (35 bits), capability access
+declare the_MEM :: CAPADDR -> DataType -- physical memory (35 bits), capability access
+construct ShadowMem {memUntouched memR memW memRW}
+declare the_shadow_MEM   :: CAPADDR -> ShadowMem
+construct ShadowTags {tagUntouched tagR::bool tagW::bool tagRW::bool}
+declare the_shadow_TAGS  :: CAPADDR -> ShadowTags
+
+component MEM (addr::CAPADDR) :: DataType
+{
+    -- READING --
+    value = {
+        data = the_MEM(addr);
+        tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
+        match the_shadow_MEM(addr)
+        {
+            case memUntouched =>
+            {
+                the_shadow_MEM(addr) <- memR;
+                memStats.working_set <- memStats.working_set + 1
+            }
+            case memR =>
+            {
+                ()
+            }
+            case memW =>
+            {
+                the_shadow_MEM(addr) <- memRW
+            }
+            case memRW =>
+            {
+                ()
+            }
+        };
+        match the_shadow_TAGS(addr)
+        {
+            case tagUntouched =>
+            {
+                the_shadow_TAGS(addr) <- tagR(tagged)
+            }
+            case tagR(t) =>
+            {
+                ()
+            }
+            case tagW(t) =>
+            {
+                the_shadow_TAGS(addr) <- tagRW(t)
+            }
+            case tagRW(t) =>
+            {
+                ()
+            }
+        };
+        data
+    }
+
+    -- WRITING --
+    assign value =
+    {
+        tagged = match value {case Cap(c) => getTag(c) case Raw(r) => false};
+        match the_shadow_MEM(addr)
+        {
+            case memUntouched =>
+            {
+                the_shadow_MEM(addr) <- memW;
+                memStats.working_set <- memStats.working_set + 1
+            }
+            case memR =>
+            {
+                the_shadow_MEM(addr) <- memRW
+            }
+            case memW =>
+            {
+                ()
+            }
+            case memRW =>
+            {
+                ()
+            }
+        };
+        match the_shadow_TAGS(addr)
+        {
+            case tagUntouched =>
+            {
+                the_shadow_TAGS(addr) <- tagW(tagged);
+                when tagged do memStats.tags_set <- memStats.tags_set + 1
+            }
+            case tagR(t) =>
+            {
+                the_shadow_TAGS(addr) <- tagRW(tagged);
+                when tagged and t == false do
+                    memStats.tags_set <- memStats.tags_set + 1;
+                when not tagged and t == true do
+                    memStats.tags_set <- memStats.tags_set - 1
+            }
+            case tagW(t) =>
+            {
+                the_shadow_TAGS(addr) <- tagW(tagged);
+                when tagged and t == false do
+                    memStats.tags_set <- memStats.tags_set + 1;
+                when not tagged and t == true do
+                    memStats.tags_set <- memStats.tags_set - 1
+            }
+            case tagRW(t) =>
+            {
+                the_shadow_TAGS(addr) <- tagRW(tagged);
+                when tagged and t == false do
+                    memStats.tags_set <- memStats.tags_set + 1;
+                when not tagged and t == true do
+                    memStats.tags_set <- memStats.tags_set - 1
+            }
+        };
+        the_MEM(addr) <- value
+    }
+}
 
 ---------------------------
 -- memory implementation --
@@ -54,7 +184,9 @@ declare MEM :: CAPADDR -> DataType -- physical memory (35 bits), capability acce
 unit InitMEM =
 {
     initMemStats;
-    MEM <- InitMap (Raw(UNKNOWN))
+    the_shadow_MEM   <- InitMap (memUntouched);
+    the_shadow_TAGS  <- InitMap (tagUntouched);
+    the_MEM <- InitMap (Raw(UNKNOWN))
 }
 
 dword ReadData (dwordAddr::bits(37)) =
@@ -80,7 +212,7 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
     var old_blob;
-    match MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
+    match the_MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>)
     {
         case Cap (cap) =>
         {
@@ -117,12 +249,15 @@ word ReadInst (a::pAddr) =
 
 Capability ReadCap (capAddr::CAPADDR) =
 {
-    memStats.cap_reads <- memStats.cap_reads + 1;
     data = match MEM(capAddr)
     {
         case Cap (cap) => cap
         case Raw (raw) => bitsToCap(raw)
     };
+    if getTag(data) then
+        memStats.valid_cap_reads <- memStats.valid_cap_reads + 1
+    else
+        memStats.invalid_cap_reads <- memStats.invalid_cap_reads + 1;
     mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
                 " cap from 0x" : hex40(capAddr:0));
     data
@@ -130,8 +265,11 @@ Capability ReadCap (capAddr::CAPADDR) =
 
 unit WriteCap (capAddr::CAPADDR, cap::Capability) =
 {
-    memStats.cap_writes <- memStats.cap_writes + 1;
     MEM(capAddr) <- Cap (cap);
+    if getTag(cap) then
+        memStats.valid_cap_writes <- memStats.valid_cap_writes + 1
+    else
+        memStats.invalid_cap_writes <- memStats.invalid_cap_writes + 1;
     mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
                 " cap @ 0x" : hex40(capAddr:0))
 }
