@@ -260,7 +260,11 @@ fun uart () =
 
 fun print_stats i =
   let
-    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then mips.dumpStats() else ""
+    val t = Timer.checkCPUTimer(!cpu_time)
+    val ips = "(simulation step " ^ Int.toString i ^ ", speed "  ^ Real.toString
+                      (Real.fromLargeInt (i + 1) / Time.toReal (#usr(t))) ^
+                      " inst/sec)\n"
+    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then ips^(mips.dumpStats()) else ""
   in streamPrint stats_out s end
 
 fun print_traces lvl =
