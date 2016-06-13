@@ -13,11 +13,13 @@ val uart_delay = ref 5000
 val uart_countdown = ref (!uart_delay)
 val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
+val trace_out = ref (NONE: TextIO.outstream option)
+val stats_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
-val dump_stats = ref false
 val rdhwr_extra = ref false
 val nb_core = ref 1
 val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
+val dump_stat_freq = ref (NONE: int option)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
@@ -185,9 +187,6 @@ fun readRaw filename =
     vec
   end
 
-fun printLog n = List.app (fn e => print (e ^ "\n"))
-                          (List.rev (mips.Map.lookup (!mips.log, n)))
-
 local
    fun readReg i = hex64 (mips.GPR (BitsN.fromNat (i, 5)))
 in
@@ -216,16 +215,16 @@ val bytesToString =
 val stringToBytes =
    List.map (fn c => BitsN.fromNativeInt (Char.ord c, 8)) o String.explode
 
+fun streamPrint strm s =
+  if s = "" then () else
+    case !strm of
+        SOME m => (TextIO.output (m, s); TextIO.flushOut m)
+      | NONE => TextIO.print s
+
 fun uart_output () =
    let
       val s = bytesToString (mips.JTAG_UART_output ())
-   in
-      if s = ""
-         then ()
-      else case !uart_out of
-              SOME strm => (TextIO.output (strm, s); TextIO.flushOut strm)
-            | NONE => TextIO.print s
-   end
+   in streamPrint uart_out s end
 
 fun uart_input () =
    let
@@ -258,6 +257,23 @@ fun uart () =
    else if !uart_countdown <= 0
       then (uart_countdown := !uart_delay; uart_output (); uart_input ())
    else uart_countdown := !uart_countdown - 1
+
+fun print_stats i =
+  let
+    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then mips.dumpStats() else ""
+  in streamPrint stats_out s end
+
+fun print_traces lvl =
+  let
+    fun sss n  = (String.concat (List.rev (mips.Map.lookup (!mips.log, n))))
+    fun ss n = if (sss n) = "" then "" else (sss n) ^ "\n"
+    val s = foldl
+            (fn (x,y) => if x <= lvl then
+                              y ^ (ss x)
+                         else "")
+            ""
+            (List.tabulate (lvl + 1, (fn x => x)))
+  in streamPrint trace_out s end
 
 (* ------------------------------------------------------------------------
    Schedule (denoting order in which cores are interleaved)
@@ -299,7 +315,7 @@ fun end_sim i =
    let
       val t = Timer.checkCPUTimer(!cpu_time)
    in
-      if !dump_stats then print(mips.dumpStats()) else ()
+      if isSome(!dump_stat_freq) then print(mips.dumpStats()) else ()
     ; print ("Completed " ^ IntInf.toString (i + 1) ^ " instructions in " ^
              Time.toString(#usr(t)) ^ " seconds ")
     ; print ("(" ^ Real.toString
@@ -316,12 +332,8 @@ fun loop mx i =
     uart ()
     ; mips.instCnt := i
     ; mips.Next ()
-    ; printLog 0
-    ; if 1 <= !trace_level then printLog 1 else ()
-    ; if 2 <= !trace_level then printLog 2 else ()
-    ; if 3 <= !trace_level then printLog 3 else ()
-    ; if 4 <= !trace_level then printLog 4 else ()
-    ; if 5 <= !trace_level then printLog 5 else ()
+    ; print_traces (!trace_level)
+    ; print_stats i
     ; if !mips.done orelse i = mx then end_sim i
       else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
                        then ((*print "exception level changed\n";*) i+1)
@@ -330,11 +342,21 @@ fun loop mx i =
 
 fun decr i = if i <= 0 then i else i - 1
 
+fun statsLoop mx i =
+   ( mips.switchCore (scheduleNext ())
+   ; uart ()
+   ; mips.Next ()
+   ; print_traces 0
+   ; print_stats i
+   ; if !mips.done orelse mx = 1 then end_sim i
+     else statsLoop (decr mx) (i + 1)
+   )
+
 fun pureLoop mx i =
    ( mips.switchCore (scheduleNext ())
    ; uart ()
    ; mips.Next ()
-   ; printLog 0
+   ; print_traces 0
    ; if !mips.done orelse mx = 1 then end_sim i
      else pureLoop (decr mx) (i + 1)
    )
@@ -343,7 +365,7 @@ local
    fun t f x = if !time_run then Runtime.time f x else f x
 in
    fun run_mem mx =
-      if 1 <= !trace_level then t (loop mx) 0 else t (pureLoop mx) 0
+      if (!trace_level) < 1 then (if not(isSome(!dump_stat_freq)) then t (pureLoop mx) 0 else  t (statsLoop mx) 0) else t (loop mx) 0
    fun run (pc, uart) mx code raw =
       ( List.tabulate(Nat.toNativeInt (!nb_core),
           fn x => ( mips.switchCore (Nat.fromNativeInt x)
@@ -398,9 +420,11 @@ fun printUsage () =
       \  --uart-delay <number>          UART cycle delay (determines baud rate)\n\
       \  --uart-in <file>               UART input file (stdin if omitted)\n\
       \  --uart-out <file>              UART output file (stdout if omitted)\n\
+      \  --trace-out <file>             Traces output file (stdout if omitted)\n\
+      \  --stats-out <file>             Stats output file (stdout if omitted)\n\
       \  --format <format>              'raw' or 'hex' file format \n\
       \  --non-block <on|off>           non-blocking UART input 'on' or 'off' \n\
-      \  --dump-stats <on|off>          display statistics, 'on' or 'off' \n\
+      \  --dump-stats <number>          display statistics every <number> simulation steps\n\
       \  --rdhwr-extra <on|off>         enable simulator control features through rdhwr inst, 'on' or 'off' \n\
       \  --schedule <file>              file of core ids indicating schedule\n\
       \  --ignore <string>              UNPREDICTABLE#(<string>) behaviour is \n\
@@ -504,11 +528,7 @@ val () =
                      | SOME "off" => non_blocking_input := false
                      | _          => failExit "--non-block must be on or off\n"
           val (nb, l) = processOption "--dump-stats" l
-          val () = case nb of
-                       NONE       => ()
-                     | SOME "on"  => dump_stats := true
-                     | SOME "off" => dump_stats := false
-                     | _          => failExit "--dump-stats must be on or off\n"
+          val () = dump_stat_freq := Option.map getNumber nb
           val (nb, l) = processOption "--rdhwr-extra" l
           val () = case nb of
                        NONE       => ()
@@ -547,11 +567,21 @@ ifdef(`CACHE', `dnl
           val () = schedule := Option.map TextIO.openIn sch
           val (uo, l) = processOption "--uart-out" l
           val () = uart_out := Option.map TextIO.openOut uo
+          val (to, l) = processOption "--trace-out" l
+          val () = trace_out := Option.map TextIO.openOut to
+          val (so, l) = processOption "--stats-out" l
+          val () = stats_out := Option.map TextIO.openOut so
           fun closeStreams () =
             ( case !uart_in of
                  SOME stm => TextIO.closeIn stm
                | NONE => ()
             ; case !uart_out of
+                 SOME stm => TextIO.closeOut stm
+               | NONE => ()
+            ; case !trace_out of
+                 SOME stm => TextIO.closeOut stm
+               | NONE => ()
+            ; case !stats_out of
                  SOME stm => TextIO.closeOut stm
                | NONE => ()
             )
