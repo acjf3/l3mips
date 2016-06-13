@@ -265,7 +265,7 @@ fun print_stats i =
 
 fun print_traces lvl =
   let
-    fun sss n  = (String.concat (List.rev (mips.Map.lookup (!mips.log, n))))
+    fun sss n  = (String.concatWith "\n" (List.rev (mips.Map.lookup (!mips.log, n))))
     fun ss n = if (sss n) = "" then "" else (sss n) ^ "\n"
     val s = foldl
             (fn (x,y) => if x <= lvl then
