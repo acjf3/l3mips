@@ -9,7 +9,11 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
     if valid then
         match unmapped
         {
-            case Some (pAddr, cca) => pAddr, cca, false, false
+            case Some (pAddr, cca) =>
+            {
+                check_cca(cca);
+                (pAddr, cca, false, false)
+            }
                 case None =>
                 match LookupTLB (vAddr<63:62>, vAddr<39:13>)
                 {
