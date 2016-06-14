@@ -10,7 +10,11 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType
     if valid then
         match unmapped
         {
-            case Some (addr, cca) => ([addr], cca)
+            case Some (addr, cca) =>
+            {
+                check_cca(cca);
+                ([addr], cca)
+            }
             case _ => ([vAddr], 0)
         }
     else

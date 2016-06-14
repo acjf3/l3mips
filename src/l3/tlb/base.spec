@@ -131,3 +131,11 @@ nat option checkMask (mask::bits(12)) = match mask
     case 0b1111_1111_1111 => Some(24)
     case _                => None
 }
+
+unit check_cca (cca::bits(3)) = match cca
+{
+    case 0 => #UNPREDICTABLE("CCA 0 Reserved")
+    case 1 => #UNPREDICTABLE("CCA 1 Reserved")
+    case 7 => #UNPREDICTABLE("CCA 7 Reserved")
+    case _ => nothing
+}

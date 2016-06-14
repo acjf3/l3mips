@@ -10,7 +10,11 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
     if valid then
         match unmapped
         {
-            case Some (addr, cca) => ([addr], cca, false, false)
+            case Some (addr, cca) =>
+            {
+                check_cca(cca);
+                ([addr], cca, false, false)
+            }
             case _ => ([vAddr], 0, false, false)
         }
     else

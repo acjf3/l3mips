@@ -39,6 +39,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, IorD::IorD, AccessTy
                                     vAddr_   = [vAddr] :: bool list;
                                     pAddr    = PFN_<27:EvenOddBit-12>
                                        : vAddr_<EvenOddBit-1:0>;
+                                    check_cca(C);
                                     ([pAddr], C, S, L)
                                 }
                             else
