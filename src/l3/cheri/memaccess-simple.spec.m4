@@ -26,6 +26,7 @@ unit initMemStats = nothing
 
 string printMemAccessStats = "No MemAccessStats implemented"
 string printMemStats = "No MemStats implemented"
+unit clearDynamicMemStats () = nothing
 
 declare watchPaddr::bits(40) option
 

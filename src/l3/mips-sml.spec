@@ -30,6 +30,8 @@ string dumpStats =
     out
 }
 
+unit clearDynamicStats () = clearDynamicMemStats ()
+
 --------------------------------------------------
 -- HI/LO registers
 --------------------------------------------------

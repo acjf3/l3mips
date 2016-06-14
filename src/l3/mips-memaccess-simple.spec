@@ -27,6 +27,7 @@ unit initMemStats = nothing
 
 string printMemAccessStats = "No MemAccessStats implemented"
 string printMemStats = "No MemStats implemented"
+unit clearDynamicMemStats () = nothing
 
 -- memory types and declarations / sml stubs
 ---------------------------------------------------------------------------

@@ -338,6 +338,7 @@ fun loop mx i =
     ; mips.Next ()
     ; print_traces (!trace_level)
     ; print_stats i
+    ; mips.clearDynamicStats ()
     ; if !mips.done orelse i = mx then end_sim i
       else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
                        then ((*print "exception level changed\n";*) i+1)
@@ -352,6 +353,7 @@ fun statsLoop mx i =
    ; mips.Next ()
    ; print_traces 0
    ; print_stats i
+   ; mips.clearDynamicStats ()
    ; if !mips.done orelse mx = 1 then end_sim i
      else statsLoop (decr mx) (i + 1)
    )

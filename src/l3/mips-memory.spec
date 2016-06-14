@@ -31,6 +31,8 @@ string printMemStats =
     PadRight (#" ", 16, "inst_reads")  : " = " :
     PadLeft (#" ", 9, [memStats.inst_reads])
 
+unit clearDynamicMemStats () = nothing
+
 ---------------------------
 -- memory implementation --
 ---------------------------

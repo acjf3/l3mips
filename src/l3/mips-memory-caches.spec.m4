@@ -85,6 +85,7 @@ string printMemStats =
        MemStateLine ("l2_mandatory_evict", memStats.l2_mandatory_evict) :
        MemStateLine ("l2_prefetch_evict",  memStats.l2_prefetch_evict)
 
+unit clearDynamicMemStats () = nothing
 
 -- address size in bits (40 bits)
 nat L1ADDRWIDTH = 40
