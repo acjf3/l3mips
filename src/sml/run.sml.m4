@@ -264,7 +264,9 @@ fun print_stats i =
     val ips = "(simulation step " ^ Int.toString i ^ ", speed "  ^ Real.toString
                       (Real.fromLargeInt (i + 1) / Time.toReal (#usr(t))) ^
                       " inst/sec)\n"
-    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then ips^(mips.dumpStats()) else ""
+    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then
+              (let val ds = mips.dumpStats() in mips.clearDynamicStats (); ips^ds end)
+              else ""
   in streamPrint stats_out s end
 
 fun print_traces lvl =
@@ -338,7 +340,6 @@ fun loop mx i =
     ; mips.Next ()
     ; print_traces (!trace_level)
     ; print_stats i
-    ; mips.clearDynamicStats ()
     ; if !mips.done orelse i = mx then end_sim i
       else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
                        then ((*print "exception level changed\n";*) i+1)
@@ -353,7 +354,6 @@ fun statsLoop mx i =
    ; mips.Next ()
    ; print_traces 0
    ; print_stats i
-   ; mips.clearDynamicStats ()
    ; if !mips.done orelse mx = 1 then end_sim i
      else statsLoop (decr mx) (i + 1)
    )
