@@ -4,6 +4,12 @@
 --------------------------------------------------------------------------------
 
 -----------------
+-- Memory type --
+-----------------
+
+construct DataType {Cap :: Capability, Raw :: CAPRAWBITS}
+
+-----------------
 -- stats utils --
 -----------------
 
@@ -21,9 +27,6 @@ record MemStats
     tags_working_set    :: nat
 }
 
-declare staticMemStats  :: MemStats
-declare dynamicMemStats :: MemStats
-
 MemStats nullMemStats =
 {
     var stats;
@@ -39,13 +42,52 @@ MemStats nullMemStats =
     stats
 }
 
+string strMemStats (memStats::MemStats) =
+    PadRight (#" ", 19, "data_reads")  : " = " :
+    PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
+    PadRight (#" ", 19, "data_writes") : " = " :
+    PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
+    PadRight (#" ", 19, "inst_reads")  : " = " :
+    PadLeft (#" ", 9, [memStats.inst_reads])  : "\\n" :
+    PadRight (#" ", 19, "valid_cap_reads")   : " = " :
+    PadLeft (#" ", 9, [memStats.valid_cap_reads])   : "\\n" :
+    PadRight (#" ", 19, "invalid_cap_reads")   : " = " :
+    PadLeft (#" ", 9, [memStats.invalid_cap_reads])   : "\\n" :
+    PadRight (#" ", 19, "valid_cap_writes")   : " = " :
+    PadLeft (#" ", 9, [memStats.valid_cap_writes])   : "\\n" :
+    PadRight (#" ", 19, "invalid_cap_writes")  : " = " :
+    PadLeft (#" ", 9, [memStats.invalid_cap_writes]) : "\\n" :
+    PadRight (#" ", 19, "working_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.working_set]) : " (" : [memStats.working_set * CAPBYTEWIDTH] : " bytes)\\n" :
+    PadRight (#" ", 19, "tags_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.tags_set]) : " (one tag per " : [CAPBYTEWIDTH] : " bytes)\\n"
+
+construct ShadowMem {memUntouched memR memW memRW}
+construct ShadowTags {tagUntouched tagR::bool tagW::bool tagRW::bool}
+declare static_shadow_MEM   :: CAPADDR -> ShadowMem
+declare static_shadow_TAGS  :: CAPADDR -> ShadowTags
+declare dynamic_shadow_MEM  :: CAPADDR -> ShadowMem
+declare dynamic_shadow_TAGS :: CAPADDR -> ShadowTags
+
+declare staticMemStats  :: MemStats
+declare dynamicMemStats :: MemStats
+
+string printMemStats =
+    "static memory count:\\n" : strMemStats(staticMemStats) :
+    "dynamic mem stats (for last sampled quantum)\\n" : strMemStats(dynamicMemStats)
+
 unit initMemStats = 
 {
     staticMemStats   <- nullMemStats;
     dynamicMemStats  <- nullMemStats
 }
 
-unit clearDynamicMemStats () = dynamicMemStats <- nullMemStats
+unit clearDynamicMemStats () =
+{
+    dynamic_shadow_MEM  <- InitMap (memUntouched);
+    dynamic_shadow_TAGS <- InitMap (tagUntouched);
+    dynamicMemStats <- nullMemStats
+}
 
 unit stats_data_reads_updt (inc::int) =
 {
@@ -82,157 +124,154 @@ unit stats_invalid_cap_writes_updt (inc::int) =
     staticMemStats.invalid_cap_writes  <- [[staticMemStats.invalid_cap_writes] + inc];
     dynamicMemStats.invalid_cap_writes <- [[dynamicMemStats.invalid_cap_writes] + inc]
 }
-unit stats_working_set_updt (inc::int) =
+
+unit updt_shadow_stats_read (addr::CAPADDR, data::DataType) =
 {
-    staticMemStats.working_set  <- [[staticMemStats.working_set] + inc];
-    dynamicMemStats.working_set <- [[dynamicMemStats.working_set] + inc]
-}
-unit stats_tags_set_updt (inc::int) =
-{
-    staticMemStats.tags_set  <- [[staticMemStats.tags_set] + inc];
-    dynamicMemStats.tags_set <- [[dynamicMemStats.tags_set] + inc]
+    tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
+    match static_shadow_MEM(addr)
+    {
+        case memUntouched =>
+        {
+            static_shadow_MEM(addr) <- memR;
+            staticMemStats.working_set  <- staticMemStats.working_set + 1
+        }
+        case memW => static_shadow_MEM(addr) <- memRW
+        case _    => nothing
+    };
+    match static_shadow_TAGS(addr)
+    {
+        case tagUntouched => static_shadow_TAGS(addr) <- tagR(tagged)
+        case tagW(t)      => static_shadow_TAGS(addr) <- tagRW(t)
+        case _            => nothing
+    };
+    match dynamic_shadow_MEM(addr)
+    {
+        case memUntouched =>
+        {
+            dynamic_shadow_MEM(addr) <- memR;
+            dynamicMemStats.working_set  <- dynamicMemStats.working_set + 1
+        }
+        case memW => dynamic_shadow_MEM(addr) <- memRW
+        case _    => nothing
+    };
+    match dynamic_shadow_TAGS(addr)
+    {
+        case tagUntouched => dynamic_shadow_TAGS(addr) <- tagR(tagged)
+        case tagW(t)      => dynamic_shadow_TAGS(addr) <- tagRW(t)
+        case _            => nothing
+    }
 }
 
-string strMemStats (memStats::MemStats) =
-    PadRight (#" ", 19, "data_reads")  : " = " :
-    PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
-    PadRight (#" ", 19, "data_writes") : " = " :
-    PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
-    PadRight (#" ", 19, "inst_reads")  : " = " :
-    PadLeft (#" ", 9, [memStats.inst_reads])  : "\\n" :
-    PadRight (#" ", 19, "valid_cap_reads")   : " = " :
-    PadLeft (#" ", 9, [memStats.valid_cap_reads])   : "\\n" :
-    PadRight (#" ", 19, "invalid_cap_reads")   : " = " :
-    PadLeft (#" ", 9, [memStats.invalid_cap_reads])   : "\\n" :
-    PadRight (#" ", 19, "valid_cap_writes")   : " = " :
-    PadLeft (#" ", 9, [memStats.valid_cap_writes])   : "\\n" :
-    PadRight (#" ", 19, "invalid_cap_writes")  : " = " :
-    PadLeft (#" ", 9, [memStats.invalid_cap_writes]) : "\\n" :
-    PadRight (#" ", 19, "working_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.working_set]) : " (" : [memStats.working_set * CAPBYTEWIDTH] : " bytes)\\n" :
-    PadRight (#" ", 19, "tags_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.tags_set]) : " (one tag per " : [CAPBYTEWIDTH] : " bytes)\\n"
-
-string printMemStats =
-    "static memory count:\\n" : strMemStats(staticMemStats) :
-    "dynamic mem stats (for last sampled quantum)\\n" : strMemStats(dynamicMemStats)
+unit updt_shadow_stats_write (addr::CAPADDR, data::DataType) =
+{
+    tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
+    match static_shadow_MEM(addr)
+    {
+        case memUntouched =>
+        {
+            static_shadow_MEM(addr) <- memW;
+            staticMemStats.working_set  <- staticMemStats.working_set + 1
+        }
+        case memR => static_shadow_MEM(addr) <- memRW
+        case _ => nothing
+    };
+    match static_shadow_TAGS(addr)
+    {
+        case tagUntouched =>
+        {
+            static_shadow_TAGS(addr) <- tagW(tagged);
+            when tagged do
+                staticMemStats.tags_set  <- staticMemStats.tags_set + 1
+        }
+        case tagR(t) =>
+        {
+            static_shadow_TAGS(addr) <- tagRW(tagged);
+            when tagged and t == false do
+                staticMemStats.tags_set  <- staticMemStats.tags_set + 1;
+            when not tagged and t == true do
+                staticMemStats.tags_set  <- staticMemStats.tags_set - 1
+        }
+        case tagW(t) =>
+        {
+            static_shadow_TAGS(addr) <- tagW(tagged);
+            when tagged and t == false do
+                staticMemStats.tags_set  <- staticMemStats.tags_set + 1;
+            when not tagged and t == true do
+                staticMemStats.tags_set  <- staticMemStats.tags_set - 1
+        }
+        case tagRW(t) =>
+        {
+            static_shadow_TAGS(addr) <- tagRW(tagged);
+            when tagged and t == false do
+                staticMemStats.tags_set  <- staticMemStats.tags_set + 1;
+            when not tagged and t == true do
+                staticMemStats.tags_set  <- staticMemStats.tags_set - 1
+        }
+    };
+    match dynamic_shadow_MEM(addr)
+    {
+        case memUntouched =>
+        {
+            dynamic_shadow_MEM(addr) <- memW;
+            dynamicMemStats.working_set  <- dynamicMemStats.working_set + 1
+        }
+        case memR => dynamic_shadow_MEM(addr) <- memRW
+        case _ => nothing
+    };
+    match dynamic_shadow_TAGS(addr)
+    {
+        case tagUntouched =>
+        {
+            dynamic_shadow_TAGS(addr) <- tagW(tagged);
+            when tagged do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set + 1
+        }
+        case tagR(t) =>
+        {
+            dynamic_shadow_TAGS(addr) <- tagRW(tagged);
+            when tagged and t == false do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set + 1;
+            when not tagged and t == true do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set - 1
+        }
+        case tagW(t) =>
+        {
+            dynamic_shadow_TAGS(addr) <- tagW(tagged);
+            when tagged and t == false do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set + 1;
+            when not tagged and t == true do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set - 1
+        }
+        case tagRW(t) =>
+        {
+            dynamic_shadow_TAGS(addr) <- tagRW(tagged);
+            when tagged and t == false do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set + 1;
+            when not tagged and t == true do
+                dynamicMemStats.tags_set  <- dynamicMemStats.tags_set - 1
+        }
+    }
+}
 
 ----------------------------
 -- types and declarations --
 ----------------------------
 
-construct DataType {Cap :: Capability, Raw :: CAPRAWBITS}
-
 declare the_MEM :: CAPADDR -> DataType -- physical memory (35 bits), capability access
-construct ShadowMem {memUntouched memR memW memRW}
-declare the_shadow_MEM   :: CAPADDR -> ShadowMem
-construct ShadowTags {tagUntouched tagR::bool tagW::bool tagRW::bool}
-declare the_shadow_TAGS  :: CAPADDR -> ShadowTags
 
 component MEM (addr::CAPADDR) :: DataType
 {
     -- READING --
     value = {
         data = the_MEM(addr);
-        tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
-        match the_shadow_MEM(addr)
-        {
-            case memUntouched =>
-            {
-                the_shadow_MEM(addr) <- memR;
-                stats_working_set_updt(1)
-            }
-            case memR =>
-            {
-                ()
-            }
-            case memW =>
-            {
-                the_shadow_MEM(addr) <- memRW
-            }
-            case memRW =>
-            {
-                ()
-            }
-        };
-        match the_shadow_TAGS(addr)
-        {
-            case tagUntouched =>
-            {
-                the_shadow_TAGS(addr) <- tagR(tagged)
-            }
-            case tagR(t) =>
-            {
-                ()
-            }
-            case tagW(t) =>
-            {
-                the_shadow_TAGS(addr) <- tagRW(t)
-            }
-            case tagRW(t) =>
-            {
-                ()
-            }
-        };
+        updt_shadow_stats_read(addr,data);
         data
     }
 
     -- WRITING --
     assign value =
     {
-        tagged = match value {case Cap(c) => getTag(c) case Raw(r) => false};
-        match the_shadow_MEM(addr)
-        {
-            case memUntouched =>
-            {
-                the_shadow_MEM(addr) <- memW;
-                stats_working_set_updt(1)
-            }
-            case memR =>
-            {
-                the_shadow_MEM(addr) <- memRW
-            }
-            case memW =>
-            {
-                ()
-            }
-            case memRW =>
-            {
-                ()
-            }
-        };
-        match the_shadow_TAGS(addr)
-        {
-            case tagUntouched =>
-            {
-                the_shadow_TAGS(addr) <- tagW(tagged);
-                when tagged do stats_tags_set_updt(1)
-            }
-            case tagR(t) =>
-            {
-                the_shadow_TAGS(addr) <- tagRW(tagged);
-                when tagged and t == false do
-                    stats_tags_set_updt(1);
-                when not tagged and t == true do
-                    stats_tags_set_updt(-1)
-            }
-            case tagW(t) =>
-            {
-                the_shadow_TAGS(addr) <- tagW(tagged);
-                when tagged and t == false do
-                    stats_tags_set_updt(1);
-                when not tagged and t == true do
-                    stats_tags_set_updt(-1)
-            }
-            case tagRW(t) =>
-            {
-                the_shadow_TAGS(addr) <- tagRW(tagged);
-                when tagged and t == false do
-                    stats_tags_set_updt(1);
-                when not tagged and t == true do
-                    stats_tags_set_updt(-1)
-            }
-        };
+        updt_shadow_stats_write(addr,value);
         the_MEM(addr) <- value
     }
 }
@@ -243,8 +282,10 @@ component MEM (addr::CAPADDR) :: DataType
 
 unit InitMEM =
 {
-    the_shadow_MEM   <- InitMap (memUntouched);
-    the_shadow_TAGS  <- InitMap (tagUntouched);
+    static_shadow_MEM   <- InitMap (memUntouched);
+    static_shadow_TAGS  <- InitMap (tagUntouched);
+    dynamic_shadow_MEM  <- InitMap (memUntouched);
+    dynamic_shadow_TAGS <- InitMap (tagUntouched);
     the_MEM <- InitMap (Raw(UNKNOWN))
 }
 
