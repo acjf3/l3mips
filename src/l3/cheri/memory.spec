@@ -66,7 +66,7 @@ string strCsvHeaderMemStats (pfx::string) =
     pfx:"invalid_cap_reads,":
     pfx:"valid_cap_writes,":
     pfx:"invalid_cap_writes,":
-    pfx:"bytes_per_mem_location":
+    pfx:"bytes_per_mem_location,":
     pfx:"working_set,":
     pfx:"tags_set"
 
