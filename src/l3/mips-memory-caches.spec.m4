@@ -84,6 +84,26 @@ string printMemStats =
        MemStateLine ("l2_evict",           memStats.l2_evict) :
        MemStateLine ("l2_mandatory_evict", memStats.l2_mandatory_evict) :
        MemStateLine ("l2_prefetch_evict",  memStats.l2_prefetch_evict)
+string csvHeaderMemStats =
+"data_reads,data_writes,inst_reads,l2_read,l2_read_hit,l2_read_miss,l2_write,l2_write_hit,l2_write_miss,l2_mandatory_fetch,l2_prefetch,l2_tlb_hit,l2_tlb_miss,l2_prefetch_alias,l2_evict,l2_mandatory_evict,l2_prefetch_evict"
+string csvMemStats =
+[memStats.data_reads] : "," :
+[memStats.data_writes] : "," :
+[memStats.inst_reads] : "," :
+[memStats.l2_read] : "," :
+[memStats.l2_read_hit] : "," :
+[memStats.l2_read_miss] : "," :
+[memStats.l2_write] : "," :
+[memStats.l2_write_hit] : "," :
+[memStats.l2_write_miss] : "," :
+[memStats.l2_mandatory_fetch] : "," :
+[memStats.l2_prefetch] : "," :
+[memStats.l2_tlb_hit] : "," :
+[memStats.l2_tlb_miss] : "," :
+[memStats.l2_prefetch_alias] : "," :
+[memStats.l2_evict] : "," :
+[memStats.l2_mandatory_evict] : "," :
+[memStats.l2_prefetch_evict]
 
 unit clearDynamicMemStats () = nothing
 

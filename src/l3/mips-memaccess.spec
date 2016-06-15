@@ -47,7 +47,9 @@ string printMemAccessStats =
     PadRight (#" ", 16, "bytes_read")    : " = " :
     PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\\n" :
     PadRight (#" ", 16, "bytes_written") : " = " :
-    PadLeft (#" ", 9, [memAccessStats.bytes_written]) : "\\n"
+    PadLeft (#" ", 9, [memAccessStats.bytes_written])
+string csvHeaderMemAccessStats = "bytes_read,bytes_written"
+string csvMemAccessStats = [memAccessStats.bytes_read] : "," : [memAccessStats.bytes_written]
 
 -- watch paddr
 

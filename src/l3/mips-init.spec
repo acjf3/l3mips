@@ -98,6 +98,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;
    PIC_initialise (0x7f804000 + [procID] * 0x4000);
    initCoreStats;
+   csv_stats_header_done <- false;
    when procID == 0 do
    {
       JTAG_UART_initialise (uart);

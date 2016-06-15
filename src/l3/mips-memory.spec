@@ -30,6 +30,8 @@ string printMemStats =
     PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
     PadRight (#" ", 16, "inst_reads")  : " = " :
     PadLeft (#" ", 9, [memStats.inst_reads])
+string csvHeaderMemStats = "data_reads,data_writes,inst_reads"
+string csvMemStats = [memStats.data_reads] : "," : [memStats.data_writes] : "," : [memStats.inst_reads]
 
 unit clearDynamicMemStats () = nothing
 

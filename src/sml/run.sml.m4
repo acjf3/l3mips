@@ -20,6 +20,7 @@ val rdhwr_extra = ref false
 val nb_core = ref 1
 val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
 val dump_stat_freq = ref (NONE: int option)
+val stats_fmt = ref (NONE: string option)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
 ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
@@ -261,11 +262,9 @@ fun uart () =
 fun print_stats i =
   let
     val t = Timer.checkCPUTimer(!cpu_time)
-    val ips = "(simulation step " ^ Int.toString i ^ ", speed "  ^ Real.toString
-                      (Real.fromLargeInt (i + 1) / Time.toReal (#usr(t))) ^
-                      " inst/sec)\n"
+    val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
     val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then
-              (let val ds = mips.dumpStats() in mips.clearDynamicStats (); ips^ds end)
+              (let val sstr = mips.dumpStats(i,(Real.toString ips,!stats_fmt)) in mips.clearDynamicStats (); sstr end)
               else ""
   in streamPrint stats_out s end
 
@@ -320,13 +319,12 @@ val () = mips.UNPREDICTABLE_TLB := (fn _ => raise mips.UNPREDICTABLE "TLB")
 fun end_sim i =
    let
       val t = Timer.checkCPUTimer(!cpu_time)
+      val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
    in
-      if isSome(!dump_stat_freq) then print(mips.dumpStats()) else ()
+      if isSome(!dump_stat_freq) then print(mips.dumpStats(i,(Real.toString ips,!stats_fmt))) else ()
     ; print ("Completed " ^ IntInf.toString (i + 1) ^ " instructions in " ^
              Time.toString(#usr(t)) ^ " seconds ")
-    ; print ("(" ^ Real.toString
-                     (Real.fromLargeInt (i + 1) / Time.toReal (#usr(t))) ^
-             " inst/sec)\n")
+    ; print ("(" ^ Real.toString ips ^ " inst/sec)\n")
    end
 
 fun loop mx i =
@@ -428,6 +426,7 @@ fun printUsage () =
       \  --uart-out <file>              UART output file (stdout if omitted)\n\
       \  --trace-out <file>             Traces output file (stdout if omitted)\n\
       \  --stats-out <file>             Stats output file (stdout if omitted)\n\
+      \  --stats-format <format>        'csv' or human readable stats output format (default is human readable)\n\
       \  --format <format>              'raw' or 'hex' file format \n\
       \  --non-block <on|off>           non-blocking UART input 'on' or 'off' \n\
       \  --dump-stats <number>          display statistics every <number> simulation steps\n\
@@ -535,6 +534,8 @@ val () =
                      | _          => failExit "--non-block must be on or off\n"
           val (nb, l) = processOption "--dump-stats" l
           val () = dump_stat_freq := Option.map getNumber nb
+          val (fmt, l) = processOption "--stats-format" l
+          val () = stats_fmt := fmt
           val (nb, l) = processOption "--rdhwr-extra" l
           val () = case nb of
                        NONE       => ()

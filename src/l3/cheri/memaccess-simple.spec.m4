@@ -25,7 +25,11 @@ unit initMemAccessStats = nothing
 unit initMemStats = nothing
 
 string printMemAccessStats = "No MemAccessStats implemented"
+string csvHeaderMemAccessStats = "No csvHeaderAccessStats implemented"
+string csvMemAccessStats = "No csvMemAccessStats implemented"
 string printMemStats = "No MemStats implemented"
+string csvHeaderMemStats = "No csvHeaderMemStats implemented"
+string csvMemStats = "No csvMemStats implemented"
 unit clearDynamicMemStats () = nothing
 
 declare watchPaddr::bits(40) option

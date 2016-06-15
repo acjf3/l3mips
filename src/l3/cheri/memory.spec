@@ -42,25 +42,45 @@ MemStats nullMemStats =
     stats
 }
 
-string strMemStats (memStats::MemStats) =
-    PadRight (#" ", 19, "data_reads")  : " = " :
-    PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
-    PadRight (#" ", 19, "data_writes") : " = " :
-    PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
-    PadRight (#" ", 19, "inst_reads")  : " = " :
-    PadLeft (#" ", 9, [memStats.inst_reads])  : "\\n" :
-    PadRight (#" ", 19, "valid_cap_reads")   : " = " :
-    PadLeft (#" ", 9, [memStats.valid_cap_reads])   : "\\n" :
-    PadRight (#" ", 19, "invalid_cap_reads")   : " = " :
-    PadLeft (#" ", 9, [memStats.invalid_cap_reads])   : "\\n" :
-    PadRight (#" ", 19, "valid_cap_writes")   : " = " :
-    PadLeft (#" ", 9, [memStats.valid_cap_writes])   : "\\n" :
-    PadRight (#" ", 19, "invalid_cap_writes")  : " = " :
-    PadLeft (#" ", 9, [memStats.invalid_cap_writes]) : "\\n" :
-    PadRight (#" ", 19, "working_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.working_set]) : " (" : [memStats.working_set * CAPBYTEWIDTH] : " bytes)\\n" :
-    PadRight (#" ", 19, "tags_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.tags_set]) : " (one tag per " : [CAPBYTEWIDTH] : " bytes)\\n"
+string strStat (name::string,data::nat) =
+    PadRight (#" ", 30, name)  : " = " : PadLeft (#" ", 10, [data])  : "\\n"
+
+string strMemStats (pfx::string, memStats::MemStats) =
+    strStat(pfx:"data_reads", memStats.data_reads):
+    strStat(pfx:"data_writes", memStats.data_writes):
+    strStat(pfx:"inst_reads", memStats.inst_reads):
+    strStat(pfx:"valid_cap_reads", memStats.valid_cap_reads):
+    strStat(pfx:"invalid_cap_reads", memStats.invalid_cap_reads):
+    strStat(pfx:"valid_cap_writes", memStats.valid_cap_writes):
+    strStat(pfx:"invalid_cap_writes", memStats.invalid_cap_writes):
+    PadRight (#" ", 19, pfx:"working_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.working_set]) : " locations, " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\\n" :
+    PadRight (#" ", 19, pfx:"tags_set")  : " = " :
+    PadLeft (#" ", 9, [memStats.tags_set]) : " (one tag bit per " : [CAPBYTEWIDTH] : " bytes)\\n"
+
+string strCsvHeaderMemStats (pfx::string) =
+    pfx:"data_reads,":
+    pfx:"data_writes,":
+    pfx:"inst_reads,":
+    pfx:"valid_cap_reads,":
+    pfx:"invalid_cap_reads,":
+    pfx:"valid_cap_writes,":
+    pfx:"invalid_cap_writes,":
+    pfx:"bytes_per_mem_location":
+    pfx:"working_set,":
+    pfx:"tags_set"
+
+string strCsvMemStats (memStats::MemStats) =
+    [memStats.data_reads] : "," :
+    [memStats.data_writes] : "," :
+    [memStats.inst_reads] : "," :
+    [memStats.valid_cap_reads] : "," :
+    [memStats.invalid_cap_reads] : "," :
+    [memStats.valid_cap_writes] : "," :
+    [memStats.invalid_cap_writes] : "," :
+    [CAPBYTEWIDTH] : "," :
+    [memStats.working_set] : "," :
+    [memStats.tags_set]
 
 construct ShadowMem {memUntouched memR memW memRW}
 construct ShadowTags {tagUntouched tagR::bool tagW::bool tagRW::bool}
@@ -73,8 +93,10 @@ declare staticMemStats  :: MemStats
 declare dynamicMemStats :: MemStats
 
 string printMemStats =
-    "static memory count:\\n" : strMemStats(staticMemStats) :
-    "dynamic mem stats (for last sampled quantum)\\n" : strMemStats(dynamicMemStats)
+    "static memory count:\\n" : strMemStats("static_",staticMemStats) :
+    "dynamic mem stats (for last sampled quantum)\\n" : strMemStats("dynamic_",dynamicMemStats)
+string csvHeaderMemStats = strCsvHeaderMemStats("static_"):",":strCsvHeaderMemStats("dynamic_")
+string csvMemStats = strCsvMemStats(staticMemStats):",":strCsvMemStats(dynamicMemStats)
 
 unit initMemStats = 
 {

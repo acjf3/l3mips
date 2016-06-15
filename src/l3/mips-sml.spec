@@ -20,14 +20,38 @@ unit resetStats =
     initMemStats
 }
 
-string dumpStats =
+declare csv_stats_header_done :: bool
+
+string dumpStats (inst::nat, ips::string, fmt :: string option) = match fmt
 {
-    var out = "";
-    for i in 0 .. totalCore-1 do
-        out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
-    out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
-    out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
-    out
+    case Some ("csv") =>
+    {
+        var out = "";
+        when not csv_stats_header_done do
+        {
+            out <- "inst,ips,";
+            out <- out : csvHeaderCoreStats : ",";
+            out <- out : csvHeaderMemAccessStats : ",";
+            out <- out : csvHeaderMemStats : "\\n";
+            csv_stats_header_done <- true
+        };
+        out <- out:[inst]:",":ips:",";
+        out <- out : csvCoreStats : ",";
+        out <- out : csvMemAccessStats : ",";
+        out <- out : csvMemStats : "\\n";
+        out
+    }
+    case _ =>
+    {
+        var out = "";
+        out <- "===========================================================\\n";
+        out <- "instruction #" : [inst] : " (":ips:" inst/sec)\\n";
+        for i in 0 .. totalCore-1 do
+            out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
+        out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
+        out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
+        out
+    }
 }
 
 unit clearDynamicStats () = clearDynamicMemStats ()

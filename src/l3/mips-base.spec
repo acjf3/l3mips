@@ -181,3 +181,5 @@ string printCoreStats =
     PadLeft (#" ", 9, [coreStats.branch_taken]) : "\\n" :
     PadRight (#" ", 16, "branch_not_taken") : " = " :
     PadLeft (#" ", 9, [coreStats.branch_not_taken])
+string csvHeaderCoreStats = "branch_taken,branch_not_taken"
+string csvCoreStats = [coreStats.branch_taken] : "," : [coreStats.branch_not_taken]
