@@ -286,14 +286,16 @@ component MEM (addr::CAPADDR) :: DataType
     -- READING --
     value = {
         data = the_MEM(addr);
-        updt_shadow_stats_read(addr,data);
+        when not PROVER_EXPORT do
+            updt_shadow_stats_read(addr,data);
         data
     }
 
     -- WRITING --
     assign value =
     {
-        updt_shadow_stats_write(addr,value);
+        when not PROVER_EXPORT do
+            updt_shadow_stats_write(addr,value);
         the_MEM(addr) <- value
     }
 }
