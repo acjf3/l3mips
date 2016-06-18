@@ -70,7 +70,18 @@ string COP2InstructionToString (i::instruction) =
                 case CUnseal(cd, cs, ct)          => op_cr_cr_cr("cunseal",cd,cs,ct)
                 case CCall(cs, cb)                => op_cr_cr("ccall",cs,cb)
                 case CReturn                      => "creturn"
-                case CLLx(rd, cb, stt)            => "cllx" -- TODO
+                case CLLx(rd, cb, stt)            =>
+                    match stt
+                    {
+                        case 0b000 => op_gr_cr("cllbu", rd, cb)
+                        case 0b001 => op_gr_cr("cllhu", rd, cb)
+                        case 0b010 => op_gr_cr("cllwu", rd, cb)
+                        case 0b011 => op_gr_cr("clld", rd, cb)
+                        case 0b100 => op_gr_cr("cllb", rd, cb)
+                        case 0b101 => op_gr_cr("cllh", rd, cb)
+                        case 0b110 => op_gr_cr("cllw", rd, cb)
+                        case 0b111 => op_gr_cr("cllx", rd, cb)
+                    }
                 case CLLC(cd, cb)                 => op_cr_cr("cllc", cd, cb)
                 case CSCx(rcs, cb, rd, ctt)       => "cscx" -- TODO
                 case CSCC(cs, cb, rd)             => op_gr_cr_cr("cscc", rd, cs, cb)
