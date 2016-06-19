@@ -96,10 +96,10 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
    else if SupervisorMode then
       None,
       vAddr <+ 0x0000_0100_0000_0000 or         -- xsuseg
-      0x4000_0000_0000_0000 <=+ vAddr and
-      vAddr <+  0x4000_0100_0000_0000 or        -- xsseg
-      0xFFFF_FFFF_C000_0000 <=+ vAddr and
-      vAddr <+  0xFFFF_FFFF_E000_0000           -- csseg
+      (0x4000_0000_0000_0000 <=+ vAddr and
+      vAddr <+ 0x4000_0100_0000_0000) or        -- xsseg
+      (0xFFFF_FFFF_C000_0000 <=+ vAddr and
+      vAddr <+ 0xFFFF_FFFF_E000_0000)           -- csseg
    else if vAddr <+ 0x0000_0100_0000_0000 then  -- xkuseg
       None, true
    else if 0x4000_0000_0000_0000 <=+ vAddr and
