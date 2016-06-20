@@ -25,6 +25,10 @@ record MemStats
     working_set         :: nat
     tags_now_set        :: nat
     tags_ever_set       :: nat
+    tags_4K_now_set     :: nat
+    tags_4K_ever_set    :: nat
+    tags_16K_now_set    :: nat
+    tags_16K_ever_set   :: nat
 }
 
 MemStats nullMemStats =
@@ -40,6 +44,10 @@ MemStats nullMemStats =
     stats.working_set        <- 0;
     stats.tags_now_set       <- 0;
     stats.tags_ever_set      <- 0;
+    stats.tags_4K_now_set    <- 0;
+    stats.tags_4K_ever_set   <- 0;
+    stats.tags_16K_now_set   <- 0;
+    stats.tags_16K_ever_set  <- 0;
     stats
 }
 
@@ -54,12 +62,13 @@ string strMemStats (pfx::string, memStats::MemStats) =
     strStat(pfx:"invalid_cap_reads", memStats.invalid_cap_reads):
     strStat(pfx:"valid_cap_writes", memStats.valid_cap_writes):
     strStat(pfx:"invalid_cap_writes", memStats.invalid_cap_writes):
-    PadRight (#" ", 19, pfx:"working_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.working_set]) : " locations, " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\\n" :
-    PadRight (#" ", 19, pfx:"tags_now_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.tags_now_set]) : " (one tag bit per " : [CAPBYTEWIDTH] : " bytes)\\n" :
-    PadRight (#" ", 19, pfx:"tags_ever_set")  : " = " :
-    PadLeft (#" ", 9, [memStats.tags_ever_set]) : " (one tag bit per " : [CAPBYTEWIDTH] : " bytes)\\n"
+    strStat(pfx:"working_set", memStats.working_set): " memory locations or " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\\n" :
+    strStat(pfx:"tags_now_set", memStats.tags_now_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
+    strStat(pfx:"tags_ever_set", memStats.tags_ever_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
+    strStat(pfx:"tags_4K_now_set", memStats.tags_4K_now_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\\n" :
+    strStat(pfx:"tags_4K_ever_set", memStats.tags_4K_ever_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\\n" :
+    strStat(pfx:"tags_16K_now_set", memStats.tags_16K_now_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\\n" :
+    strStat(pfx:"tags_16K_ever_set", memStats.tags_16K_ever_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\\n"
 
 string strCsvHeaderMemStats (pfx::string) =
     pfx:"data_reads,":
@@ -72,7 +81,11 @@ string strCsvHeaderMemStats (pfx::string) =
     pfx:"bytes_per_mem_location,":
     pfx:"working_set,":
     pfx:"tags_now_set,":
-    pfx:"tags_ever_set"
+    pfx:"tags_ever_set,":
+    pfx:"tags_4K_now_set,":
+    pfx:"tags_4K_ever_set,":
+    pfx:"tags_16K_now_set,":
+    pfx:"tags_16K_ever_set"
 
 string strCsvMemStats (memStats::MemStats) =
     [memStats.data_reads] : "," :
@@ -85,14 +98,22 @@ string strCsvMemStats (memStats::MemStats) =
     [CAPBYTEWIDTH] : "," :
     [memStats.working_set] : "," :
     [memStats.tags_now_set] : "," :
-    [memStats.tags_ever_set]
+    [memStats.tags_ever_set] : "," :
+    [memStats.tags_4K_now_set] : "," :
+    [memStats.tags_4K_ever_set] : "," :
+    [memStats.tags_16K_now_set] : "," :
+    [memStats.tags_16K_ever_set]
 
 construct ShadowMem {memUntouched memR memW memRW}
 construct ShadowTags {tagUnused tagTouched::bool}
 declare static_shadow_MEM   :: CAPADDR -> ShadowMem
 declare static_shadow_TAGS  :: CAPADDR -> ShadowTags
+declare static_shadow_4K_TAGS  :: bits(52) -> ShadowTags
+declare static_shadow_16K_TAGS  :: bits(50) -> ShadowTags
 declare dynamic_shadow_MEM  :: CAPADDR -> ShadowMem
 declare dynamic_shadow_TAGS :: CAPADDR -> ShadowTags
+declare dynamic_shadow_4K_TAGS  :: bits(52) -> ShadowTags
+declare dynamic_shadow_16K_TAGS  :: bits(50) -> ShadowTags
 
 declare staticMemStats  :: MemStats
 declare dynamicMemStats :: MemStats
@@ -113,6 +134,8 @@ unit clearDynamicMemStats () =
 {
     dynamic_shadow_MEM  <- InitMap (memUntouched);
     dynamic_shadow_TAGS <- InitMap (tagUnused);
+    dynamic_shadow_4K_TAGS <- InitMap (tagUnused);
+    dynamic_shadow_16K_TAGS <- InitMap (tagUnused);
     dynamicMemStats <- nullMemStats
 }
 
@@ -209,6 +232,46 @@ unit updt_shadow_stats_write (addr::CAPADDR, data::DataType) =
                 staticMemStats.tags_now_set <- staticMemStats.tags_now_set + 1
         }
     };
+    addr4k = [addr >>+ (12-Log2(CAPBYTEWIDTH))];
+    match static_shadow_4K_TAGS(addr4k)
+    {
+        case tagUnused => when tagged do
+        {
+                static_shadow_4K_TAGS(addr4k) <- tagTouched(true);
+                staticMemStats.tags_4K_ever_set <- staticMemStats.tags_4K_ever_set + 1;
+                staticMemStats.tags_4K_now_set <- staticMemStats.tags_4K_now_set + 1
+        }
+        case tagTouched(true) => when not tagged do
+        {
+                static_shadow_4K_TAGS(addr4k) <- tagTouched(false);
+                staticMemStats.tags_4K_now_set <- staticMemStats.tags_4K_now_set - 1
+        }
+        case tagTouched(false) => when tagged do
+        {
+                static_shadow_4K_TAGS(addr4k) <- tagTouched(true);
+                staticMemStats.tags_4K_now_set <- staticMemStats.tags_4K_now_set + 1
+        }
+    };
+    addr16k = [addr >>+ (14-Log2(CAPBYTEWIDTH))];
+    match static_shadow_16K_TAGS(addr16k)
+    {
+        case tagUnused => when tagged do
+        {
+                static_shadow_16K_TAGS(addr16k) <- tagTouched(true);
+                staticMemStats.tags_16K_ever_set <- staticMemStats.tags_16K_ever_set + 1;
+                staticMemStats.tags_16K_now_set <- staticMemStats.tags_16K_now_set + 1
+        }
+        case tagTouched(true) => when not tagged do
+        {
+                static_shadow_16K_TAGS(addr16k) <- tagTouched(false);
+                staticMemStats.tags_16K_now_set <- staticMemStats.tags_16K_now_set - 1
+        }
+        case tagTouched(false) => when tagged do
+        {
+                static_shadow_16K_TAGS(addr16k) <- tagTouched(true);
+                staticMemStats.tags_16K_now_set <- staticMemStats.tags_16K_now_set + 1
+        }
+    };
     match dynamic_shadow_MEM(addr)
     {
         case memUntouched =>
@@ -236,6 +299,44 @@ unit updt_shadow_stats_write (addr::CAPADDR, data::DataType) =
         {
                 dynamic_shadow_TAGS(addr) <- tagTouched(true);
                 dynamicMemStats.tags_now_set <- dynamicMemStats.tags_now_set + 1
+        }
+    };
+    match dynamic_shadow_4K_TAGS(addr4k)
+    {
+        case tagUnused => when tagged do
+        {
+                dynamic_shadow_4K_TAGS(addr4k) <- tagTouched(true);
+                dynamicMemStats.tags_4K_ever_set <- dynamicMemStats.tags_4K_ever_set + 1;
+                dynamicMemStats.tags_4K_now_set <- dynamicMemStats.tags_4K_now_set + 1
+        }
+        case tagTouched(true) => when not tagged do
+        {
+                dynamic_shadow_4K_TAGS(addr4k) <- tagTouched(false);
+                dynamicMemStats.tags_4K_now_set <- dynamicMemStats.tags_4K_now_set - 1
+        }
+        case tagTouched(false) => when tagged do
+        {
+                dynamic_shadow_4K_TAGS(addr4k) <- tagTouched(true);
+                dynamicMemStats.tags_4K_now_set <- dynamicMemStats.tags_4K_now_set + 1
+        }
+    };
+    match dynamic_shadow_16K_TAGS(addr16k)
+    {
+        case tagUnused => when tagged do
+        {
+                dynamic_shadow_16K_TAGS(addr16k) <- tagTouched(true);
+                dynamicMemStats.tags_16K_ever_set <- dynamicMemStats.tags_16K_ever_set + 1;
+                dynamicMemStats.tags_16K_now_set <- dynamicMemStats.tags_16K_now_set + 1
+        }
+        case tagTouched(true) => when not tagged do
+        {
+                dynamic_shadow_16K_TAGS(addr16k) <- tagTouched(false);
+                dynamicMemStats.tags_16K_now_set <- dynamicMemStats.tags_16K_now_set - 1
+        }
+        case tagTouched(false) => when tagged do
+        {
+                dynamic_shadow_16K_TAGS(addr16k) <- tagTouched(true);
+                dynamicMemStats.tags_16K_now_set <- dynamicMemStats.tags_16K_now_set + 1
         }
     }
 }
@@ -273,8 +374,12 @@ unit InitMEM =
 {
     static_shadow_MEM   <- InitMap (memUntouched);
     static_shadow_TAGS  <- InitMap (tagUnused);
+    static_shadow_4K_TAGS <- InitMap (tagUnused);
+    static_shadow_16K_TAGS  <- InitMap (tagUnused);
     dynamic_shadow_MEM  <- InitMap (memUntouched);
     dynamic_shadow_TAGS <- InitMap (tagUnused);
+    dynamic_shadow_4K_TAGS <- InitMap (tagUnused);
+    dynamic_shadow_16K_TAGS <- InitMap (tagUnused);
     the_MEM <- InitMap (Raw(UNKNOWN))
 }
 
