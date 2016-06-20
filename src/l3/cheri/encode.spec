@@ -20,6 +20,7 @@ string op_cr_cr_cr(op::string, cr1::reg, cr2::reg, cr3::reg) = pad(op):cr(cr1):"
 string op_gr_cr_cr(op::string, r1::reg, cr1::reg, cr2::reg) = pad(op):gr(r1):", ":cr(cr1):", ":cr(cr2)
 string op_gr_cr_gr_imm(op::string, r1::reg, cr1::reg, r2::reg, i::bits(N)) = pad(op):gr(r1):", ":cr(cr1):", ":gr(r2):", ":imm(i)
 string op_cr_cr_gr_imm(op::string, cr1::reg, cr2::reg, r1::reg, i::bits(N)) = pad(op):cr(cr1):", ":cr(cr2):", ":gr(r1):", ":imm(i)
+string op_gr_gr_cr(op::string, r1::reg, r2::reg, cr1::reg) = pad(op):gr(r1):", ":gr(r2):", ":cr(cr1)
 
 string COP2InstructionToString (i::instruction) =
     match i
@@ -83,7 +84,14 @@ string COP2InstructionToString (i::instruction) =
                         case 0b111 => op_gr_cr("cllx", rd, cb)
                     }
                 case CLLC(cd, cb)                 => op_cr_cr("cllc", cd, cb)
-                case CSCx(rcs, cb, rd, ctt)       => "cscx" -- TODO
+                case CSCx(rs, cb, rd, tt)         =>
+                    match tt
+                    {
+                        case 0b00 => op_gr_gr_cr("cscb", rd, rs, cb)
+                        case 0b01 => op_gr_gr_cr("csch", rd, rs, cb)
+                        case 0b10 => op_gr_gr_cr("cscw", rd, rs, cb)
+                        case 0b11 => op_gr_gr_cr("cscd", rd, rs, cb)
+                    }
                 case CSCC(cs, cb, rd)             => op_gr_cr_cr("cscc", rd, cs, cb)
                 case UnknownCapInstruction        => "unknown_cap_inst"
             }
