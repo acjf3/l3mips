@@ -22,7 +22,9 @@ unit resetStats =
 
 declare csv_stats_header_done :: bool
 
-string dumpStats (inst::nat, ips::string, fmt :: string option) = match fmt
+string dumpStats (inst::nat, ips::string, fmt :: string option) =
+if PROVER_EXPORT then "" else
+match fmt
 {
     case Some ("csv") =>
     {
