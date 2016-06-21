@@ -16,8 +16,10 @@ endif
 L3SRCBASE+=mips-types.spec
 L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-base.spec
+ifndef SIMPLEMEM
 L3SRCBASE+=mips-pic.spec
 L3SRCBASE+=mips-uart.spec
+endif
 ifdef CAP
 L3SRCBASE+=cheri/cap-params.spec
 L3SRCBASE+=cheri/cap-common.spec
@@ -127,7 +129,9 @@ else
 L3SRCBASE+=mips-next.spec
 L3SRCBASE+=cp2-null/init.spec
 endif
+ifndef SIMPLEMEM
 L3SRCBASE+=mips-init.spec
+endif
 
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 

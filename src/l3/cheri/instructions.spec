@@ -392,44 +392,46 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
 -----------------------------------
 define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
     if not CP0.Status.CU2 then
-        SignalCP2UnusableException
+      SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+      SignalCapException(capExcAccessSysReg,cb)
+    else if register_inaccessible(ct) then
+      SignalCapException(capExcAccessSysReg,ct)
     else
     {
+        cap_cb = CAPR(cb);
+        cap_ct = CAPR(ct);
         var equal = false;
-        var less;
         var greater;
-        var lessu;
         var greateru;
-        if register_inaccessible(cb) then
-            SignalCapException(capExcAccessSysReg,cb)
-        else if register_inaccessible(ct) then
-            SignalCapException(capExcAccessSysReg,ct)
-        else if getTag(CAPR(cb)) <> getTag(CAPR(ct)) then
-            if getTag(CAPR(cb)) then
+        var less;
+        var lessu;
+        if getTag(cap_cb) <> getTag(cap_ct) then
+            if getTag(cap_cb) then
             {
-                less <- false;
-                lessu <- false;
                 greater <- true;
-                greateru <- true
+                greateru <- true;
+                less <- false;
+                lessu <- false
             }
             else
             {
-                less <- true;
-                lessu <- true;
                 greater <- false;
-                greateru <- false
+                greateru <- false;
+                less <- true;
+                lessu <- true
             }
         else
         {
-            cursor1 = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64
-            cursor2 = getBase(CAPR(ct)) + getOffset(CAPR(ct)); -- mod 2^64
+            cursor1 = getBase(cap_cb) + getOffset(cap_cb); -- mod 2^64
+            cursor2 = getBase(cap_ct) + getOffset(cap_ct); -- mod 2^64
             equal <- cursor1 == cursor2;
-            less <- cursor1 < cursor2;
             greater <- cursor1 > cursor2;
-            lessu <- cursor1 <+ cursor2;
-            greateru <- cursor1 >+ cursor2
+            greateru <- cursor1 >+ cursor2;
+            less <- cursor1 < cursor2;
+            lessu <- cursor1 <+ cursor2
         };
-        when not exceptionSignalled do match t
+        match t
         {
            case 0 => GPR(rd) <- [equal]
            case 1 => GPR(rd) <- [not equal]
@@ -437,7 +439,7 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
            case 3 => GPR(rd) <- [less or equal]
            case 4 => GPR(rd) <- [lessu]
            case 5 => GPR(rd) <- [lessu or equal]
-           case 6 => GPR(rd) <- if CAPR(cb) == CAPR(ct) then 1 else 0
+           case 6 => GPR(rd) <- if cap_cb == cap_ct then 1 else 0
            case _ => SignalException (ResI)
         }
     }
@@ -570,11 +572,12 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         SignalCapException(capExcPermLoad,cb)
     else
     {
-        var access;
-        var size;
-        cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
+        cap_cb = CAPR(cb);
+        cursor = getBase(cap_cb) + getOffset(cap_cb);
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
         addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
+        var size;
+        var access;
         var bytesel = '000';
         match t
         {
@@ -602,9 +605,9 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
                 access  <- DOUBLEWORD
             }
         };
-        if addr + size > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+        if addr + size > ZeroExtend(getBase(cap_cb) + getLength(cap_cb)) then
             SignalCapException(capExcLength,cb)
-        else if addr < ZeroExtend(getBase(CAPR(cb))) then
+        else if addr < ZeroExtend(getBase(cap_cb)) then
             SignalCapException(capExcLength,cb)
         else
         {
@@ -669,12 +672,12 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         SignalCapException(capExcPermStore,cb)
     else
     {
-        var access;
-        var size;
-        cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb)); -- mod 2^64 ?
+        cap_cb = CAPR(cb);
+        cursor = getBase(cap_cb) + getOffset(cap_cb); -- mod 2^64 ?
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
-        tmp::bits(66) = SignExtend(extOff);
         addr::bits(66) = ZeroExtend(cursor) + ZeroExtend(GPR(rt)) + SignExtend(extOff);
+        var size;
+        var access;
         var bytesel = '000';
         match t
         {
@@ -702,9 +705,9 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
                 access  <- DOUBLEWORD
             }
         };
-        if addr + size > ZeroExtend(getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+        if addr + size > ZeroExtend(getBase(cap_cb) + getLength(cap_cb)) then
             SignalCapException(capExcLength,cb)
-        else if addr < ZeroExtend(getBase(CAPR(cb))) then
+        else if addr < ZeroExtend(getBase(cap_cb)) then
             SignalCapException(capExcLength,cb)
         else
         {
