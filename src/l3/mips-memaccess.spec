@@ -78,8 +78,8 @@ unit watchForStore (addr::pAddr, data::dword, mask::dword) =
 -- Pimitive memory load (with memory-mapped devices)
 
 dword LoadMemory
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
-    IorD::IorD, AccessType::AccessType, link::bool) =
+  ( MemType::bits(3), AccessLength::bits(3), needAlign::bool,
+    vAddr::vAddr, link::bool ) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
     mark_log (2, "Bad load, CP0.BadVAddr <-" : hex64(vAddr));
@@ -89,7 +89,7 @@ dword LoadMemory
   }
   else
   {
-    var pAddr = Fst (AddressTranslation (vAddr, IorD, AccessType));
+    var pAddr = Fst (AddressTranslation (vAddr, LOAD));
     if not exceptionSignalled then
     {
       pAddr <- AdjustEndian (MemType, pAddr);
@@ -134,7 +134,7 @@ dword LoadMemory
 
 bool StoreMemory
    (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+    vAddr::vAddr, cond::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
     mark_log (2, "Bad store, CP0.BadVAddr <-" : hex64(vAddr));
@@ -144,7 +144,7 @@ bool StoreMemory
   }
   else
   {
-    var pAddr = Fst (AddressTranslation (vAddr, IorD, AccessType));
+    var pAddr = Fst (AddressTranslation (vAddr, STORE));
     pAddr <- AdjustEndian (MemType, pAddr);
     -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     var sc_success = true;
@@ -200,15 +200,6 @@ bool StoreMemory
     sc_success
   }
 
-unit StoreMem
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
-{
-   _ = StoreMemory (MemType,AccessLength,needAlign,MemElem,vAddr,IorD,
-                    AccessType,false);
-   nothing
-}
-
 --------------------------------------------------
 -- Instruction fetch
 --------------------------------------------------
@@ -240,7 +231,7 @@ unit Fetch =
       nothing
    else if PC<1:0> == 0 then
    {
-      pc, cca = AddressTranslation (PC, INSTRUCTION, LOAD);
+      pc, cca = AddressTranslation (PC, LOAD);
       when not exceptionSignalled do currentInst <- Some (ReadInst (pc))
    }
    else

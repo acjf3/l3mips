@@ -611,7 +611,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
             SignalCapException(capExcLength,cb)
         else
         {
-            data = LoadMemoryCap(access, true, [addr], DATA, LOAD, false);
+            data = LoadMemoryCap(access, true, [addr], false);
             when not exceptionSignalled do
             {
                 data_list = [data]::bool list;
@@ -653,7 +653,7 @@ define LWC2 > CHERILWC2 > CLLD (rd::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalException(AdEL)
     }
     else
-        GPR(rd) <- LoadMemoryCap(DOUBLEWORD, addr, DATA, LOAD, true)
+        GPR(rd) <- LoadMemoryCap(DOUBLEWORD, addr, true)
 }
 -}
 -----------------------------------
@@ -711,7 +711,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             SignalCapException(capExcLength,cb)
         else
         {
-            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], DATA, STORE, false);
+            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], false);
             nothing
         }
     }
@@ -745,7 +745,7 @@ define SWC2 > CHERISWC2 > CSCD (rs::reg, cb::reg, rt::reg, offset::bits(8)) =
         SignalException(AdES)
     }
     else
-        GPR(rs) <- if StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, DATA, LOAD, true) then 1 else 0
+        GPR(rs) <- if StoreMemoryCap(DOUBLEWORD, DOUBLEWORD, GPR(rs), addr, true) then 1 else 0
 }
 -}
 
@@ -815,7 +815,7 @@ define COP2 > CHERICOP2 > CLLx (rd::reg, cb::reg, stt::bits(3)) =
         SignalCapException(capExcLength,cb)
     else
     {
-        data = LoadMemoryCap(access_length, true, addr, DATA, LOAD, true);
+        data = LoadMemoryCap(access_length, true, addr, true);
         when not exceptionSignalled do
         {
             data_list = [data]::bool list;
@@ -890,7 +890,7 @@ define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
     else
     {
         ret = if StoreMemoryCap(access_length, access_length,
-                                     GPR(rs), true, addr, DATA, STORE, true)
+                                     GPR(rs), true, addr, true)
                                      then 1 else 0;
         when not exceptionSignalled do GPR(rd) <- ret
     }

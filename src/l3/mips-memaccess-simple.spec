@@ -54,8 +54,7 @@ unit Write256 (pAddr::bits(35), data::bits(256)) =
 -- memory load
 
 dword LoadMemory
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
-    IorD::IorD, AccessType::AccessType, link::bool) =
+   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
     CP0.BadVAddr <- vAddr;
@@ -79,7 +78,7 @@ dword LoadMemory
 
 bool StoreMemory
    (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+    vAddr::vAddr, cond::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
     CP0.BadVAddr <- vAddr;
@@ -117,15 +116,6 @@ bool StoreMemory
     LLbit <- None;
     sc_success
   }
-
-unit StoreMem
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
-{
-   _ = StoreMemory (MemType,AccessLength,needAlign,MemElem,vAddr,IorD,
-                    AccessType,false);
-   nothing
-}
 
 -- instruction fetch
 

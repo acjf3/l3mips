@@ -29,5 +29,4 @@ record TLBEntry
    V1   :: bool
 }
 
-construct IorD { INSTRUCTION, DATA }
 construct AccessType { LOAD, STORE }

@@ -99,8 +99,7 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 -- Data accesses
 -----------------
 
-dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD,
-                     AccessType::AccessType, link::bool) =
+dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
@@ -111,7 +110,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD
     }
     else
     {
-        tmp, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
+        tmp, CCA, S, L = AddressTranslation (vAddr, LOAD);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         if not exceptionSignalled then
@@ -157,8 +156,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD
     }
 }
 
-dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
-                  IorD::IorD, AccessType::AccessType, link::bool) =
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
@@ -171,14 +169,14 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
-    else LoadMemoryCap(MemType, needAlign, final_vAddr, IorD, AccessType, link)
+    else LoadMemoryCap(MemType, needAlign, final_vAddr, link)
 }
 
 inline nat capbottom = Log2(CAPBYTEWIDTH)-3
 
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
-    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, LOAD);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, LOAD);
     if not exceptionSignalled then
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
@@ -214,7 +212,7 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
 }
 
 bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, needAlign::bool,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+                   vAddr::vAddr, cond::bool) =
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
@@ -225,7 +223,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
     }
     else {
         var sc_success = false;
-        tmp, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
+        tmp, CCA, S, L = AddressTranslation (vAddr, STORE);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         when not exceptionSignalled do
@@ -285,7 +283,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
 }
 
 bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+                   vAddr::vAddr, cond::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
@@ -298,23 +296,13 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, IorD,
-                         AccessType, cond)
-}
-
-unit StoreMem
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
-{
-   _ = StoreMemory (MemType,AccessLength,needAlign,MemElem,vAddr,IorD,
-                    AccessType,false);
-   nothing
+    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, cond)
 }
 
 bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 {
     var sc_success = false;
-    pAddr, CCA, S, L = AddressTranslation (vAddr, DATA, STORE);
+    pAddr, CCA, S, L = AddressTranslation (vAddr, STORE);
     when not exceptionSignalled do
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
@@ -401,7 +389,7 @@ word option Fetch =
         else if (('0':vAddr)+4 >+ [getBase(PCC)] + [getLength(PCC)]) then {SignalCapException_noReg(capExcLength); None}
         else if not getPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
         else {
-            pc, cca = AddressTranslation (vAddr, INSTRUCTION, LOAD);
+            pc, cca = AddressTranslation (vAddr, LOAD);
             if exceptionSignalled then None else Some (ReadInst (pc))
         }
     }

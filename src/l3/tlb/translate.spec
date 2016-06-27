@@ -4,7 +4,7 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
+pAddr * CCA AddressTranslation (vAddr::vAddr, AccessType::AccessType) =
 {
    unmapped, valid = CheckSegment (vAddr);
    if valid then

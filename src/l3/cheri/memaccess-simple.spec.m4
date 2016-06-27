@@ -135,8 +135,7 @@ unit Write256 (addr::bits(35), data::bits(256)) =
 
 -- memory loads
 
-dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD,
-                     AccessType::AccessType, link::bool) =
+dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
@@ -158,8 +157,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, IorD::IorD
     }
 }
 
-dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr,
-                  IorD::IorD, AccessType::AccessType, link::bool) =
+dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
@@ -172,7 +170,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
-    else LoadMemoryCap(MemType, needAlign, final_vAddr, IorD, AccessType, link)
+    else LoadMemoryCap(MemType, needAlign, final_vAddr, link)
 }
 
 Capability LoadCap (vAddr::vAddr, link::bool) =
@@ -192,8 +190,7 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
 
 -- memory stores
 
-bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, needAlign::bool,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, needAlign::bool, vAddr::vAddr, cond::bool) =
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
@@ -234,8 +231,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
     }
 }
 
-bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-                   vAddr::vAddr, IorD::IorD, AccessType::AccessType, cond::bool) =
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword, vAddr::vAddr, cond::bool) =
 {
     final_vAddr = vAddr + getBase(CAPR(0)) + getOffset(CAPR(0));
     if not getTag(CAPR(0))
@@ -248,17 +244,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemE
         then {SignalCapException(capExcLength,0); UNKNOWN}
     else if not getPerms(CAPR(0)).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, IorD,
-                         AccessType, cond)
-}
-
-unit StoreMem
-   (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-    vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
-{
-   _ = StoreMemory (MemType,AccessLength,needAlign,MemElem,vAddr,IorD,
-                    AccessType,false);
-   nothing
+    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, final_vAddr, cond)
 }
 
 bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
