@@ -80,4 +80,6 @@ inline unit unmark_log (lvl::nat) =
      when lvl <= trace_level do log(lvl) <- Tail (log(lvl))
 
 --unit clear_logs () = log <- InitMap(Nil)
-unit clear_logs () = for i in 0 .. trace_level do log(i) <- Nil
+unit clear_logs =
+   when not PROVER_EXPORT do
+     for i in 0 .. trace_level do log(i) <- Nil
