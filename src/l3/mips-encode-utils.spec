@@ -1,7 +1,7 @@
-string r (n::reg) = "$" : [[n]::nat]
+inline string r (n::reg) = "$" : [[n]::nat]
 inline string c (n::reg) = ", " : r(n)
 string ihex (n::bits(N)) = (if n <+ 10 then "" else "0x") : ToLower([n])
-string i (n::bits(N)) = ", " : ihex(n)
+inline string i (n::bits(N)) = ", " : ihex(n)
 inline string oi (n::bits(N)) = if n == 0 then "" else i(n)
 
 string op1i (s::string, n::bits(N)) =
