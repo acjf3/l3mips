@@ -188,7 +188,7 @@ M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
 all: $(SIM)
 
 hol: ${L3SRC}
-	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
+	echo 'HolExport.sigDocs false; HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
 
 isabelle: ${L3SRC}
 	echo 'IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI")' | l3
