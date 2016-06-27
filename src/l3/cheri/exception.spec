@@ -136,7 +136,8 @@ unit SignalException (ExceptionType::ExceptionType) =
     -- move KCC to PCC
     PCC <- KCC;
 
-    PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
+    --PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
+    PC <- (vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)) - getBase(PCC);
     mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 
