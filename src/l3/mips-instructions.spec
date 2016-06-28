@@ -635,7 +635,7 @@ define Trap > TNEI (rs::reg, immediate::bits(16)) =
 -----------------------------------
 unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    memdoubleword = LoadMemory (BYTE, BYTE, false, vAddr, false);
    when not exceptionSignalled do
    {
@@ -648,7 +648,7 @@ unit loadByte (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 
 unit loadHalf (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    memdoubleword =
       LoadMemory (HALFWORD, HALFWORD, true, vAddr, false);
    when not exceptionSignalled do
@@ -665,7 +665,7 @@ unit loadHalf (base::reg, rt::reg, offset::bits(16), unsigned::bool) =
 unit loadWord (link::bool, base::reg, rt::reg, offset::bits(16),
                unsigned::bool) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    memdoubleword = LoadMemory (WORD, WORD, true, vAddr, link);
    when not exceptionSignalled do
    {
@@ -680,7 +680,7 @@ unit loadWord (link::bool, base::reg, rt::reg, offset::bits(16),
 
 unit loadDoubleword (link::bool, base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    memdoubleword =
       LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, link);
    when not exceptionSignalled do GPR(rt) <- memdoubleword
@@ -720,7 +720,7 @@ define Load > LLD (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
    memdoubleword =
@@ -748,7 +748,7 @@ define Load > LWL (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
    memdoubleword =
@@ -778,7 +778,7 @@ define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<2:0> ?? BigEndianCPU^3;
    memdoubleword =
       LoadMemory (DOUBLEWORD, byte, false, vAddr, false);
@@ -802,7 +802,7 @@ define Load > LDL (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<2:0> ?? BigEndianCPU^3;
    memdoubleword =
     LoadMemory (DOUBLEWORD, DOUBLEWORD - byte, false, vAddr, false);
@@ -826,7 +826,7 @@ define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SB (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    bytesel = vAddr<2:0> ?? BigEndianCPU^3;
    datadoubleword = GPR(rt) << (0n8 * [bytesel]);
    _ = StoreMemory (BYTE, BYTE, false, datadoubleword, vAddr, false);
@@ -838,7 +838,7 @@ define Store > SB (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SH (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    bytesel = vAddr<2:0> ?? (BigEndianCPU^2 : '0');
    datadoubleword = GPR(rt) << (0n8 * [bytesel]);
    _ = StoreMemory (HALFWORD, HALFWORD, true, datadoubleword, vAddr, false);
@@ -853,7 +853,7 @@ define Store > SH (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 bool storeWord (base::reg, rt::reg, offset::bits(16), cond::bool) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
    datadoubleword = GPR(rt) << (0n8 * [bytesel]);
    StoreMemory (WORD, WORD, true, datadoubleword, vAddr, cond)
@@ -861,7 +861,7 @@ bool storeWord (base::reg, rt::reg, offset::bits(16), cond::bool) =
 
 bool storeDoubleword (base::reg, rt::reg, offset::bits(16), cond::bool) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    datadoubleword = GPR(rt);
    StoreMemory
       (DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, cond)
@@ -898,7 +898,7 @@ define Store > SCD (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
    datadoubleword`64 =
@@ -921,7 +921,7 @@ define Store > SWL (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
    datadoubleword =
@@ -946,7 +946,7 @@ define Store > SWR (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<2:0> ?? BigEndianCPU^3;
    datadoubleword =
       match byte
@@ -970,7 +970,7 @@ define Store > SDL (base::reg, rt::reg, offset::bits(16)) =
 -----------------------------------
 define Store > SDR (base::reg, rt::reg, offset::bits(16)) =
 {
-   vAddr = SignExtend (offset) + GPR(base);
+   vAddr = getVirtualAddress(offset, GPR(base));
    byte = vAddr<2:0> ?? BigEndianCPU^3;
    datadoubleword =
       match byte

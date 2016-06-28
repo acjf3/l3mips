@@ -51,6 +51,9 @@ unit Write256 (pAddr::bits(35), data::bits(256)) =
 -- memory API
 ---------------------------------------------------------------------------
 
+-- virtual address computation
+vAddr getVirtualAddress (o::bits(16), r::bits(64)) = SignExtend(o) + r
+
 -- memory load
 
 dword LoadMemory

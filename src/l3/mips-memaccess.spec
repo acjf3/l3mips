@@ -75,6 +75,9 @@ unit watchForStore (addr::pAddr, data::dword, mask::dword) =
      case None => nothing
   }
 
+-- virtual address computation
+vAddr getVirtualAddress (o::bits(16), r::bits(64)) = SignExtend(o) + r
+
 -- Pimitive memory load (with memory-mapped devices)
 
 dword LoadMemory
