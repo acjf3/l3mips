@@ -559,9 +559,9 @@ define COP1 > LDC1 (ft::reg, offset::bits(16), base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = SignExtend (offset) + GPR(base);
+        vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
         memdoubleword =
-            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, false);
         when not exceptionSignalled do FGR(ft) <- memdoubleword
     }
 
@@ -573,9 +573,9 @@ define COP1 > LDXC1 (fd::reg, index::reg, base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = GPR(index) + GPR(base);
+        vAddr = getVirtualAddress(GPR(index) + GPR(base));
         memdoubleword =
-            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, DATA, LOAD, false);
+            LoadMemory (DOUBLEWORD, DOUBLEWORD, true, vAddr, false);
         when not exceptionSignalled do FGR(fd) <- memdoubleword
     }
 
@@ -587,8 +587,8 @@ define COP1 > LWC1 (ft::reg, offset::bits(16), base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = SignExtend (offset) + GPR(base);
-        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
+        vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
+        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, false);
         when not exceptionSignalled do
         {
             byte = vAddr<2:0> ?? (BigEndianCPU : '00');
@@ -606,8 +606,8 @@ define COP1 > LWXC1 (ft::reg, index::reg, base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = GPR(index) + GPR(base);
-        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, DATA, LOAD, false);
+        vAddr = getVirtualAddress(GPR(index) + GPR(base));
+        memdoubleword = LoadMemory (WORD, WORD, true, vAddr, false);
         when not exceptionSignalled do
         {
             byte = vAddr<2:0> ?? (BigEndianCPU : '00');
@@ -892,10 +892,9 @@ define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = SignExtend (offset) + GPR(base);
+        vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
         datadoubleword = FGR(ft);
-        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr,
-            DATA, STORE, false);
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false);
         nothing
     }
 
@@ -907,10 +906,9 @@ define COP1 > SDXC1 (fs::reg, index::reg, base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = GPR(index) + GPR(base);
+        vAddr = getVirtualAddress(GPR(index) + GPR(base));
         datadoubleword = FGR(fs);
-        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr,
-            DATA, STORE, false);
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false);
         nothing
     }
 
@@ -960,11 +958,10 @@ define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = SignExtend (offset) + GPR(base);
+        vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE,
-            false);
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false);
         nothing
     }
 
@@ -976,11 +973,10 @@ define COP1 > SWXC1 (ft::reg, index::reg, base::reg) =
         SignalCP1UnusableException
     else
     {
-        vAddr = GPR (index) + GPR(base);
+        vAddr = getVirtualAddress(GPR (index) + GPR(base));
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, DATA, STORE,
-            false);
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false);
         nothing
     }
 

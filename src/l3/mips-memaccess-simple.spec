@@ -52,7 +52,7 @@ unit Write256 (pAddr::bits(35), data::bits(256)) =
 ---------------------------------------------------------------------------
 
 -- virtual address computation
-vAddr getVirtualAddress (o::bits(16), r::bits(64)) = SignExtend(o) + r
+vAddr getVirtualAddress (addr::bits(64)) = addr
 
 -- memory load
 

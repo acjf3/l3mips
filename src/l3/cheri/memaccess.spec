@@ -96,8 +96,7 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 }
 
 -- virtual address computation
-vAddr getVirtualAddress (o::bits(16), r::bits(64)) =
-    SignExtend(o) + r + getBase(CAPR(0)) + getOffset(CAPR(0))
+vAddr getVirtualAddress (addr::bits(64)) = addr + getBase(CAPR(0)) + getOffset(CAPR(0))
 
 -----------------
 -- Data accesses
