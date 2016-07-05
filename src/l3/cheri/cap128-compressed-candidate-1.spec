@@ -275,7 +275,8 @@ string cap_inner_rep (cap::Capability) =
 -}
 
 string log_cap_write (cap::Capability) =
-    "s:":(if getSealed(cap) then "1" else "0"):
+    "t:":(if getTag(cap) then "1" else "0"):
+    " s:":(if getSealed(cap) then "1" else "0"):
     " perms:0x":hex23(cap.uperms:cap.perms): -- TODO report 2 architectural fields
     " type:0x":hex16(getType(cap)):
     " offset:0x":hex64(getOffset(cap)):
