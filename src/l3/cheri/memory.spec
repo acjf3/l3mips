@@ -23,6 +23,7 @@ record MemStats
     valid_cap_writes    :: nat
     invalid_cap_writes  :: nat
     working_set         :: nat
+    mem_4K_touched      :: nat
     tags_now_set        :: nat
     tags_ever_set       :: nat
     tags_4K_now_set     :: nat
@@ -37,17 +38,18 @@ MemStats nullMemStats =
     stats.data_reads  <- 0;
     stats.data_writes <- 0;
     stats.inst_reads  <- 0;
-    stats.valid_cap_reads    <- 0;
-    stats.invalid_cap_reads  <- 0;
-    stats.valid_cap_writes   <- 0;
-    stats.invalid_cap_writes <- 0;
-    stats.working_set        <- 0;
-    stats.tags_now_set       <- 0;
-    stats.tags_ever_set      <- 0;
-    stats.tags_4K_now_set    <- 0;
-    stats.tags_4K_ever_set   <- 0;
-    stats.tags_16K_now_set   <- 0;
-    stats.tags_16K_ever_set  <- 0;
+    stats.valid_cap_reads       <- 0;
+    stats.invalid_cap_reads     <- 0;
+    stats.valid_cap_writes      <- 0;
+    stats.invalid_cap_writes    <- 0;
+    stats.working_set           <- 0;
+    stats.mem_4K_touched        <- 0;
+    stats.tags_now_set          <- 0;
+    stats.tags_ever_set         <- 0;
+    stats.tags_4K_now_set       <- 0;
+    stats.tags_4K_ever_set      <- 0;
+    stats.tags_16K_now_set      <- 0;
+    stats.tags_16K_ever_set     <- 0;
     stats
 }
 
@@ -63,6 +65,7 @@ string strMemStats (pfx::string, memStats::MemStats) =
     strStat(pfx:"valid_cap_writes", memStats.valid_cap_writes):
     strStat(pfx:"invalid_cap_writes", memStats.invalid_cap_writes):
     strStat(pfx:"working_set", memStats.working_set): " memory locations or " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\\n" :
+    strStat(pfx:"mem_4K_touched", memStats.mem_4K_touched): " (": [4096 div CAPBYTEWIDTH] :" memory locations or 4K bytes)\\n" :
     strStat(pfx:"tags_now_set", memStats.tags_now_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
     strStat(pfx:"tags_ever_set", memStats.tags_ever_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
     strStat(pfx:"tags_4K_now_set", memStats.tags_4K_now_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\\n" :
@@ -80,6 +83,7 @@ string strCsvHeaderMemStats (pfx::string) =
     pfx:"invalid_cap_writes,":
     pfx:"bytes_per_mem_location,":
     pfx:"working_set,":
+    pfx:"mem_4K_touched,":
     pfx:"tags_now_set,":
     pfx:"tags_ever_set,":
     pfx:"tags_4K_now_set,":
@@ -97,6 +101,7 @@ string strCsvMemStats (memStats::MemStats) =
     [memStats.invalid_cap_writes] : "," :
     [CAPBYTEWIDTH] : "," :
     [memStats.working_set] : "," :
+    [memStats.mem_4K_touched] : "," :
     [memStats.tags_now_set] : "," :
     [memStats.tags_ever_set] : "," :
     [memStats.tags_4K_now_set] : "," :
@@ -106,14 +111,16 @@ string strCsvMemStats (memStats::MemStats) =
 
 construct ShadowMem {memUntouched memR memW memRW}
 construct ShadowTags {tagUnused tagTouched::bool}
-declare static_shadow_MEM   :: CAPADDR -> ShadowMem
-declare static_shadow_TAGS  :: CAPADDR -> ShadowTags
-declare static_shadow_4K_TAGS  :: bits(52) -> ShadowTags
+declare static_shadow_MEM       :: CAPADDR  -> ShadowMem
+declare static_shadow_4K_MEM    :: bits(52) -> ShadowMem
+declare static_shadow_TAGS      :: CAPADDR  -> ShadowTags
+declare static_shadow_4K_TAGS   :: bits(52) -> ShadowTags
 declare static_shadow_16K_TAGS  :: bits(50) -> ShadowTags
-declare dynamic_shadow_MEM  :: CAPADDR -> ShadowMem
-declare dynamic_shadow_TAGS :: CAPADDR -> ShadowTags
+declare dynamic_shadow_MEM      :: CAPADDR  -> ShadowMem
+declare dynamic_shadow_4K_MEM   :: bits(52) -> ShadowMem
+declare dynamic_shadow_TAGS     :: CAPADDR  -> ShadowTags
 declare dynamic_shadow_4K_TAGS  :: bits(52) -> ShadowTags
-declare dynamic_shadow_16K_TAGS  :: bits(50) -> ShadowTags
+declare dynamic_shadow_16K_TAGS :: bits(50) -> ShadowTags
 
 declare staticMemStats  :: MemStats
 declare dynamicMemStats :: MemStats
@@ -132,11 +139,12 @@ unit initMemStats =
 
 unit clearDynamicMemStats () =
 {
-    dynamic_shadow_MEM  <- InitMap (memUntouched);
-    dynamic_shadow_TAGS <- InitMap (tagUnused);
-    dynamic_shadow_4K_TAGS <- InitMap (tagUnused);
+    dynamic_shadow_MEM      <- InitMap (memUntouched);
+    dynamic_shadow_4K_MEM   <- InitMap (memUntouched);
+    dynamic_shadow_TAGS     <- InitMap (tagUnused);
+    dynamic_shadow_4K_TAGS  <- InitMap (tagUnused);
     dynamic_shadow_16K_TAGS <- InitMap (tagUnused);
-    dynamicMemStats <- nullMemStats
+    dynamicMemStats         <- nullMemStats
 }
 
 unit stats_data_reads_updt (inc::int) =
@@ -197,6 +205,27 @@ unit updt_shadow_stats_read (addr::CAPADDR, data::DataType) =
         }
         case memW => dynamic_shadow_MEM(addr) <- memRW
         case _    => nothing
+    };
+    addr4k = [addr >>+ (12-Log2(CAPBYTEWIDTH))];
+    match static_shadow_4K_MEM(addr4k)
+    {
+        case memUntouched =>
+        {
+            static_shadow_4K_MEM(addr4k)    <- memR;
+            staticMemStats.mem_4K_touched   <- staticMemStats.mem_4K_touched + 1
+        }
+        case memW => static_shadow_4K_MEM(addr4k) <- memRW
+        case _    => nothing
+    };
+    match dynamic_shadow_4K_MEM(addr4k)
+    {
+        case memUntouched =>
+        {
+            dynamic_shadow_4K_MEM(addr4k)   <- memR;
+            dynamicMemStats.mem_4K_touched  <- dynamicMemStats.mem_4K_touched + 1
+        }
+        case memW => dynamic_shadow_4K_MEM(addr4k) <- memRW
+        case _    => nothing
     }
 }
 
@@ -233,6 +262,16 @@ unit updt_shadow_stats_write (addr::CAPADDR, data::DataType) =
         }
     };
     addr4k = [addr >>+ (12-Log2(CAPBYTEWIDTH))];
+    match static_shadow_4K_MEM(addr4k)
+    {
+        case memUntouched =>
+        {
+            static_shadow_4K_MEM(addr4k)    <- memW;
+            staticMemStats.mem_4K_touched   <- staticMemStats.mem_4K_touched + 1
+        }
+        case memR => static_shadow_4K_MEM(addr4k) <- memRW
+        case _ => nothing
+    };
     match static_shadow_4K_TAGS(addr4k)
     {
         case tagUnused => when tagged do
@@ -280,6 +319,16 @@ unit updt_shadow_stats_write (addr::CAPADDR, data::DataType) =
             dynamicMemStats.working_set  <- dynamicMemStats.working_set + 1
         }
         case memR => dynamic_shadow_MEM(addr) <- memRW
+        case _ => nothing
+    };
+    match dynamic_shadow_4K_MEM(addr4k)
+    {
+        case memUntouched =>
+        {
+            dynamic_shadow_4K_MEM(addr4k)   <- memW;
+            dynamicMemStats.mem_4K_touched  <- dynamicMemStats.mem_4K_touched + 1
+        }
+        case memR => dynamic_shadow_4K_MEM(addr4k) <- memRW
         case _ => nothing
     };
     match dynamic_shadow_TAGS(addr)
