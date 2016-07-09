@@ -122,6 +122,58 @@ To control the name of the generated simulator, set the `SIM` variable:
 make SIM=mySimulatorName
 ```
 
+Runing the simulator
+--------------------
+
+When running the `l3mips` simulator, a set of command line arguments can be specified. A list of these flags is provided when running the simulator with `-h` or `--help`, or without any argument. The simulator should be run as follows:
+
+```
+l3mips [arguments] <file>
+```
+
+with `<file>` being the binary file to execute, and `[arguments]` an optional list of arguments drawn from the following:
+
++ `--cycles <number>`       : maximum number of instructions being simulated
++ `--trace <level>`         : trace verbosity level (0 default, 5 maximum)
++ `--pc <address>`          : initial program counter value and start address for main Intel Hex file
++ `--at <address> <file>`   : load extra `<file>` into physical memory at location `<address>`
++ `--watch-paddr <address>` : specify a physical `<address>` to monitor memory accesses
++ `--nbcore <number>`       : `<number>` of core(s) to simulate (default is 1)
++ `--uart <address>`        : base physical `<address>` for the UART device
++ `--uart-delay <number>`   : UART cycle delay (determines baud rate)
++ `--uart-in <file>`        : UART input `<file>` (stdin if omitted)
++ `--uart-out <file>`       : UART output `<file>` (stdout if omitted)
++ `--trace-out <file>`      : Traces output `<file>` (stdout if omitted)
++ `--stats-out <file>`      : Stats output `<file>` (stdout if omitted)
++ `--stats-format <format>` : Stats output format. `<format>` can be set to `csv`, or to anything else for human readable stats output format (default is human readable)
++ `--format <format>`       : File format for the specified binaries. `<format>` can be set to `raw` or `hex`.
++ `--non-block <on|off>`    : non-blocking UART input `on` or `off`
++ `--dump-stats <number>`   : display statistics every `<number>` simulation steps
++ `--rdhwr-extra <on|off>`  : enable simulator control features through rdhwr inst, `on` or `off`
++ `--schedule <file>`       : `<file>` of core ids indicating schedule. When ommitted, round robin between cores
++ `--ignore <string>`       : UNPREDICTABLE#(`<string>`) behaviour is ignored (currently `<string>` must be `HI` or `LO`)
++ `-h` or `--help`          : print help message
+
+Booting FreeBSD
+---------------
+
+To boot FreeBSD, you will need a kernel image. There exist a CHERI port of FreeBSD, [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd), available on github.
+
+Some kernel images are readily available in the [BERI cpu website software download section](http://www.cl.cam.ac.uk/research/security/ctsrd/beri/downloads-sw.html). To get "arcina-cheribsd-beri-sim-mdroot-singleuser-kernel", run the following commands:
+
+```
+wget http://www.cl.cam.ac.uk/research/security/ctsrd/beri/downloads/arcina-cheribsd-beri-sim-mdroot-singleuser-kernel.bz2
+bunzip2 arcina-cheribsd-beri-sim-mdroot-singleuser-kernel.bz2
+```
+
+To run your kernel image in the `l3mips` simulator, run the command:
+
+```
+./l3mips --non-block on --ignore HI --ignore LO --format raw --at 1048576 <your-kernel-image> roms/simboot.mem
+```
+
+Booting a FreeBSD kernel and getting to a user prompt takes around 10 mins on a recent PC.
+
 Project hierarchy
 -----------------
 
@@ -133,35 +185,6 @@ Project hierarchy
         + tlb
     + sml
         + lib
-
-roms directory
---------------
-
-This directory contains some MIPS binaries that the emulator can run.
-
-###FreeBSD
-
-(from within the `roms/` directory)
-To boot FreeBSD, download a kernel image:
-
-`$ wget http://www.cl.cam.ac.uk/research/security/ctsrd/beri/downloads/20150121-cheribsd-beri-sim-mdroot-singleuser-kernel.bz2`
-
-Uncompress it:
-
-`$ bunzip2 20150121-cheribsd-beri-sim-mdroot-singleuser-kernel.bz2`
-
-And run it through the emulator:
-
-`$ ../l3mips --non-block on --ignore HI --ignore LO --format raw --at 1048576 20150121-cheribsd-beri-sim-mdroot-singleuser-kernel simboot.mem`
-
-Booting takes around 10 mins on a modern PC.
-
-For users in the Computer Laboratory, a dual-core kernel image is available in:
-`/usr/groups/ctsrd/cheri/20140819-cheribsd-beri-sim-2core-mdroot-singleuser-kernel.bz2`
-
-The dual core simulation can be run using:
-
-`$ ../l3mips --nbcore 2 --non-block on --ignore HI --ignore LO --format raw --at 1048576 20140819-cheribsd-beri-sim-2core-mdroot-singleuser-kernel simboot.mem`
 
 src directory
 -------------
