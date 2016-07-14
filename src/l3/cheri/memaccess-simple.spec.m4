@@ -21,16 +21,16 @@ pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr) =
 -- dummy stubs
 ---------------------------------------------------------------------------
 
-unit initMemAccessStats = nothing
-unit initMemStats = nothing
+inline unit initMemAccessStats = nothing
+inline unit initMemStats = nothing
 
-string printMemAccessStats = "No MemAccessStats implemented"
-string csvHeaderMemAccessStats = "No csvHeaderAccessStats implemented"
-string csvMemAccessStats = "No csvMemAccessStats implemented"
-string printMemStats = "No MemStats implemented"
-string csvHeaderMemStats = "No csvHeaderMemStats implemented"
-string csvMemStats = "No csvMemStats implemented"
-unit clearDynamicMemStats () = nothing
+inline string printMemAccessStats = "No MemAccessStats implemented"
+inline string csvHeaderMemAccessStats = "No csvHeaderAccessStats implemented"
+inline string csvMemAccessStats = "No csvMemAccessStats implemented"
+inline string printMemStats = "No MemStats implemented"
+inline string csvHeaderMemStats = "No csvHeaderMemStats implemented"
+inline string csvMemStats = "No csvMemStats implemented"
+inline unit clearDynamicMemStats () = nothing
 
 declare watchPaddr::bits(40) option
 
@@ -201,20 +201,19 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
         return UNKNOWN
     }
     else {
-        var sc_success = false;
         pAddr = AdjustEndian (MemType, [vAddr]);
-        l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
-        mask::bits(64) = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
 
-        when cond do match LLbit
-        {
-            case None => #UNPREDICTABLE("conditional store: LLbit not set")
-            case Some (false) => sc_success <- false
-            case Some (true) =>
-                if CP0.LLAddr == [pAddr] then
-                    sc_success <- true
-                else #UNPREDICTABLE("conditional store: address does not match previous LL address")
-        };
+        sc_success =
+          cond and
+          match LLbit
+          {
+              case None => #UNPREDICTABLE("conditional store: LLbit not set")
+              case Some (false) => false
+              case Some (true) =>
+                  if CP0.LLAddr == [pAddr] then
+                      true
+                  else #UNPREDICTABLE("conditional store: address does not match previous LL address")
+          };
 
         LLbit <- None;
 
@@ -228,7 +227,11 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
                     all_state(i).c_LLbit <- Some (false)
         };
         when not cond or sc_success do
-            WriteData(pAddr<39:3>, MemElem, mask);
+        {
+            x = 0n8 * ([AccessLength] + 1);
+            mask = (1 << x - 1) << (0n64 - (x + 8 * [vAddr<2:0>]));
+            WriteData(pAddr<39:3>, MemElem, mask)
+        };
         return sc_success
     }
 }
