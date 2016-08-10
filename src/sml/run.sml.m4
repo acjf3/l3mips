@@ -44,8 +44,7 @@ val hex64 = phex 64
 fun failExit s = ( print (s ^ "\n"); OS.Process.exit OS.Process.failure )
 fun err e s = failExit ("Failed to " ^ e ^ " file \"" ^ s ^ "\"")
 
-fun debug_print s = print("==DEBUG== "^s)
-fun debug_println s = print("==DEBUG== "^s^"\n")
+fun debug_print s = TextIO.print ("==DEBUG== " ^ s)
 
 local
    val endLine = ":00000001FF"
@@ -381,7 +380,6 @@ in
       ifdef(`CACHE', `; mips.l2PrefetchDepth := !l2_prefetch_depth', `dnl')
       ifdef(`CACHE', `; mips.l2Prefetcher := !l2_prefetcher', `dnl')
       ; mips.print := debug_print
-      ; mips.println := debug_println
       ; List.app
           (fn (a, s) =>
              ( print ("Loading " ^ s ^ "... ")

@@ -7,6 +7,14 @@
 -- Logging
 --------------------------------------------------
 
+declare {
+  trace_level :: nat
+  log         :: nat -> string list   -- One log per "trace level"
+  print       :: string -> unit
+}
+
+unit println (s::string) = print (s : "\\n")
+
 string cpr (r::reg) =
    "c0_" :
    match r
@@ -68,9 +76,6 @@ string log_w_mem (addr::bits(37), mask::bits(64), data::dword) =
 string log_r_mem (addr::bits(37), data::dword) =
    "data <- MEM[0x" : hex40(addr:'000') : "]: 0x" : hex64(data)
 
-declare trace_level :: nat
-declare log :: nat -> string list   -- One log per "trace level"
-
 inline unit mark_log (lvl::nat, s::string) =
    when not PROVER_EXPORT do
      when lvl <= trace_level do log(lvl) <- s @ log(lvl)
@@ -79,7 +84,6 @@ inline unit unmark_log (lvl::nat) =
    when not PROVER_EXPORT do
      when lvl <= trace_level do log(lvl) <- Tail (log(lvl))
 
---unit clear_logs () = log <- InitMap(Nil)
 unit clear_logs =
    when not PROVER_EXPORT do
      for i in 0 .. trace_level do log(i) <- Nil

@@ -7,7 +7,6 @@
 #######################################
 L3SRCDIR=src/l3
 
-L3SRCBASE+=mips-print.spec
 ifdef CAP
 L3SRCBASE+=cheri/tlb-types.spec
 else
