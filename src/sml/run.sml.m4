@@ -172,19 +172,13 @@ fun storeVecInMemHelper vec base i =
   end
 
 fun storeVecInMem (base, vec) =
-  let
-    val b = IntInf.andb (base div 32, 0x7ffffffff)
-  in
-    storeVecInMemHelper vec b 0
-  end
+  storeVecInMemHelper vec (IntInf.andb (base div 32, 0x7ffffffff)) 0
 
 fun readRaw filename =
   let
     val istream = BinIO.openIn filename
-    val vec     = BinIO.inputAll istream
-    val ()      = BinIO.closeIn istream
   in
-    vec
+    BinIO.inputAll istream before BinIO.closeIn istream
   end
 
 local
@@ -212,19 +206,18 @@ end
 
 val bytesToString =
    String.implode o List.map (Char.chr o IntInf.toInt o BitsN.toNat)
+
 val stringToBytes =
    List.map (fn c => BitsN.fromNativeInt (Char.ord c, 8)) o String.explode
 
 fun streamPrint strm s =
-  if s = "" then () else
-    case !strm of
-        SOME m => (TextIO.output (m, s); TextIO.flushOut m)
-      | NONE => TextIO.print s
+  if s = "" then ()
+  else case !strm of
+          SOME m => (TextIO.output (m, s); TextIO.flushOut m)
+        | NONE => TextIO.print s
 
 fun uart_output () =
-   let
-      val s = bytesToString (mips.JTAG_UART_output ())
-   in streamPrint uart_out s end
+  streamPrint uart_out (bytesToString (mips.JTAG_UART_output ()))
 
 fun uart_input () =
    let
@@ -237,19 +230,18 @@ fun uart_input () =
         let
           val (readN, istrm) =
             case !uart_in of
-                SOME strm => (n, strm)
-              | NONE => if   !non_blocking_input
-                        then case TextIO.canInput (TextIO.stdIn, n) of
-                                 NONE   => (0, TextIO.stdIn)
-                               | SOME x => (x, TextIO.stdIn)
-                        else (print "UART in: "; (n, TextIO.stdIn))
+               SOME strm => (n, strm)
+             | NONE => if   !non_blocking_input
+                       then case TextIO.canInput (TextIO.stdIn, n) of
+                               NONE   => (0, TextIO.stdIn)
+                             | SOME x => (x, TextIO.stdIn)
+                       else (print "UART in: "; (n, TextIO.stdIn))
         in
           if readN > 0 then
             mips.JTAG_UART_input (stringToBytes(TextIO.inputN(istrm,readN)))
           else ()
         end
    end
-
 
 fun uart () =
    if !uart_delay <= 0 (* UART turned off *)
@@ -260,24 +252,31 @@ fun uart () =
 
 fun print_stats i =
   let
-    val t = Timer.checkCPUTimer(!cpu_time)
+    val t = Timer.checkCPUTimer (!cpu_time)
     val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
-    val s = if isSome(!dump_stat_freq) andalso ((i mod valOf(!dump_stat_freq)) = 0) then
-              (let val sstr = mips.dumpStats(i,(Real.toString ips,!stats_fmt)) in mips.clearDynamicStats (); sstr end)
-              else ""
-  in streamPrint stats_out s end
+    val s =
+      case Option.map (fn f => i mod f) (!dump_stat_freq) of
+         SOME 0 =>
+           let
+              val sstr = mips.dumpStats (i, (Real.toString ips, !stats_fmt))
+            in
+              mips.clearDynamicStats ()
+            ; sstr
+            end
+       | _ => ""
+  in
+    streamPrint stats_out s
+  end
 
-fun print_traces lvl =
-  let
-    fun sss n  = (String.concatWith "\n" (List.rev (mips.Map.lookup (!mips.log, n))))
-    fun ss n = if (sss n) = "" then "" else (sss n) ^ "\n"
-    val s = foldl
-            (fn (x,y) => if x <= lvl then
-                              y ^ (ss x)
-                         else "")
-            ""
-            (List.tabulate (lvl + 1, (fn x => x)))
-  in streamPrint trace_out s end
+local
+  fun log_string n =
+    case mips.Map.lookup (!mips.log, n) of
+       [] => ""
+     | l => String.concatWith "\n" (List.rev l) ^ "\n"
+in
+  fun print_traces lvl =
+    streamPrint trace_out (String.concat (List.tabulate (lvl + 1, log_string)))
+end
 
 (* ------------------------------------------------------------------------
    Schedule (denoting order in which cores are interleaved)
@@ -286,16 +285,15 @@ fun print_traces lvl =
 (* Returns next core id from given text stream *)
 fun readNextCoreId stream =
   case TextIO.inputLine stream of
-    NONE => failExit ("Reached end of schedule\n")
-  | SOME line =>
-        if line = "" then failExit ("Reached end of schedule\n")
-        else
-          case IntExtra.fromString (String.extract(line, 0,
-                 SOME (String.size(line)-1))) of
-              NONE   => failExit ("Bad core id in schedule: " ^ line)
-            | SOME i => if i >= !nb_core then (
-                          failExit ("Core id in schedule >= nb_core: " ^ line)
-                        ) else i
+     NONE => failExit ("Reached end of schedule\n")
+   | SOME "" => failExit ("Reached end of schedule\n")
+   | SOME line =>
+      (case IntExtra.fromString
+              (String.extract (line, 0, SOME (String.size line - 1))) of
+          NONE   => failExit ("Bad core id in schedule: " ^ line)
+        | SOME i => if i >= !nb_core
+                      then failExit ("Core id in schedule >= nb_core: " ^ line)
+                    else i)
 
 (* Returns id of next core to run *)
 fun scheduleNext () =
@@ -320,9 +318,11 @@ fun end_sim i =
       val t = Timer.checkCPUTimer(!cpu_time)
       val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
    in
-      if isSome(!dump_stat_freq) then print(mips.dumpStats(i,(Real.toString ips,!stats_fmt))) else ()
+      if Option.isSome (!dump_stat_freq)
+         then print (mips.dumpStats (i, (Real.toString ips, !stats_fmt)))
+      else ()
     ; print ("Completed " ^ IntInf.toString (i + 1) ^ " instructions in " ^
-             Time.toString(#usr(t)) ^ " seconds ")
+             Time.toString (#usr (t)) ^ " seconds ")
     ; print ("(" ^ Real.toString ips ^ " inst/sec)\n")
    end
 
@@ -497,10 +497,13 @@ fun getCode p =
 
 fun processOptions s commandLine =
   case processOption s commandLine of
-      (NONE, rest)   => ([], rest)
-    | (SOME x, rest) => let val (xs, rest2) = processOptions s rest
-                        in  (x::xs, rest2)
-                        end
+     (NONE, rest)   => ([], rest)
+   | (SOME x, rest) =>
+      let
+        val (xs, rest2) = processOptions s rest
+      in
+        (x::xs, rest2)
+      end
 
 val () =
    case getArguments () of
