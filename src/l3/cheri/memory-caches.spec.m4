@@ -261,18 +261,24 @@ match current_l1_type
 
 -- instanciate l2 cache --
 
--- replacement policy --
-declare l2ReplacePolicy :: nat
--- naive replace policy
-declare l2LastVictimWay::nat
--- LRU replace policy
-declare l2LRUBits::L2Index -> nat list
+declare {
+  -- replacement policy   --
+  l2ReplacePolicy :: nat
+  l2LastVictimWay :: nat -- naive replace policy
+  l2LRUBits       :: L2Index -> nat list -- LRU replace policy
+  -- prefetching --
+  l2PrefetchDepth :: nat
+  l2Prefetcher    :: nat
+  c_l2            :: nat -> DirectMappedL2
+}
 
--- prefetching --
-declare l2PrefetchDepth :: nat
-declare l2Prefetcher :: nat
+unit setL2 (replace_policy::nat, prefetch_depth::nat, l2_pefetcher::nat) =
+{
+  l2ReplacePolicy <- replace_policy;
+  l2PrefetchDepth <- prefetch_depth;
+  l2Prefetcher <- l2_pefetcher
+}
 
-declare c_l2 :: nat -> DirectMappedL2
 component L2Cache (way::nat, idx::L2Index) :: L2Entry
 {
     value = { m = c_l2(way); m(idx) }
