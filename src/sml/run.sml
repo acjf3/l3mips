@@ -23,9 +23,9 @@ val dump_stat_freq = ref (NONE: int option)
 val stats_fmt = ref (NONE: string option)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
-ifdef(`CACHE', `val l2_replace_policy = ref 0', `dnl')
-ifdef(`CACHE', `val l2_prefetch_depth = ref 0', `dnl')
-ifdef(`CACHE', `val l2_prefetcher = ref 0', `dnl')
+val l2_replace_policy = ref 0
+val l2_prefetch_depth = ref 0
+val l2_prefetcher = ref 0
 
 (* --------------------------------------------------------------------------
    Loading code into memory from Hex file
@@ -253,19 +253,17 @@ fun uart () =
 fun print_stats i =
   let
     val t = Timer.checkCPUTimer (!cpu_time)
-    val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
-    val s =
+    val ips = Real.fromLargeInt i / Time.toReal (#usr t)
+  in
       case Option.map (fn f => i mod f) (!dump_stat_freq) of
          SOME 0 =>
            let
               val sstr = mips.dumpStats (i, (Real.toString ips, !stats_fmt))
             in
               mips.clearDynamicStats ()
-            ; sstr
+            ; streamPrint stats_out (sstr)
             end
-       | _ => ""
-  in
-    streamPrint stats_out s
+       | _ => ()
   end
 
 local
@@ -316,146 +314,128 @@ val () = mips.UNPREDICTABLE_TLB := (fn _ => raise mips.UNPREDICTABLE "TLB")
 fun end_sim i =
    let
       val t = Timer.checkCPUTimer(!cpu_time)
-      val ips = Real.fromLargeInt i / Time.toReal (#usr(t))
+      val ips = Real.fromLargeInt i / Time.toReal (#usr t)
    in
       if Option.isSome (!dump_stat_freq)
          then print (mips.dumpStats (i, (Real.toString ips, !stats_fmt)))
       else ()
     ; print ("Completed " ^ IntInf.toString (i + 1) ^ " instructions in " ^
-             Time.toString (#usr (t)) ^ " seconds ")
-    ; print ("(" ^ Real.toString ips ^ " inst/sec)\n")
+             Time.toString (#usr t) ^ " seconds " ^
+             "(" ^ Real.toString ips ^ " inst/sec)\n")
    end
 
-fun loop mx i =
-   let
-      val _ =  mips.switchCore (scheduleNext ())
-      val exl0 = #EXL (#Status (mips.CP0 ()))
-      val pc = mips.PC ()
-   in
-    uart ()
-    ; mips.instCnt := i
-    ; mips.Next ()
-    ; print_traces (!trace_level)
-    ; print_stats i
-    ; if !mips.done orelse i = mx then end_sim i
-      else loop mx (if not exl0 andalso #EXL (#Status (mips.CP0 ()))
-                       then ((*print "exception level changed\n";*) i+1)
-                    else i + 1)
-   end
-
-fun decr i = if i <= 0 then i else i - 1
-
-fun statsLoop mx i =
-   ( mips.switchCore (scheduleNext ())
-   ; uart ()
-   ; mips.Next ()
-   ; print_traces 0
-   ; print_stats i
-   ; if !mips.done orelse mx = 1 then end_sim i
-     else statsLoop (decr mx) (i + 1)
-   )
-
-fun pureLoop mx i =
-   ( mips.switchCore (scheduleNext ())
-   ; uart ()
-   ; mips.Next ()
-   ; print_traces 0
-   ; if !mips.done orelse mx = 1 then end_sim i
-     else pureLoop (decr mx) (i + 1)
-   )
-
-local
-   fun t f x = if !time_run then Runtime.time f x else f x
-in
-   fun run_mem mx =
-      if (!trace_level) < 1 then (if not(isSome(!dump_stat_freq)) then t (pureLoop mx) 0 else  t (statsLoop mx) 0) else t (loop mx) 0
-   fun run (pc, uart) mx code raw =
-      ( List.tabulate(Nat.toNativeInt (!nb_core),
-          fn x => ( mips.switchCore (Nat.fromNativeInt x)
-                  ; mips.initMips (pc, (uart, !rdhwr_extra))
-                  ))
-      ; mips.totalCore := !nb_core
-      ; mips.watchPaddr := !watch_paddr
-      ifdef(`CACHE', `; mips.l2ReplacePolicy := !l2_replace_policy', `dnl')
-      ifdef(`CACHE', `; mips.l2PrefetchDepth := !l2_prefetch_depth', `dnl')
-      ifdef(`CACHE', `; mips.l2Prefetcher := !l2_prefetcher', `dnl')
-      ; mips.print := debug_print
-      ; List.app
-          (fn (a, s) =>
-             ( print ("Loading " ^ s ^ "... ")
-             ; if raw
-                 then storeVecInMem (a, readRaw s)
-               else storeArrayInMem (a, loadIntelHex s)
-             )) code
-      ; uart_countdown := !uart_delay
-      ; if 0 < !uart_delay then uart_input () else ()
-      ; cpu_time := Timer.startCPUTimer()
-      ; run_mem mx
-      ; if 0 < !uart_delay then uart_output () else ()
+fun next_loop mx =
+  let
+    val traces = if !trace_level < 1 then fn () => ()
+                 else fn () => print_traces (!trace_level)
+    val stats = if Option.isSome (!dump_stat_freq) then print_stats
+                else fn _ => ()
+    val i = ref 0
+    fun loop () =
+      ( mips.switchCore (scheduleNext ())
+      ; uart ()
+      ; mips.instCnt := !i
+      ; mips.Next ()
+      ; traces ()
+      ; stats (!i)
+      ; i := !i + 1
+      ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
       )
-      handle mips.UNPREDICTABLE s =>
-        ( List.tabulate
-            (Nat.toNativeInt (!nb_core), dumpRegisters o Nat.fromNativeInt)
-        ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
-        )
-end
+  in
+    loop ()
+  end
+
+fun run (pc, uart) mx code raw =
+  let
+    val loop = if !time_run then Runtime.time next_loop else next_loop
+  in
+    List.tabulate(Nat.toNativeInt (!nb_core),
+      fn x => ( mips.switchCore (Nat.fromNativeInt x)
+              ; mips.initMips (pc, (uart, !rdhwr_extra))
+              ))
+  ; mips.totalCore := !nb_core
+  ; mips.watchPaddr := !watch_paddr
+  ; mips.print := debug_print
+  ; mips.setL2 (!l2_replace_policy, (!l2_prefetch_depth, !l2_prefetcher))
+  ; List.app
+      (fn (a, s) =>
+         ( print ("Loading " ^ s ^ "... ")
+         ; if raw
+             then storeVecInMem (a, readRaw s)
+           else storeArrayInMem (a, loadIntelHex s)
+         )) code
+  ; uart_countdown := !uart_delay
+  ; if 0 < !uart_delay then uart_input () else ()
+  ; cpu_time := Timer.startCPUTimer()
+  ; loop mx
+  ; if 0 < !uart_delay then uart_output () else ()
+  end
+  handle mips.UNPREDICTABLE s =>
+    ( List.tabulate
+        (Nat.toNativeInt (!nb_core), dumpRegisters o Nat.fromNativeInt)
+    ; failExit ("UNPREDICTABLE \"" ^ s ^ "\"\n")
+    )
 
 (* ------------------------------------------------------------------------
    Command line interface
    ------------------------------------------------------------------------ *)
 
 fun printUsage () =
-   print
-    ("\nMIPS emulator (based on an L3 specification).\n\
-      \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
-      \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
-      \Arguments:\n\
-      \  --cycles <number>              upper bound on instruction cycles\n\
-      \  --trace <level>                verbosity level (0 default, 5 maximum)\n\
-      \  --pc <address>                 initial program counter value and\n\
-      \                                 start address for main Intel Hex file\n\
-      \  --at <address> <file>          load extra Intel Hex <file> into physical\n\
-      \                                 memory at location <address>\n\
-      \  --watch-paddr <address>        specify a physical address to monitor accesses\n\
-      \  --nbcore <number>              number of core(s) (default is 1)\n\
-      \  --uart <address>               base physical address for UART memory-map\n\
-      \  --uart-delay <number>          UART cycle delay (determines baud rate)\n\
-      \  --uart-in <file>               UART input file (stdin if omitted)\n\
-      \  --uart-out <file>              UART output file (stdout if omitted)\n\
-      \  --trace-out <file>             Traces output file (stdout if omitted)\n\
-      \  --stats-out <file>             Stats output file (stdout if omitted)\n\
-      \  --stats-format <format>        'csv' or human readable stats output format (default is human readable)\n\
-      \  --format <format>              'raw' or 'hex' file format \n\
-      \  --non-block <on|off>           non-blocking UART input 'on' or 'off' \n\
-      \  --dump-stats <number>          display statistics every <number> simulation steps\n\
-      \  --rdhwr-extra <on|off>         enable simulator control features through rdhwr inst, 'on' or 'off' \n\
-      \  --schedule <file>              file of core ids indicating schedule\n\
-      \  --ignore <string>              UNPREDICTABLE#(<string>) behaviour is \n\
-      \                                 ignored (currently <string> must be \n\
-      \                                 'HI' or 'LO')                       \n\
-ifdef(`CACHE', `dnl
-      \  --l2-replace-policy <number>   Replace policy for the l2\n\
-      \                                   *  0: naive(pseudo-random)\n\
-      \                                   *  1: LRU\n\dnl'
-,`dnl')
-ifdef(`CACHE', `dnl
-      \  --l2-prefetch-depth <number>   L2 prefetcher depth (level of nesting)\n\
-      \                                 (default to 0 = inactive prefetcher)\n\dnl'
-,`dnl')
-ifdef(`CACHE', `dnl
-      \  --l2-prefetcher     <number>   L2 prefetcher \n\
-      \                                   *  0: FirstPtr (default)\n\
-      \                                   *  1: AllPtr\n\dnl'
-ifdef(`CAP', `
-      \                                   *  2: FirstCap\n\
-      \                                   *  3: AllCap\n\dnl',`dnl')
-,`dnl')
-      \  -h or --help                   print this message\n\n")
+  print
+   ("\nMIPS emulator (based on an L3 specification).\n\
+     \http://www.cl.cam.ac.uk/~acjf3/l3\n\n\
+     \usage: " ^ OS.Path.file (CommandLine.name ()) ^ " [arguments] file\n\n\
+     \Arguments:\n\
+     \  --cycles <number>              upper bound on instruction cycles\n\
+     \  --trace <level>                verbosity level (0 default, 5 maximum)\n\
+     \  --pc <address>                 initial program counter value and\n\
+     \                                 start address for main Intel Hex file\n\
+     \  --at <address> <file>          load extra Intel Hex <file> into\
+     \ physical\n\
+     \                                 memory at location <address>\n\
+     \  --watch-paddr <address>        specify a physical address to monitor\
+     \ accesses\n\
+     \  --nbcore <number>              number of core(s) (default is 1)\n\
+     \  --uart <address>               base physical address for UART\
+     \ memory-map\n\
+     \  --uart-delay <number>          UART cycle delay (determines baud\
+     \ rate)\n\
+     \  --uart-in <file>               UART input file (stdin if omitted)\n\
+     \  --uart-out <file>              UART output file (stdout if omitted)\n\
+     \  --trace-out <file>             Traces output file (stdout if omitted)\n\
+     \  --stats-out <file>             Stats output file (stdout if omitted)\n\
+     \  --stats-format <format>        'csv' or human readable stats output\
+     \ format\n\
+     \                                 (default is human readable)\n\
+     \  --format <format>              'raw' or 'hex' file format \n\
+     \  --non-block <on|off>           non-blocking UART input 'on' or 'off' \n\
+     \  --dump-stats <number>          display statistics every <number>\
+     \ simulation\n\
+     \                                 steps\n\
+     \  --rdhwr-extra <on|off>         enable simulator control features\n\
+     \                                 through rdhwr inst, 'on' or 'off' \n\
+     \  --schedule <file>              file of core ids indicating schedule\n\
+     \  --ignore <string>              UNPREDICTABLE#(<string>) behaviour is \n\
+     \                                 ignored (currently <string> must be \n\
+     \                                 'HI' or 'LO')                       \n\
+     \  --l2-replace-policy <number>   Replace policy for the l2\n\
+     \                                   *  0: naive (pseudo-random)\n\
+     \                                   *  1: LRU\n\
+     \  --l2-prefetch-depth <number>   L2 prefetcher depth (level of nesting)\n\
+     \                                 (default to 0 = inactive prefetcher)\n\
+     \  --l2-prefetcher     <number>   L2 prefetcher \n\
+     \                                   *  0: FirstPtr (default)\n\
+     \                                   *  1: AllPtr\n\
+     \                                   *  2: FirstCap\n\
+     \                                   *  3: AllCap\n\
+     \  -h or --help                   print this message\n\n")
 
 fun getNumber s =
    case IntExtra.fromString s of
       SOME n => n
     | NONE => failExit ("Bad number: " ^ s)
+
+fun getNumberDefault (s, d) = Option.getOpt (Option.map getNumber s, d)
 
 fun getHexNumber s =
    case StringCvt.scanString (IntInf.scan StringCvt.HEX) s of
@@ -512,63 +492,56 @@ val () =
        let
           val (fmt, l) = processOption "--format" l
           val raw = case fmt of
-                        NONE       => false
-                      | SOME "raw" => true
-                      | SOME "hex" => false
-                      | _          => failExit "--format must be raw or hex\n"
+                       NONE       => false
+                     | SOME "raw" => true
+                     | SOME "hex" => false
+                     | _          => failExit "--format must be raw or hex\n"
           val (igns, l) = processOptions "--ignore" l
           val () = List.app (fn x =>
                      case x of
-                         "HI" => mips.UNPREDICTABLE_HI := (fn _ => ())
-                       | "LO" => mips.UNPREDICTABLE_LO := (fn _ => ())
-                       | "TLB" => mips.UNPREDICTABLE_TLB := (fn _ => ())
-                       | _    => failExit "Unknown argument to --ignore"
+                        "HI" => mips.UNPREDICTABLE_HI := (fn _ => ())
+                      | "LO" => mips.UNPREDICTABLE_LO := (fn _ => ())
+                      | "TLB" => mips.UNPREDICTABLE_TLB := (fn _ => ())
+                      | _    => failExit "Unknown argument to --ignore"
                    ) igns
           val (w, l) = processOption "--watch-paddr" l
           val () = watch_paddr :=
                    Option.map (fn s => BitsN.fromInt (getHexNumber s, 40)) w
           val (nb, l) = processOption "--non-block" l
           val () = case nb of
-                       NONE       => ()
-                     | SOME "on"  => non_blocking_input := true
-                     | SOME "off" => non_blocking_input := false
-                     | _          => failExit "--non-block must be on or off\n"
+                      NONE       => ()
+                    | SOME "on"  => non_blocking_input := true
+                    | SOME "off" => non_blocking_input := false
+                    | _          => failExit "--non-block must be on or off\n"
           val (nb, l) = processOption "--dump-stats" l
           val () = dump_stat_freq := Option.map getNumber nb
           val (fmt, l) = processOption "--stats-format" l
           val () = stats_fmt := fmt
           val (nb, l) = processOption "--rdhwr-extra" l
           val () = case nb of
-                       NONE       => ()
-                     | SOME "on"  => rdhwr_extra := true
-                     | SOME "off" => rdhwr_extra := false
-                     | _          => failExit "--rdhwr-extra must be on or off\n"
+                      NONE       => ()
+                    | SOME "on"  => rdhwr_extra := true
+                    | SOME "off" => rdhwr_extra := false
+                    | _          => failExit "--rdhwr-extra must be on or off\n"
           val (p, l) = processOption "--pc" l
-          val p = Option.getOpt (Option.map getNumber p, 0x9000000040000000)
+          val p =  getNumberDefault (p, 0x9000000040000000)
           val (u, l) = processOption "--uart" l
-          val u = Option.getOpt (Option.map getNumber u, 0x000000007f000000)
+          val u = getNumberDefault (u, 0x000000007f000000)
           val (c, l) = processOption "--cycles" l
-          val c = Option.getOpt (Option.map getNumber c, ~1)
+          val c = getNumberDefault (c, ~1)
           val (n, l) = processOption "--nbcore" l
-          val () = nb_core := Option.getOpt (Option.map getNumber n, 1)
+          val () = nb_core := getNumberDefault (n, 1)
           val (t, l) = processOption "--trace" l
-          val t = Option.getOpt (Option.map getNumber t, !trace_level)
+          val t = getNumberDefault (t, !trace_level)
           val () = trace_level := IntInf.max (0, t)
-ifdef(`CACHE', `dnl
           val (n, l) = processOption "--l2-replace-policy" l
-          val () = l2_replace_policy := Option.getOpt (Option.map getNumber n, 0)dnl'
-,`dnl')
-ifdef(`CACHE', `dnl
+          val () = l2_replace_policy := getNumberDefault (n, 0)
           val (n, l) = processOption "--l2-prefetch-depth" l
-          val () = l2_prefetch_depth := Option.getOpt (Option.map getNumber n, 0)dnl'
-,`dnl')
-ifdef(`CACHE', `dnl
+          val () = l2_prefetch_depth := getNumberDefault (n, 0)
           val (n, l) = processOption "--l2-prefetcher" l
-          val () = l2_prefetcher := Option.getOpt (Option.map getNumber n, 0)dnl'
-,`dnl')
+          val () = l2_prefetcher := getNumberDefault (n, 0)
           val (d, l) = processOption "--uart-delay" l
-          val () =
-             uart_delay := Option.getOpt (Option.map getNumber d, !uart_delay)
+          val () = uart_delay := getNumberDefault (d, !uart_delay)
           val (ui, l) = processOption "--uart-in" l
           val () = uart_in := Option.map TextIO.openIn ui
           val (sch, l) = processOption "--schedule" l

@@ -95,3 +95,6 @@ unit Write256 (pAddr::bits(35), data::bits(256)) =
     MEM(pAddr:'10') <- data<191:128>;
     MEM(pAddr:'11') <- data<255:192>
 }
+
+-- stub for configuring L2 cache
+unit setL2 (replace_policy::nat, prefetch_depth::nat, l2_pefetcher::nat) = ()

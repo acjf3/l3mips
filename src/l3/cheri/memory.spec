@@ -516,3 +516,6 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
     mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
                 " cap @ 0x" : hex40(capAddr:0))
 }
+
+-- stub for configuring L2 cache
+unit setL2 (replace_policy::nat, prefetch_depth::nat, l2_pefetcher::nat) = ()

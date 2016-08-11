@@ -204,7 +204,6 @@ ${L3SRCDIR}/%.spec: ${L3SRCDIR}/%.spec.m4
 ${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1SIZE=$(L1SIZE) -D L1WAYS=$(L1WAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
-${SMLSRCDIR}/run.sml: ${SMLSRCDIR}/run.sml.m4
 ifdef CACHE
 ifdef CAP
 	m4 -D CAP -D CACHE $^ > $@
@@ -237,4 +236,3 @@ clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml
 	rm -f $(M4_CHERI_FILES)
 	rm -f $(M4_FILES)
-	rm -f ${SMLSRCDIR}/run.sml
