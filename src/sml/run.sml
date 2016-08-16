@@ -326,8 +326,7 @@ fun end_sim i =
 
 fun next_loop mx =
   let
-    val traces = if !trace_level < 1 then fn () => ()
-                 else fn () => print_traces (!trace_level)
+    val traces = fn () => print_traces (!trace_level)
     val stats = if Option.isSome (!dump_stat_freq) then print_stats
                 else fn _ => ()
     val i = mips.instCnt
