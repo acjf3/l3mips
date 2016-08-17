@@ -326,7 +326,6 @@ fun end_sim i =
 
 fun next_loop mx =
   let
-    val traces = fn () => print_traces (!trace_level)
     val stats = if Option.isSome (!dump_stat_freq) then print_stats
                 else fn _ => ()
     val i = mips.instCnt
@@ -334,7 +333,7 @@ fun next_loop mx =
       ( mips.switchCore (scheduleNext ())
       ; uart ()
       ; mips.Next ()
-      ; traces ()
+      ; print_traces (!trace_level)
       ; stats (!i)
       ; i := !i + 1
       ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
@@ -344,10 +343,7 @@ fun next_loop mx =
   end
 
 fun run (pc, uart) mx code raw =
-  let
-    val loop = if !time_run then Runtime.time next_loop else next_loop
-  in
-    List.tabulate(Nat.toNativeInt (!nb_core),
+  ( List.tabulate(Nat.toNativeInt (!nb_core),
       fn x => ( mips.switchCore (Nat.fromNativeInt x)
               ; mips.initMips (pc, (uart, !rdhwr_extra))
               ))
@@ -365,9 +361,9 @@ fun run (pc, uart) mx code raw =
   ; uart_countdown := !uart_delay
   ; if 0 < !uart_delay then uart_input () else ()
   ; cpu_time := Timer.startCPUTimer()
-  ; loop mx
+  ; (if !time_run then Runtime.time next_loop else next_loop) mx
   ; if 0 < !uart_delay then uart_output () else ()
-  end
+  )
   handle mips.UNPREDICTABLE s =>
     ( List.tabulate
         (Nat.toNativeInt (!nb_core), dumpRegisters o Nat.fromNativeInt)
