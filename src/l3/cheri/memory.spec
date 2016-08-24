@@ -447,7 +447,7 @@ dword ReadData (dwordAddr::bits(37)) =
         }
         case Raw (raw) => data <- readDwordFromRaw (dwordAddr, raw)
     };
-    mark_log(3, "read data 0x":hex64(data):" from 0x":hex40(dwordAddr:0));
+    mark_log(3, "read data ":hex (data):" from ":hex (dwordAddr:'0'));
     data
 }
 
@@ -466,7 +466,7 @@ unit WriteData (dwordAddr::bits(37), data::dword, mask::dword) =
         case Raw (raw) => old_blob <- raw
     };
     new_blob = updateDwordInRaw (dwordAddr, data, mask, old_blob);
-    mark_log(3, "write data 0x":hex64(data):" @ 0x":hex40(dwordAddr:0));
+    mark_log(3, "write data ":hex (data):" @ ":hex (dwordAddr:'0'));
     MEM(dwordAddr<36:(Log2(CAPBYTEWIDTH)-3)>) <- Raw(new_blob)
 }
 
@@ -486,7 +486,7 @@ word ReadInst (a::pAddr) =
         case Raw (raw) => inst_pair <- readDwordFromRaw (a<39:3>, raw)
     };
     inst = if a<2> then inst_pair<31:0> else inst_pair<63:32>;
-    mark_log(3, "read instruction 0x":hex32(inst):" @0x":hex40(a));
+    mark_log(3, "read instruction ":hex (inst):" @":hex (a));
     inst
 }
 
@@ -502,7 +502,7 @@ Capability ReadCap (capAddr::CAPADDR) =
     else
         stats_invalid_cap_reads_updt(1);
     mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
-                " cap from 0x" : hex40(capAddr:0));
+                " cap from " : hex (capAddr:'0'));
     data
 }
 
@@ -514,7 +514,7 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
     else
         stats_invalid_cap_writes_updt(1);
     mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
-                " cap @ 0x" : hex40(capAddr:0))
+                " cap @ " : hex (capAddr:'0'))
 }
 
 -- stub for configuring L2 cache

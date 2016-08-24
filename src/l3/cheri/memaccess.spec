@@ -60,8 +60,7 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:3> == watch_paddr<39:3> do
-            println ("watching --> load 0x" : hex64 (data) : " from 0x" :
-                     hex40 (addr))
+            println ("watching --> load " : hex (data) : " from " : hex (addr))
     }
     case None => nothing
 }
@@ -71,8 +70,8 @@ unit watchForCapLoad (addr::bits(40), cap::Capability) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
-            println ("watching --> load " : log_cap_write (cap) : " from 0x" :
-                     hex40 (addr))
+            println ("watching --> load " : log_cap_write (cap) : " from " :
+                     hex (addr))
     }
     case None => nothing
 }
@@ -81,8 +80,8 @@ unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 {
     case Some(watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-        println ("watching --> Store 0x" : hex64 (data) : "(mask: 0x" :
-                 hex64 (mask) : ") at 0x" : hex40 (addr))
+        println ("watching --> Store " : hex (data) : "(mask: " :
+                 hex (mask) : ") at " : hex (addr))
     case None => nothing
 }
 
@@ -90,8 +89,8 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 {
     case Some(watch_paddr) =>
        when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
-        println ("watching --> Store 0x" : log_cap_write (cap) : ") at 0x" :
-                 hex40 (addr))
+        println ("watching --> Store 0x" : log_cap_write (cap) : ") at " :
+                 hex (addr))
     case None => nothing
 }
 
@@ -106,7 +105,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
-        mark_log (2, "Bad Load, CP0.BadVAddr <-" : hex64(vAddr));
+        mark_log (2, "Bad Load, CP0.BadVAddr <-" : hex (vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdEL);
         UNKNOWN
@@ -150,7 +149,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
 
             memAccessStats.bytes_read <- memAccessStats.bytes_read + [[MemType]::nat+1];
             mark_log (2, "Load of " : [[MemType]::nat+1] :
-                         " byte(s) from vAddr 0x":hex64(vAddr));
+                         " byte(s) from vAddr ":hex (vAddr));
 
             watchForLoad(pAddr, ret);
             ret
@@ -205,7 +204,7 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
 
         memAccessStats.bytes_read <- memAccessStats.bytes_read + CAPBYTEWIDTH;
         mark_log (2, "Load cap: " : log_load_cap (pAddr, cap) :
-                     " from vAddr 0x":hex64(vAddr));
+                     " from vAddr ":hex (vAddr));
 
         watchForCapLoad(pAddr, cap);
         return cap
@@ -218,7 +217,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
 {
     if needAlign and not isAligned (vAddr, MemType)
     then {
-        mark_log (2, "Bad Store, CP0.BadVAddr <-" : hex64(vAddr));
+        mark_log (2, "Bad Store, CP0.BadVAddr <-" : hex (vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdES);
         return UNKNOWN
@@ -275,9 +274,9 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
                     WriteData(a, MemElem, mask)
             };
             memAccessStats.bytes_written <- memAccessStats.bytes_written + [[AccessLength]::nat+1];
-            mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" :
-                         hex64(mask) : " (" : [[AccessLength]::nat+1] :
-                         " byte(s)) at vAddr 0x" : hex64(vAddr));
+            mark_log (2, "Store " : hex (MemElem) : ", mask " :
+                         hex (mask) : " (" : [[AccessLength]::nat+1] :
+                         " byte(s)) at vAddr " : hex (vAddr));
             watchForStore(pAddr, MemElem, mask)
         };
         return sc_success
@@ -345,7 +344,7 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 
             memAccessStats.bytes_written <- memAccessStats.bytes_written + CAPBYTEWIDTH;
             mark_log (2, "Store cap: " : log_store_cap (pAddr, cap) :
-                         " at vAddr 0x":hex64(vAddr));
+                         " at vAddr ":hex (vAddr));
 
             watchForCapStore(pAddr, cap);
             when not cond or sc_success do
@@ -396,7 +395,7 @@ word option Fetch =
     }
     else
     {
-        mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(getBase(PCC) + PC));
+        mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex (getBase(PCC) + PC));
         CP0.BadVAddr <- getBase(PCC) + PC;
         SignalException (AdEL);
         None

@@ -89,13 +89,13 @@ unit SignalException (ExceptionType::ExceptionType) =
     {
         if IsSome (BranchDelay) or IsSome(BranchDelayPCC) then
         {
-            mark_log (2, "EPC <- ":hex64(PC - 4):" (in branch delay slot => PC - 4 )");
+            mark_log (2, "EPC <- ":hex (PC - 4):" (in branch delay slot => PC - 4 )");
             CP0.EPC <- PC - 4;
             CP0.Cause.BD <- true
         }
         else
         {
-            mark_log (2, "EPC <- ":hex64(PC));
+            mark_log (2, "EPC <- ":hex (PC));
             CP0.EPC <- PC;
             CP0.Cause.BD <- false
         }

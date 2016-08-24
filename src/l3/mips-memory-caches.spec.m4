@@ -147,8 +147,7 @@ MemAddr MemAddrFromDwordAddr (addr::dwordAddr) = addr<36:Log2(L2LINESIZE)-3>
 
 -- mem log utils --
 
-string MemAddr_str (addr::MemAddr) =
-    "0x" : hex40(addr:0)
+string MemAddr_str (addr::MemAddr) = hex (addr:'0')
 
 string MemData_str (data::MemData) = "0x" : ToLower([data])
 
@@ -333,8 +332,7 @@ L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
 
 -- l1 log utils --
 
-string l1addr_str (addr::L1Addr) =
-    "0x" : hex40(addr)
+string l1addr_str (addr::L1Addr) = hex (addr)
 string l1addr_line_str (addr::L1Addr) =
     "0x" : PadLeft (#"0", (L1LINENUMBERWIDTH+3) div 4, [addr<L1ADDRWIDTH-1:L1ADDRWIDTH-L1LINENUMBERWIDTH>])
 string l1addr_tag_str (addr::L1Addr) =
@@ -355,9 +353,8 @@ string l1data_str (data::L1Data) =
     word_list = L1DataToWordList (data);
     foreach elem in word_list do
     {
-        when i > 0 do
-            str <- str : ":";
-        str <- str : hex32(elem);
+        when i > 0 do str <- str : ":";
+        str <- str : dhex (elem);
         i <- i + 1
     };
     return str : "]"
@@ -412,8 +409,7 @@ DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, U
 
 -- l2 log utils --
 
-string l2addr_str (addr::L2Addr) =
-    "0x" : hex40(addr)
+string l2addr_str (addr::L2Addr) = hex (addr)
 string l2addr_line_str (addr::L2Addr) =
     "0x" : PadLeft (#"0", (L2LINENUMBERWIDTH+3) div 4, [addr<L2ADDRWIDTH-1:L2ADDRWIDTH-L2LINENUMBERWIDTH>])
 string l2addr_tag_str (addr::L2Addr) =
@@ -553,7 +549,7 @@ unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
         }
     };
     when found > 1 do
-        #UNPREDICTABLE ("Found ":[found]:" duplicates for @ 0x":hex40(addr):" in L2 cache");
+        #UNPREDICTABLE ("Found ":[found]:" duplicates for @ ":hex (addr):" in L2 cache");
     ret
 }
 

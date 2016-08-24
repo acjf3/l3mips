@@ -45,15 +45,13 @@ declare MEM :: dwordAddr -> dword -- physical memory (37 bits), doubleword acces
 
 -- mem log utils --
 
-string MemAddr_str (addr::dwordAddr) = "0x" : hex40(addr:'000')
-
-string MemData_str (data::dword) = "0x" : hex64(data)
+string MemAddr_str (addr::dwordAddr) = hex (addr:'000')
 
 string log_mem_write (addr::dwordAddr, data::dword) =
-    "write MEM[" : MemAddr_str (addr) : "] <- " : MemData_str (data)
+    "write MEM[" : MemAddr_str (addr) : "] <- " : hex (data)
 
 string log_mem_read (addr::dwordAddr, data::dword) =
-    "read MEM[" : MemAddr_str (addr) : "]: " : MemData_str (data)
+    "read MEM[" : MemAddr_str (addr) : "]: " : hex (data)
 
 -- mem API --
 

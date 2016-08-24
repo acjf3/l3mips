@@ -156,10 +156,10 @@ unit dumpRegs () =
 {
     mark_log (0, "======   Registers   ======")
   ; mark_log (0, "DEBUG MIPS COREID " : [[procID]::nat])
-  ; mark_log (0, "DEBUG MIPS PC\\t0x" : hex64(PC))
+  ; mark_log (0, "DEBUG MIPS PC\\t" : hex (PC))
   ; for i in 0 .. 31 do
-      mark_log (0, "DEBUG MIPS REG " : (if i < 10 then " " else "") : [i] : "\\t0x" :
-                hex64(GPR([i])))
+      mark_log (0, "DEBUG MIPS REG " : (if i < 10 then " " else "") : [i] : "\\t" :
+                hex (GPR([i])))
 }
 
 -- stats utils --

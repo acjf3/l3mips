@@ -366,38 +366,30 @@ bool isCapRepresentable(sealed::bool,
 ---------------
 -- log utils --
 --------------------------------------------------------------------------------
-string hex8 (x::bits(8)) = ToLower (PadLeft (#"0", 2, [x]))
-string hex10 (x::bits(10)) = ToLower (PadLeft (#"0", 3, [x]))
-string hex12 (x::bits(12)) = ToLower (PadLeft (#"0", 3, [x]))
-string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
-string hex19 (x::bits(19)) = ToLower (PadLeft (#"0", 5, [x]))
-string hex20 (x::bits(20)) = ToLower (PadLeft (#"0", 5, [x]))
-string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
-string hex24 (x::bits(24)) = ToLower (PadLeft (#"0", 6, [x]))
 string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
     " uperms:0x":[cap.uperms]:
-    " perms:0x":hex16(ZeroExtend(cap.perms)):
+    " perms:":hex (ZeroExtend(cap.perms)`16):
     " exp:":dec6(cap.exp):
     match cap.sFields
     {
         case Sealed(sf)   =>
-            " sealed:1 baseBits:0x":hex8(sf.baseBits):" topBits:0x":hex8(sf.topBits):" otype:0x":hex24(sf.otypeHi:sf.otypeLo):"(hi:0x":hex12(sf.otypeHi):", lo:0x":hex12(sf.otypeLo)
+            " sealed:1 baseBits:":hex (sf.baseBits):" topBits:":hex (sf.topBits):" otype:":hex (sf.otypeHi:sf.otypeLo):"(hi:":hex (sf.otypeHi):", lo:":hex (sf.otypeLo)
         case Unsealed(uf) =>
-            " sealed:0 baseBits:0x":hex20(uf.baseBits):" topBits:0x":hex20(uf.topBits)
+            " sealed:0 baseBits:":hex (uf.baseBits):" topBits:":hex (uf.topBits)
     }:
-    " cursor:0x":hex64(cap.cursor)
+    " cursor:":hex (cap.cursor)
 string log_cap_write (cap::Capability) =
     "t:":(if getTag(cap) then "1" else "0"):
     " s:":(if getSealed(cap) then "1" else "0"):
-    " perms:0x":hex19(cap.uperms:SignExtend(cap.perms)): -- TODO report 2 architectural fields
-    " type:0x":hex24(getType(cap)):
-    " offset:0x":hex64(getOffset(cap)):
-    " base:0x":hex64(getBase(cap)):
-    " length:0x":hex64(getLength(cap)):"\\n(":cap_inner_rep(cap):")"
+    " perms:":hex ((cap.uperms:SignExtend(cap.perms))`19): -- TODO report 2 architectural fields
+    " type:":hex (getType(cap)):
+    " offset:":hex (getOffset(cap)):
+    " base:":hex (getBase(cap)):
+    " length:":hex (getLength(cap)):"\\n(":cap_inner_rep(cap):")"
 
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
-string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":log_cap_write(cap)
-string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[0x":hex40(pAddr):"]"
+string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[":hex (pAddr):"] <- ":log_cap_write(cap)
+string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[":hex (pAddr):"]"

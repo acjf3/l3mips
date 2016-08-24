@@ -131,8 +131,7 @@ type MemAddr = capAddr
 
 -- mem log utils --
 
-string MemAddr_str (addr::MemAddr) =
-    "0x" : hex40(addr:0)
+string MemAddr_str (addr::MemAddr) = hex (addr:'0')
 
 string RawMemData_str (data::CAPRAWBITS) =
 {
@@ -140,7 +139,7 @@ string RawMemData_str (data::CAPRAWBITS) =
     for i in ((CAPBYTEWIDTH*8) div 32) .. 1 do
     {
         tmp::bits(32) = data<(i*32)-1:(i-1)*32>;
-        ret <- ret : hex32 (tmp);
+        ret <- ret : dhex (tmp);
         when i > 1 do ret <- ret : ":"
     };
     ret <- ret : "]";
@@ -154,7 +153,7 @@ string dword_list_str (dword_list::dword list) =
     foreach dw in dword_list do
     {
         when i > 0 do ret <- ret : ", ";
-        ret <- ret : [i] :".[":hex32(dw<63:32>):":":hex32(dw<31:0>):"]";
+        ret <- ret : [i] :".[":dhex (dw<63:32>):":":dhex (dw<31:0>):"]";
         i <- i + 1
     };
     ret <- ret : "}";
@@ -399,8 +398,7 @@ L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
 
 -- l1 log utils --
 
-string l1addr_str (addr::L1Addr) =
-    "0x" : hex40(addr)
+string l1addr_str (addr::L1Addr) = hex (addr)
 string l1addr_line_str (addr::L1Addr) =
     "0x" : PadLeft (`#'"0", ((L1LINENUMBERWIDTH+3) div 4), [addr<(L1ADDRWIDTH-1):(L1ADDRWIDTH-L1LINENUMBERWIDTH)>])
 string l1addr_tag_str (addr::L1Addr) =
@@ -490,8 +488,7 @@ DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, U
 
 -- l2 log utils --
 
-string l2addr_str (addr::L2Addr) =
-    "0x" : hex40(addr)
+string l2addr_str (addr::L2Addr) = hex (addr)
 string l2addr_line_str (addr::L2Addr) =
     "0x" : PadLeft (`#'"0", ((L2LINENUMBERWIDTH+3) div 4), [addr<(L2ADDRWIDTH-1):(L2ADDRWIDTH-L2LINENUMBERWIDTH)>])
 string l2addr_tag_str (addr::L2Addr) =
@@ -1107,7 +1104,7 @@ Capability ReadCap (capAddr::CAPADDR) =
         case Raw (raw) => bitsToCap(raw)
     };
     mark_log(4, "read " : (if getTag(data) then "valid" else "invalid") :
-                " cap from 0x" : hex40(capAddr:0));
+                " cap from " : hex (capAddr:'0'));
     data
 }
 
@@ -1124,5 +1121,5 @@ unit WriteCap (capAddr::CAPADDR, cap::Capability) =
     current_l1_type <- Data;
     L1Write(capAddr:0, l1_data, l1_mask);
     mark_log(4, "write " : (if getTag(cap) then "valid" else "invalid") :
-                " cap @ 0x" : hex40(capAddr:0))
+                " cap @ " : hex (capAddr:'0'))
 }

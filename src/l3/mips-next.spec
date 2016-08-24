@@ -10,7 +10,7 @@
 
 string log_instruction(w::word, inst::instruction) =
     "instr " : [procID] : " " : [instCnt] : " " :
-    hex64(PC) : " : " : hex32(w) : "   " : instructionToString(inst)
+    dhex (PC) : " : " : dhex (w) : "   " : instructionToString(inst)
 
 unit Next =
 {

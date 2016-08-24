@@ -53,28 +53,30 @@ string cpr (r::reg) =
       case 31 => "kscratch"
    }
 
-string hexN (w::nat, x::bits(N)) = PadLeft (#"0", w, ToLower ([x]))
+string hex (x::bits(N)) =
+{
+  q, r = QuotRem ([N], 4);
+  "0x" : PadLeft (#"0", [q + (if r == 0 then 0 else 1)], ToLower ([x]))
+}
 
-inline string hex32 (x::bits(32)) = hexN (8, x)
-inline string hex40 (x::bits(40)) = hexN (10, x)
-inline string hex64 (x::bits(64)) = hexN (16, x)
+inline string dhex (x::bits(N)) = Drop (2, hex (x))
 
 string log_sig_exception (ExceptionCode::bits(5)) =
-   "MIPS exception 0x" : hexN (2, ExceptionCode)
+   "MIPS exception " : hex (ExceptionCode)
 
 string log_w_gpr (r::reg, data::dword) =
-   "Reg " : [[r]::nat] : " <- 0x" : hex64 (data)
+   "Reg " : [[r]::nat] : " <- " : hex (data)
 
-string log_w_hi (data::dword) = "HI <- 0x" : hex64 (data)
-string log_w_lo (data::dword) = "LO <- 0x" : hex64 (data)
-string log_w_c0 (r::reg, data::dword) = cpr(r) : " <- 0x" : hex64 (data)
+string log_w_hi (data::dword) = "HI <- " : hex (data)
+string log_w_lo (data::dword) = "LO <- " : hex (data)
+string log_w_c0 (r::reg, data::dword) = cpr(r) : " <- " : hex (data)
 
 string log_w_mem (addr::bits(37), mask::bits(64), data::dword) =
-   "MEM[0x" : hex40(addr:'000') : "] <- (data: 0x" : hex64 (data) :
-   ", mask: 0x" : hex64 (mask) : ")"
+   "MEM[" : hex (addr:'000') : "] <- (data: " : hex (data) :
+   ", mask: " : hex (mask) : ")"
 
 string log_r_mem (addr::bits(37), data::dword) =
-   "data <- MEM[0x" : hex40(addr:'000') : "]: 0x" : hex64(data)
+   "data <- MEM[" : hex (addr:'000') : "]: " : hex(data)
 
 inline unit mark_log (lvl::nat, s::string) =
    when not PROVER_EXPORT do

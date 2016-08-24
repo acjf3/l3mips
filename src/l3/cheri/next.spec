@@ -7,9 +7,9 @@
 -- The next state function
 --================================================
 
-string log_instruction(w::word, inst::instruction) =
-    "instr " : [procID] : " " : [instCnt] : " " :
-    hex64(PC + getBase(PCC)) : " : " : hex32(w) : "   " : instructionToString(inst)
+string log_instruction (w::word, inst::instruction) =
+    "instr " : [procID] : " " : [instCnt] : " " : dhex (PC + getBase(PCC)) :
+    " : " : dhex (w) : "   " : instructionToString(inst)
 
 unit Next =
 {

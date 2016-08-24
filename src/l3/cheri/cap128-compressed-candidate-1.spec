@@ -260,30 +260,27 @@ bool isCapRepresentable(sealed::bool,
 -- log utils --
 --------------------------------------------------------------------------------
 
-string hex16 (x::bits(16)) = ToLower (PadLeft (#"0", 4, [x]))
-string hex23 (x::bits(23)) = ToLower (PadLeft (#"0", 6, [x]))
-
 {-
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
-    " perms:0x":hex23(cap.perms):
+    " perms:":hex (cap.perms):
     " exp:":[[cap.exp]::nat]:
-    " toTop:0x":hex16(cap.toTop):
-    " toBottom:0x":hex16(cap.toBottom):
+    " toTop:":hex (cap.toTop):
+    " toBottom:":hex (cap.toBottom):
     " sealed:":(if cap.sealed then "1" else "0"):
-    " pointer:0x":hex64(cap.pointer)
+    " pointer:":hex (cap.pointer)
 -}
 
 string log_cap_write (cap::Capability) =
     "t:":(if getTag(cap) then "1" else "0"):
     " s:":(if getSealed(cap) then "1" else "0"):
-    " perms:0x":hex23(cap.uperms:cap.perms): -- TODO report 2 architectural fields
-    " type:0x":hex16(getType(cap)):
-    " offset:0x":hex64(getOffset(cap)):
-    " base:0x":hex64(getBase(cap)):
-    " length:0x":hex64(getLength(cap))--:"\\n(":cap_inner_rep(cap):")"
+    " perms:":hex (cap.uperms:cap.perms): -- TODO report 2 architectural fields
+    " type:":hex (getType(cap)):
+    " offset:":hex (getOffset(cap)):
+    " base:":hex (getBase(cap)):
+    " length:":hex (getLength(cap))--:"\\n(":cap_inner_rep(cap):")"
 
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
-string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[0x":hex40(pAddr):"] <- ":log_cap_write(cap)
-string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[0x":hex40(pAddr):"]"
+string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[":hex (pAddr):"] <- ":log_cap_write(cap)
+string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[":hex (pAddr):"]"

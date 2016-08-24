@@ -60,8 +60,7 @@ unit watchForLoad (addr::pAddr, data::dword) =
   {
      case Some (watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-         println ("watching --> load 0x" : hex64(data) : " from 0x" :
-                  hex40(addr))
+         println ("watching --> load " : hex (data) : " from " : hex (addr))
      case None => nothing
   }
 
@@ -70,8 +69,8 @@ unit watchForStore (addr::pAddr, data::dword, mask::dword) =
   {
      case Some (watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-         println ("watching --> Store 0x" : hex64(data) : "(mask:" :
-                  hex64(mask) : ") at 0x" : hex40(addr))
+         println ("watching --> Store " : hex (data) : "(mask:" :
+                  hex (mask) : ") at " : hex (addr))
      case None => nothing
   }
 
@@ -85,7 +84,7 @@ dword LoadMemory
     vAddr::vAddr, link::bool ) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
-    mark_log (2, "Bad load, CP0.BadVAddr <-" : hex64(vAddr));
+    mark_log (2, "Bad load, CP0.BadVAddr <-" : hex (vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdEL);
     return UNKNOWN
@@ -126,7 +125,7 @@ dword LoadMemory
         LLbit <- None;
       b = [MemType] + 0n1;
       memAccessStats.bytes_read <- memAccessStats.bytes_read + b;
-      mark_log (2, "Load of " : [b] : " byte(s) from vAddr 0x" : hex64(vAddr));
+      mark_log (2, "Load of " : [b] : " byte(s) from vAddr " : hex (vAddr));
       watchForLoad (pAddr, ret);
       return ret
     }
@@ -140,7 +139,7 @@ bool StoreMemory
     vAddr::vAddr, cond::bool) =
   if needAlign and not Aligned (vAddr, MemType) then
   {
-    mark_log (2, "Bad store, CP0.BadVAddr <-" : hex64(vAddr));
+    mark_log (2, "Bad store, CP0.BadVAddr <-" : hex (vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdES);
     return false
@@ -196,8 +195,8 @@ bool StoreMemory
       };
       LLbit <- None;
       memAccessStats.bytes_written <- memAccessStats.bytes_written + b;
-      mark_log (2, "Store 0x" : hex64(MemElem) : ", mask 0x" : hex64(mask) :
-                   " (" : [b] : " byte(s)) at vAddr 0x" : hex64(vAddr));
+      mark_log (2, "Store " : hex (MemElem) : ", mask " : hex (mask) :
+                   " (" : [b] : " byte(s)) at vAddr " : hex (vAddr));
       watchForStore(pAddr, MemElem, mask)
     };
     sc_success
@@ -239,7 +238,7 @@ unit Fetch =
    }
    else
    {
-      mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex64(PC));
+      mark_log (2, "Bad IFetch, CP0.BadVAddr <-" : hex (PC));
       CP0.BadVAddr <- PC;
       SignalException (AdEL)
    }
