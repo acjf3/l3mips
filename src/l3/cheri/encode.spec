@@ -160,8 +160,87 @@ string SDC2InstructionToString (i::instruction) =
         case _ => "unmatched_cap_inst"
     }
 
-word COP2Encode (i::instruction) = '010010' : 0
-word LWC2Encode (i::instruction) = '110010' : 0
-word LDC2Encode (i::instruction) = '110110' : 0
-word SWC2Encode (i::instruction) = '111010' : 0
-word SDC2Encode (i::instruction) = '111110' : 0
+bits(26) CHERICOP2Encode (j::CHERICOP2) =
+    match j
+    {
+        case DumpCapReg                     => '00100' : 0 : '110'
+        case CGet(CGetBase(rd, cb))         => '00000' : rd : cb : 0 : '000010'
+        case CGet(CGetOffset(rd, cb))       => '01101' : rd : cb : 0 : '000010'
+        case CGet(CGetLen(rd, cb))          => '00000' : rd : cb : 0 : '000011'
+        case CGet(CGetTag(rd, cb))          => '00000' : rd : cb : 0 : '000101'
+        case CGet(CGetSealed(rd, cb))       => '00000' : rd : cb : 0 : '000110'
+        case CGet(CGetPerm(rd, cb))         => '00000' : rd : cb : 0 : '000000'
+        case CGet(CGetType(rd, cb))         => '00000' : rd : cb : 0 : '000001'
+        case CGet(CGetPCC(cd))              => '00000' : cd : '00000' : '11111' : '111111'
+        case CGet(CGetPCCSetOffset(cd,rs))  => '00000' : cd : rs : '00111' : '111111'
+        case CGet(CGetCause(rd))            => '00000' : rd : '00000' : 0 : '00100'
+        case CSet(CSetCause(rt))            => '00100' : '00000' : '00000' : rt : 0 : '100'
+        case CSet(CSetBounds(cd, cb, rt))   => '00001' : cd : cb : rt : 0
+        case CSet(CIncOffset(cd, cb, rt))   => '01101' : cd : cb : rt : 0 : '000'
+        case CSet(CClearRegs(regset, mask)) => '01111' : regset : mask
+        case CSet(CClearTag(cd, cb))        => '00100' : cd : cb : 0 : '101'
+        case CSet(CAndPerm(cd, cb, rt))     => '00100' : cd : cb : rt : 0 : '000'
+        case CSet(CSetOffset(cd, cb, rt))   => '01101' : cd : cb : rt : 0 : '001'
+        case CSub(rd, cb, ct)               => '00000' : rd : cb : ct : '001010'
+        case CCheck(CCheckPerm(cs, rt))     => '01011' : cs : 0`5 : rt : 0 : '000'
+        case CCheck(CCheckType(cs, cb))     => '01011' : cs : cb : 0 : '001'
+        case CSet(CFromPtr(cd, cb, rt))     => '00100' : cd : cb : rt : 0 : '111'
+        case CGet(CToPtr(rd, cb, ct))       => '01100' : rd : cb : ct : 0
+        case CPtrCmp(rd, cb, ct, t)         => '01110' : rd : cb : ct : 0 : t
+        case CBTU(cb, offset)               => '01001' : cb : offset
+        case CBTS(cb, offset)               => '01010' : cb : offset
+        case CJR(cb)                        => '01000' : 0`5 : cb : 0
+        case CJALR(cd, cb)                  => '00111' : cd : cb : 0
+        case CSeal(cd, cs, ct)              => '00010' : cd : cs : ct : 0
+        case CUnseal(cd, cs, ct)            => '00011' : cd : cs : ct : 0
+        case CCall(cs, cb)                  => '00101' : cs : cb : 0
+        case CReturn                        => '00110' : 0
+        case CLLx(rd, cb, 's 00')           => '10000' : rd : cb : 0 : '1' : s : '00'
+        case CLLx(rd, cb, 's 01')           => '10000' : rd : cb : 0 : '1' : s : '01'
+        case CLLx(rd, cb, 's 10')           => '10000' : rd : cb : 0 : '1' : s : '10'
+        case CLLx(rd, cb, '011')            => '10000' : rd : cb : 0 : '1011'
+        case CLLx(rd, cb, '111')            => UNKNOWN
+        case CLLC(cd, cb)                   => '10000' : cd : cb : 0 : '1111'
+        case CSCx(rs, cb, rd, tt)           => '10000' : rs : cb : rd : 0 : '00' : tt
+        case CSCC(cs, cb, rd)               => '10000' : cs : cb : rd : 0 : '0111'
+        case UnknownCapInstruction          => '11111' : 0
+    }
+
+word COP2Encode (i::instruction) =
+    match i
+    {
+        case COP2(CHERICOP2(j)) => '010010' : CHERICOP2Encode(j)
+        case _ => UNKNOWN
+    }
+
+word LWC2Encode (i::instruction) =
+    match i
+    {
+        case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b0, t)))    => '110010' : rd : cb : rt : offset : '0' : t
+        case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b00))) => '110010' : rd : cb : rt : offset : '100'
+        case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b01))) => '110010' : rd : cb : rt : offset : '101'
+        case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b10))) => '110010' : rd : cb : rt : offset : '110'
+        case _ => UNKNOWN
+    }
+
+word LDC2Encode (i::instruction) =
+    match i
+    {
+        case LDC2(CHERILDC2(CLC(c, cb, rt, offset))) => '110110' : c : cb : rt : offset
+        case _ => UNKNOWN
+    }
+
+word SWC2Encode (i::instruction) =
+    match i
+    {
+        case SWC2(CHERISWC2(CStore(rs, cb, rt, offset, t))) => '111010' : rs : cb : rt : offset : '0' : t
+        case _ => UNKNOWN
+    }
+
+word SDC2Encode (i::instruction) =
+    match i
+    {
+        case SDC2(CHERISDC2(CSC(c, cb, rt, offset))) => '111110' : c : cb : rt : offset
+        case _ => UNKNOWN
+    }
+
