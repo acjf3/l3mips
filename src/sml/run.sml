@@ -13,9 +13,11 @@ val uart_delay = ref 5000
 val uart_countdown = ref (!uart_delay)
 val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
+val watcher_out = ref (NONE: TextIO.outstream option)
 val trace_out = ref (NONE: TextIO.outstream option)
 val stats_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
+val watch_oob_cap = ref false
 val rdhwr_extra = ref false
 val nb_core = ref 1
 val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
@@ -276,6 +278,16 @@ in
     streamPrint trace_out (String.concat (List.tabulate (lvl + 1, log_string)))
 end
 
+local
+  fun watcher_string () =
+    case !mips.watcher of
+       [] => ""
+     | l => String.concatWith "\n" (List.rev l) ^ "\n"
+in
+  fun print_watcher () =
+    streamPrint watcher_out (watcher_string())
+end
+
 (* ------------------------------------------------------------------------
    Schedule (denoting order in which cores are interleaved)
    ------------------------------------------------------------------------ *)
@@ -333,6 +345,7 @@ fun next_loop mx =
       ( mips.switchCore (scheduleNext ())
       ; uart ()
       ; mips.Next ()
+      ; print_watcher ()
       ; print_traces (!trace_level)
       ; stats (!i)
       ; i := !i + 1
@@ -349,6 +362,7 @@ fun run (pc, uart) mx code raw =
               ))
   ; mips.totalCore := !nb_core
   ; mips.watchPaddr := !watch_paddr
+  ; mips.watchOOBCap := !watch_oob_cap
   ; mips.print := debug_print
   ; mips.setL2 (!l2_replace_policy, (!l2_prefetch_depth, !l2_prefetcher))
   ; List.app
@@ -389,6 +403,8 @@ fun printUsage () =
      \                                 memory at location <address>\n\
      \  --watch-paddr <address>        specify a physical address to monitor\
      \ accesses\n\
+     \  --watch-oob-cap <on-off>       out of bounds capability warnings\
+     \ 'on' or 'off'\n\
      \  --nbcore <number>              number of core(s) (default is 1)\n\
      \  --uart <address>               base physical address for UART\
      \ memory-map\n\
@@ -396,6 +412,7 @@ fun printUsage () =
      \ rate)\n\
      \  --uart-in <file>               UART input file (stdin if omitted)\n\
      \  --uart-out <file>              UART output file (stdout if omitted)\n\
+     \  --watch-out <file>             Watch output file (stdout if omitted)\n\
      \  --trace-out <file>             Traces output file (stdout if omitted)\n\
      \  --stats-out <file>             Stats output file (stdout if omitted)\n\
      \  --stats-format <format>        'csv' or human readable stats output\
@@ -498,6 +515,12 @@ val () =
                       | "TLB" => mips.UNPREDICTABLE_TLB := (fn _ => ())
                       | _    => failExit "Unknown argument to --ignore"
                    ) igns
+          val (yn, l) = processOption "--watch-oob-cap" l
+          val () = case yn of
+                      NONE       => ()
+                    | SOME "on"  => watch_oob_cap := true
+                    | SOME "off" => watch_oob_cap := false
+                    | _          => failExit "--watch-oob-cap must be on or off\n"
           val (w, l) = processOption "--watch-paddr" l
           val () = watch_paddr :=
                    Option.map (fn s => BitsN.fromInt (getHexNumber s, 40)) w
@@ -511,8 +534,8 @@ val () =
           val () = dump_stat_freq := Option.map getNumber nb
           val (fmt, l) = processOption "--stats-format" l
           val () = stats_fmt := fmt
-          val (nb, l) = processOption "--rdhwr-extra" l
-          val () = case nb of
+          val (yn, l) = processOption "--rdhwr-extra" l
+          val () = case yn of
                       NONE       => ()
                     | SOME "on"  => rdhwr_extra := true
                     | SOME "off" => rdhwr_extra := false
@@ -542,6 +565,8 @@ val () =
           val () = schedule := Option.map TextIO.openIn sch
           val (uo, l) = processOption "--uart-out" l
           val () = uart_out := Option.map TextIO.openOut uo
+          val (to, l) = processOption "--watch-out" l
+          val () = watcher_out := Option.map TextIO.openOut to
           val (to, l) = processOption "--trace-out" l
           val () = trace_out := Option.map TextIO.openOut to
           val (so, l) = processOption "--stats-out" l
@@ -551,6 +576,9 @@ val () =
                  SOME stm => TextIO.closeIn stm
                | NONE => ()
             ; case !uart_out of
+                 SOME stm => TextIO.closeOut stm
+               | NONE => ()
+            ; case !watcher_out of
                  SOME stm => TextIO.closeOut stm
                | NONE => ()
             ; case !trace_out of

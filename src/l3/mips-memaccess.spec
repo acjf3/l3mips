@@ -60,7 +60,7 @@ unit watchForLoad (addr::pAddr, data::dword) =
   {
      case Some (watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-         println ("watching --> load " : hex (data) : " from " : hex (addr))
+         mark_watcher("watching --> load " : hex (data) : " from " : hex (addr))
      case None => nothing
   }
 
@@ -69,7 +69,7 @@ unit watchForStore (addr::pAddr, data::dword, mask::dword) =
   {
      case Some (watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-         println ("watching --> Store " : hex (data) : "(mask:" :
+         mark_watcher("watching --> Store " : hex (data) : "(mask:" :
                   hex (mask) : ") at " : hex (addr))
      case None => nothing
   }

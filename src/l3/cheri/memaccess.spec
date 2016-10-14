@@ -60,7 +60,7 @@ unit watchForLoad (addr::bits(40), data::dword) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:3> == watch_paddr<39:3> do
-            println ("watching --> load " : hex (data) : " from " : hex (addr))
+            mark_watcher("watching --> load " : hex (data) : " from " : hex (addr))
     }
     case None => nothing
 }
@@ -70,7 +70,7 @@ unit watchForCapLoad (addr::bits(40), cap::Capability) = match watchPaddr
     case Some(watch_paddr) =>
     {
         when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
-            println ("watching --> load " : log_cap_write (cap) : " from " :
+            mark_watcher("watching --> load " : log_cap_write (cap) : " from " :
                      hex (addr))
     }
     case None => nothing
@@ -80,7 +80,7 @@ unit watchForStore (addr::bits(40), data::dword, mask::dword) = match watchPaddr
 {
     case Some(watch_paddr) =>
        when addr<39:3> == watch_paddr<39:3> do
-        println ("watching --> Store " : hex (data) : "(mask: " :
+        mark_watcher("watching --> Store " : hex (data) : "(mask: " :
                  hex (mask) : ") at " : hex (addr))
     case None => nothing
 }
@@ -89,7 +89,7 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 {
     case Some(watch_paddr) =>
        when addr<39:Log2(CAPBYTEWIDTH)> == watch_paddr<39:Log2(CAPBYTEWIDTH)> do
-        println ("watching --> Store 0x" : log_cap_write (cap) : ") at " :
+        mark_watcher("watching --> Store 0x" : log_cap_write (cap) : ") at " :
                  hex (addr))
     case None => nothing
 }

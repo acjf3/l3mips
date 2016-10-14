@@ -41,6 +41,10 @@ declare {
   procID      :: id              -- ID of the core executing current instruction
 }
 
+-- To be initialised by run.sml, tells whether to warn on out of bounds
+-- capabilities in the capability case
+declare watchOOBCap :: bool
+
 -- Switch cores by saving the current core state in the global map and then
 -- update to the current core state to be that of core "i".
 

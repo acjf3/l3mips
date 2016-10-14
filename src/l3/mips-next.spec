@@ -14,6 +14,7 @@ string log_instruction(w::word, inst::instruction) =
 
 unit Next =
 {
+    clear_watcher;
     clear_logs;
     Fetch;
     match currentInst

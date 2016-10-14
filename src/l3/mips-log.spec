@@ -10,6 +10,7 @@
 declare {
   trace_level :: nat
   log         :: nat -> string list   -- One log per "trace level"
+  watcher     :: string list
   print       :: string -> unit
 }
 
@@ -77,6 +78,12 @@ string log_w_mem (addr::bits(37), mask::bits(64), data::dword) =
 
 string log_r_mem (addr::bits(37), data::dword) =
    "data <- MEM[" : hex (addr:'000') : "]: " : hex(data)
+
+inline unit mark_watcher (s::string) =
+   when not PROVER_EXPORT do watcher <- s @ watcher
+
+unit clear_watcher =
+   when not PROVER_EXPORT do watcher <- Nil
 
 inline unit mark_log (lvl::nat, s::string) =
    when not PROVER_EXPORT do

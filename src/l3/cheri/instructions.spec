@@ -25,6 +25,14 @@ bool register_inaccessible_write_attempt(mask::bits(16)) =
     ret
 }
 
+unit watchOOB(cap::Capability, pc::bits(64)) =
+when watchOOBCap do
+    if getBase(cap) + getOffset(cap) <+ getBase(cap) then
+        mark_watcher("OOB cap @ PC = ":hex(pc):" - ":[[Abs(getOffset(cap))]::nat]:"B below base(":hex(getBase(cap)):") - cap : ":log_cap_write(cap))
+    else if getBase(cap) + getOffset(cap) >=+ getBase(cap) + getLength(cap) then
+        mark_watcher("OOB cap @ PC = ":hex(pc):" - ":[[getOffset(cap)-getLength(cap)]::nat]:"B above top(":hex(getBase(cap)+getLength(cap)):") - cap : ":log_cap_write(cap))
+    else nothing
+
 -- only works for non empty lists
 bool list SignExtendBitString(w::nat, x::bool list) = PadLeft (Head(x), w, x)
 bool list ZeroExtendBitString(w::nat, x::bool list) = PadLeft (false, w, x)
@@ -128,7 +136,10 @@ define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =
     else if register_inaccessible(cd) then
         SignalCapException(capExcAccessSysReg,cd)
     else
-        CAPR(cd) <- setOffset(PCC, PC)
+    {
+        CAPR(cd) <- setOffset(PCC, PC);
+        watchOOB(CAPR(cd), PC)
+    }
 
 -----------------------------------
 -- CGetPCCSetOffset cd, rs
@@ -142,9 +153,15 @@ define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
                                     getBase(PCC),
                                     getLength(PCC),
                                     GPR(rs)) then
-        CAPR(cd) <- setOffset(nullCap, getBase(PCC) + GPR(rs))
+    {
+        CAPR(cd) <- setOffset(nullCap, getBase(PCC) + GPR(rs));
+        watchOOB(CAPR(cd), PC)
+    }
     else
-        CAPR(cd) <- setOffset(PCC, GPR(rs))
+    {
+        CAPR(cd) <- setOffset(PCC, GPR(rs));
+        watchOOB(CAPR(cd), PC)
+    }
 
 -----------------------------------
 -- CGetCause rd
@@ -191,9 +208,15 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
                                     getBase(CAPR(cb)),
                                     getLength(CAPR(cb)),
                                     getOffset(CAPR(cb)) + GPR(rt)) then
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt))
+    {
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
     else
-        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + GPR(rt))
+    {
+        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
 
 -----------------------------------
 -- CSetBounds
@@ -289,9 +312,15 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
                                     getBase(CAPR(cb)),
                                     getLength(CAPR(cb)),
                                     GPR(rt)) then
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt))
+    {
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
     else
-        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
+    {
+        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
 
 -----------------------------------
 -- CSub
@@ -366,9 +395,15 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
     else if not isCapRepresentable(getSealed(CAPR(cb)), getBase(CAPR(cb)), getLength(CAPR(cb)), GPR(rt)) then
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt))
+    {
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
     else
-        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt))
+    {
+        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt));
+        watchOOB(CAPR(cd), PC)
+    }
 
 -----------------------------------
 -- CToPtr
@@ -894,6 +929,7 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
         else
         {
             CAPR(cd) <- setOffset(PCC, PC + 8);
+            watchOOB(CAPR(cd), PC);
             BranchToPCC <- Some (getOffset(CAPR(cb)), CAPR(cb))
         }
     }
