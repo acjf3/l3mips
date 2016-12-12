@@ -165,6 +165,8 @@ unit SignalCapException_noReg (capException::CapExceptionType) =
 -- ERET instruction
 -----------------------------------
 define ERET =
+{
+   CheckBranch;
    if CP0.Status.CU0 or KernelMode then
    {
       if CP0.Status.ERL then
@@ -183,3 +185,4 @@ define ERET =
    }
    else
       SignalException (CpU)
+}
