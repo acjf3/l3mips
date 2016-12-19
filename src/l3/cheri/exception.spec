@@ -111,16 +111,15 @@ unit SignalException (ExceptionType::ExceptionType) =
             0x180;
     when IsSome(currentInst) do CP0.EInstr <- ValOf(currentInst);
     CP0.Cause.ExcCode <- ExceptionCode (ExceptionType);
-    CP0.Status.EXL <- true;
     vectorBase =
         if CP0.Status.BEV then
             0xFFFF_FFFF_BFC0_0200`64
         else
             0xFFFF_FFFF_8000_0000;
-    BranchDelay <- None;
-    BranchTo <- None;
-    BranchDelayPCC <- None;
-    BranchToPCC <- None;
+    BranchDelay        <- None;
+    BranchTo           <- None;
+    BranchDelayPCC     <- None;
+    BranchToPCC        <- None;
     exceptionSignalled <- true;
 
     -- move PCC to EPCC
@@ -132,12 +131,13 @@ unit SignalException (ExceptionType::ExceptionType) =
         new_epcc <- setOffset(nullCap, getBase(PCC) + PC)
     else
         new_epcc <- setOffset(new_epcc, PC);
-    EPCC <- new_epcc;
+    when not CP0.Status.EXL do EPCC <- new_epcc;
     -- move KCC to PCC
     PCC <- KCC;
 
     --PC <- vectorBase<63:30> : (vectorBase<29:0> + vectorOffset);
     PC <- (vectorBase<63:30> : (vectorBase<29:0> + vectorOffset)) - getBase(PCC);
+    CP0.Status.EXL <- true;
     mark_log (2, log_sig_exception(ExceptionCode(ExceptionType)))
 }
 

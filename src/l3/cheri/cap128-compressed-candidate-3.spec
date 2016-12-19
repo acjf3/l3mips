@@ -142,7 +142,7 @@ Capability defaultCap =
     new_cap
 }
 
-Capability nullCap = -- FIXME
+Capability nullCap =
 {
     var new_cap :: Capability;
     new_cap.tag      <- false;
