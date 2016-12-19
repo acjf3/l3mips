@@ -46,6 +46,14 @@ record Capability
 ---------------------------------
 -- capability helper functions --
 --------------------------------------------------------------------------------
+
+bits(6) encExp (e::nat) =
+{
+    ebits::bits(6) = [e];
+    ~ebits<5:4> : ebits<3:0>
+}
+nat decExp (e::bits(6)) = [~e<5:4> : e<3:0>]
+
 {-
 RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
 {
@@ -70,7 +78,8 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
         case Unsealed(uf) => uf.topBits, uf.baseBits
         case Sealed(sf)   => sf.topBits:(0`12), sf.baseBits:(0`12)
     };
-    ptr = cap.cursor<[cap.exp]+19:[cap.exp]>;
+    e = decExp(cap.exp);
+    ptr = cap.cursor<e+19:e>;
     var repBound::bits(20) = bb - 0x1000;
     pr = if ptr <+ repBound then Hi (ptr) else Low (ptr);
     tr = if tb  <+ repBound then Hi (tb)  else Low (tb);
@@ -80,7 +89,7 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
 
 nat getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 {
-    e::nat = [cap.exp];             -- exponent
+    e::nat = decExp(cap.exp);       -- exponent
     s::nat = 2**(e+20);             -- region size
     c::nat = [cap.cursor];          -- cursor
     cAlign::nat = c - (c mod s);    -- aligned cursor
@@ -124,7 +133,7 @@ Capability defaultCap =
     new_cap.uperms   <- ~0;
     new_cap.perms    <- ~0;
     new_cap.reserved <- 0;
-    new_cap.exp      <- 0x2D; -- 45
+    new_cap.exp      <- encExp(45);
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
     uf.topBits  <- 0x80000;
@@ -140,7 +149,7 @@ Capability nullCap = -- FIXME
     new_cap.uperms   <- 0;
     new_cap.perms    <- 0;
     new_cap.reserved <- 0;
-    new_cap.exp      <- 0x2D;
+    new_cap.exp      <- encExp(48); -- this exponent maps to a 0 representation
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
     uf.topBits  <- 0;
@@ -227,7 +236,7 @@ Capability setBounds (cap::Capability, length::bits(64)) =
             var newTopBits = newTop<e+19:e>;
             when (newTop && ~(~0 << e)) <> 0 do newTopBits <- newTopBits + 1; -- round up if significant bits are lost
             -- fold the derived values back in new_cap
-            new_cap.exp <- [e];
+            new_cap.exp <- encExp(e);
             var uf :: UnsealedFields;
             uf.baseBits <- newBaseBits;
             uf.topBits  <- newTopBits;
@@ -261,7 +270,7 @@ Capability setSealed (cap::Capability, sealed::bool) =
         case Sealed(sf) => when not sealed do
         {
             -- construct the new base and top bits upper 12 bits
-            e::nat = [cap.exp];
+            e::nat = decExp(cap.exp);
             lowbits::bits(12) = cap.cursor<11+e:e>;
             -- assemble the new unsealed fields
             var uf::UnsealedFields;
@@ -366,12 +375,11 @@ bool isCapRepresentable(sealed::bool,
 ---------------
 -- log utils --
 --------------------------------------------------------------------------------
-string dec6  (x::bits(6))  = ToLower (PadLeft (#" ", 2, [[x]::nat]))
 string cap_inner_rep (cap::Capability) =
     "v:":(if cap.tag then "1" else "0"):
     " uperms:0x":[cap.uperms]:
     " perms:":hex (ZeroExtend(cap.perms)`16):
-    " exp:":dec6(cap.exp):
+    " exp:":[decExp(cap.exp)]:
     match cap.sFields
     {
         case Sealed(sf)   =>
