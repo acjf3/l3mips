@@ -124,9 +124,8 @@ unit SignalException (ExceptionType::ExceptionType) =
 
     -- move PCC to EPCC
     var new_epcc = PCC;
-    if not isCapRepresentable (getSealed(PCC),
-                               getBase(PCC),
-                               getLength(PCC),
+    if not isCapRepresentable (PCC,
+                               getSealed(PCC),
                                PC) then
         new_epcc <- setOffset(nullCap, getBase(PCC) + PC)
     else

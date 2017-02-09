@@ -362,22 +362,6 @@ if dwordAddr<0> then
 else
     old_blob<127:64> : (old_blob<63:0> && ~mask || data && mask)
 
-bool isCapRepresentable(sealed::bool,
-                        base::bits(64),
-                        length::bits(64),
-                        offset::bits(64)) =
-{
-    var test_cap = defaultCap;
-    test_cap <- setOffset(test_cap, base);
-    test_cap <- setBounds(test_cap, length);
-    test_cap <- setOffset(test_cap, offset);
-    test_cap <- setSealed(test_cap, sealed);
-    if getBase(test_cap)   == base   and
-       getLength(test_cap) == length and
-       getOffset(test_cap) == offset then
-       true else false
-}
-
 ---------------
 -- log utils --
 --------------------------------------------------------------------------------

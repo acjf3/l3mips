@@ -55,10 +55,9 @@ Capability nullCap =
 }
 
 
-bool isCapRepresentable(sealed::bool,
-                        base::bits(64),
-                        length::bits(64),
-                        offset::bits(64)) = true
+bool isCapRepresentable(cap::Capability,
+                        newSealed::bool,
+                        newOffset::bits(64)) = true
 
 ------------------------------------
 -- capability "typeclass" getters --

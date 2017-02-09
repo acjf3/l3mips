@@ -149,9 +149,8 @@ define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
         SignalCapException(capExcAccessSysReg,cd)
-    else if not isCapRepresentable (getSealed(PCC),
-                                    getBase(PCC),
-                                    getLength(PCC),
+    else if not isCapRepresentable (PCC,
+                                    getSealed(PCC),
                                     GPR(rs)) then
     {
         CAPR(cd) <- setOffset(nullCap, getBase(PCC) + GPR(rs));
@@ -204,9 +203,8 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) and GPR(rt) <> 0 then
         SignalCapException(capExcSeal,cb)
-    else if not isCapRepresentable (getSealed(CAPR(cb)),
-                                    getBase(CAPR(cb)),
-                                    getLength(CAPR(cb)),
+    else if not isCapRepresentable (CAPR(cb),
+                                    getSealed(CAPR(cb)),
                                     getOffset(CAPR(cb)) + GPR(rt)) then
     {
         CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt));
@@ -308,9 +306,8 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not isCapRepresentable (getSealed(CAPR(cb)),
-                                    getBase(CAPR(cb)),
-                                    getLength(CAPR(cb)),
+    else if not isCapRepresentable (CAPR(cb),
+                                    getSealed(CAPR(cb)),
                                     GPR(rt)) then
     {
         CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
@@ -394,7 +391,9 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not isCapRepresentable(getSealed(CAPR(cb)), getBase(CAPR(cb)), getLength(CAPR(cb)), GPR(rt)) then
+    else if not isCapRepresentable (CAPR(cb),
+                                    getSealed(CAPR(cb)),
+                                    GPR(rt)) then
     {
         CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
         watchOOB(CAPR(cd), PC)
@@ -960,9 +959,8 @@ define COP2 > CHERICOP2 > CSeal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcLength,ct)
     else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) >=+ [2**OTYPEWIDTH] then
         SignalCapException(capExcLength,ct)
-    else if not isCapRepresentable (true,
-                                    getBase(CAPR(cs)),
-                                    getLength(CAPR(cs)),
+    else if not isCapRepresentable (CAPR(cs),
+                                    true,
                                     getOffset(CAPR(cs))) then
         SignalCapException(capExcInexact,cs)
     else
