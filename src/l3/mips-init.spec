@@ -12,6 +12,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config.MT  <- 1;         -- standard TLB
    CP0.Config.AR  <- 0;         -- 0 = revision 1, 1 = revision 2
    CP0.Config.AT  <- 2;         -- MIPS64 with access to all address segments
+   CP0.Config.K0  <- 3;		-- Kseg0 is cached
 
    -- Configuration register 1 (mimic BERI)
    CP0.Config1.M  <- true;      -- true if config register 2 exists
