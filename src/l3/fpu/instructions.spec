@@ -8,12 +8,10 @@
 --
 -- (a) Enabling floating point traps is not supported. (BERI doesnt
 --     implement this either).
--- (b) The only supported rounding mode is round to nearest, tie to even.
---     (BERI doesnt implement the other rounding modes either).
--- (c) In the MIPS ISA, the quiet/signalling bit of NaN values has the
+-- (b) In the MIPS ISA, the quiet/signalling bit of NaN values has the
 --     opposite sense to the IEEE 754:2008 standard. This isnt included
 --     in this model.
--- (d) In the MIPS ISA, denormalized results are flushed to zero. This isnt
+-- (c) In the MIPS ISA, denormalized results are flushed to zero. This isnt
 --     included in this model.
 ---------------------------------------------------------------------------
 
@@ -71,6 +69,18 @@ bool FP32_Unordered(a::word, b::word) =
     FP32_IsNan(a) or FP32_IsNan(b)
 
 -----------------------------------
+-- Current rounding mode
+-----------------------------------
+ieee_rounding Rounding_Mode =
+    match fcsr.RM
+    {
+        case 0 => roundTiesToEven
+        case 1 => roundTowardZero
+        case 2 => roundTowardPositive
+        case 3 => roundTowardNegative
+    }
+
+-----------------------------------
 -- ABS.D fd, fs
 -----------------------------------
 define COP1 > ABS_D (fd::reg, fs::reg) =
@@ -103,7 +113,7 @@ define COP1 > ADD_D (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Add(roundTiesToEven, FGR(fs), FGR(ft)))
+        FGR(fd) <- PostOpF64(FP64_Add(Rounding_Mode, FGR(fs), FGR(ft)))
 
 -----------------------------------
 -- ADD.S fd, fs, ft
@@ -112,7 +122,7 @@ define COP1 > ADD_S (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Add(roundTiesToEven,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Add(Rounding_Mode,
             FGR(fs)<31:0>, FGR(ft)<31:0>)))
 
 -----------------------------------
@@ -370,7 +380,7 @@ define COP1 > CVT_D_L(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)]::int)
+        FGR(fd) <- FP64_FromInt(Rounding_Mode, [FGR(fs)]::int)
 
 -----------------------------------
 -- CVT.D.S fd, fs
@@ -392,7 +402,7 @@ define COP1 > CVT_D_W(fd::reg, fs::reg) =
         when NotWordValue (FGR(fs))
             do #UNPREDICTABLE("CVT.D.W: NotWordValue");
 
-        FGR(fd) <- FP64_FromInt(roundTiesToEven, [FGR(fs)<31:0>]::int)
+        FGR(fd) <- FP64_FromInt(Rounding_Mode, [FGR(fs)<31:0>]::int)
     }
 
 -----------------------------------
@@ -402,7 +412,7 @@ define COP1 > CVT_L_D(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        FGR(fd) <- match FP64_ToInt(Rounding_Mode, FGR(fs))
         {
             case Some(x) => IntToDWordMIPS(x)
             case None => 0x7fffffffffffffff`64
@@ -415,7 +425,7 @@ define COP1 > CVT_L_S(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        FGR(fd) <- match FP32_ToInt(Rounding_Mode, FGR(fs)<31:0>)
         {
             case Some(x) => IntToDWordMIPS(x)
             case None => 0x7fffffffffffffff`64
@@ -428,7 +438,7 @@ define COP1 > CVT_S_D(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(FP64_ToFP32(roundTiesToEven, FGR(fs)))
+        FGR(fd) <- SignExtend(FP64_ToFP32(Rounding_Mode, FGR(fs)))
 
 -----------------------------------
 -- CVT.S.L fd, fs
@@ -437,7 +447,7 @@ define COP1 > CVT_S_L(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven, [FGR(fs)]::int))
+        FGR(fd) <- SignExtend(FP32_FromInt(Rounding_Mode, [FGR(fs)]::int))
 
 -----------------------------------
 -- CVT.S.W fd, fs
@@ -450,7 +460,7 @@ define COP1 > CVT_S_W(fd::reg, fs::reg) =
         when NotWordValue (FGR(fs))
             do #UNPREDICTABLE("CVT.S.W: NotWordValue");
 
-        FGR(fd) <- SignExtend(FP32_FromInt(roundTiesToEven,
+        FGR(fd) <- SignExtend(FP32_FromInt(Rounding_Mode,
             [FGR(fs)<31:0>]::int))
     }
 
@@ -461,7 +471,7 @@ define COP1 > CVT_W_D(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- match FP64_ToInt(roundTiesToEven, FGR(fs))
+        FGR(fd) <- match FP64_ToInt(Rounding_Mode, FGR(fs))
         {
             case Some(x) => SignExtend(IntToWordMIPS(x))
             case None => 0x7fffffff`64
@@ -474,7 +484,7 @@ define COP1 > CVT_W_S(fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- match FP32_ToInt(roundTiesToEven, FGR(fs)<31:0>)
+        FGR(fd) <- match FP32_ToInt(Rounding_Mode, FGR(fs)<31:0>)
         {
             case Some(x) => SignExtend(IntToWordMIPS(x))
             case None => 0x7fffffff`64
@@ -487,7 +497,7 @@ define COP1 > DIV_D (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Div(roundTiesToEven, FGR(fs), FGR(ft)))
+        FGR(fd) <- PostOpF64(FP64_Div(Rounding_Mode, FGR(fs), FGR(ft)))
 
 -----------------------------------
 -- DIV.S fd, fs, ft
@@ -496,7 +506,7 @@ define COP1 > DIV_S (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Div(roundTiesToEven,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Div(Rounding_Mode,
             FGR(fs)<31:0>, FGR(ft)<31:0>)))
 
 -----------------------------------
@@ -624,8 +634,8 @@ define COP1 > MADD_D (fd::reg, fr::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Add(roundTiesToEven,
-            PostOpF64(FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft))), FGR(fr)))
+        FGR(fd) <- PostOpF64(FP64_Add(Rounding_Mode,
+            PostOpF64(FP64_Mul(Rounding_Mode, FGR(fs), FGR(ft))), FGR(fr)))
 
 -----------------------------------
 -- MADD.S fd, fr, fs, ft (MIPS IV)
@@ -634,8 +644,8 @@ define COP1 > MADD_S (fd::reg, fr::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Add(roundTiesToEven,
-            PostOpF32(FP32_Mul(roundTiesToEven, FGR(fs)<31:0>,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Add(Rounding_Mode,
+            PostOpF32(FP32_Mul(Rounding_Mode, FGR(fs)<31:0>,
                 FGR(ft)<31:0>)), FGR(fr)<31:0>)))
 
 -----------------------------------
@@ -773,8 +783,8 @@ define COP1 > MOVZ_S(fd::reg, fs::reg, rt::reg) =
 define COP1 > MSUB_D (fd::reg, fr::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
-    else FGR(fd) <- PostOpF64(FP64_Sub(roundTiesToEven,
-        PostOpF64(FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft))), FGR(fr)))
+    else FGR(fd) <- PostOpF64(FP64_Sub(Rounding_Mode,
+        PostOpF64(FP64_Mul(Rounding_Mode, FGR(fs), FGR(ft))), FGR(fr)))
 
 -----------------------------------
 -- MSUB.S fd, fr, fs, ft (MIPS IV)
@@ -783,8 +793,8 @@ define COP1 > MSUB_S (fd::reg, fr::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Sub(roundTiesToEven,
-            PostOpF32(FP32_Mul(roundTiesToEven, FGR(fs)<31:0>,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Sub(Rounding_Mode,
+            PostOpF32(FP32_Mul(Rounding_Mode, FGR(fs)<31:0>,
             FGR(ft)<31:0>)), FGR(fr)<31:0>)))
 
 -----------------------------------
@@ -794,7 +804,7 @@ define COP1 > MUL_D (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Mul(roundTiesToEven, FGR(fs), FGR(ft)))
+        FGR(fd) <- PostOpF64(FP64_Mul(Rounding_Mode, FGR(fs), FGR(ft)))
 
 -----------------------------------
 -- MUL.S fd, fs, ft
@@ -803,7 +813,7 @@ define COP1 > MUL_S (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Mul(roundTiesToEven,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Mul(Rounding_Mode,
             FGR(fs)<31:0>, FGR(ft)<31:0>)))
 
 -----------------------------------
@@ -919,7 +929,7 @@ define COP1 > SQRT_D (fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Sqrt(roundTiesToEven, FGR(fs)))
+        FGR(fd) <- PostOpF64(FP64_Sqrt(Rounding_Mode, FGR(fs)))
 
 -----------------------------------
 -- SQRT.S fd, fs, ft
@@ -928,7 +938,7 @@ define COP1 > SQRT_S (fd::reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Sqrt(roundTiesToEven,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Sqrt(Rounding_Mode,
             FGR(fs)<31:0>)))
 
 -----------------------------------
@@ -938,7 +948,7 @@ define COP1 > SUB_D (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- PostOpF64(FP64_Sub(roundTiesToEven, FGR(fs), FGR(ft)))
+        FGR(fd) <- PostOpF64(FP64_Sub(Rounding_Mode, FGR(fs), FGR(ft)))
 
 -----------------------------------
 -- SUB.S fd, fs, ft
@@ -947,7 +957,7 @@ define COP1 > SUB_S (fd::reg, fs::reg, ft::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
-        FGR(fd) <- SignExtend(PostOpF32(FP32_Sub(roundTiesToEven,
+        FGR(fd) <- SignExtend(PostOpF32(FP32_Sub(Rounding_Mode,
             FGR(fs)<31:0>, FGR(ft)<31:0>)))
 
 -----------------------------------
@@ -1110,10 +1120,7 @@ define COP1 > CTC1(rt:: reg, fs::reg) =
                 -- NAN2008 is read-only in some versions of the MIPS ISA,
                 -- read-write in others. We don't implement the legacy NaN
                 -- encoding, so we treat it as read-only.
-                fcsr.NAN2008 <- true;
-
-                -- RM is R/w in the MIPS ISA, but we don't implement it
-                fcsr.RM <- 0
+                fcsr.NAN2008 <- true
             }
             case _  => #UNPREDICTABLE("Unsupported floating point control register")
         }
