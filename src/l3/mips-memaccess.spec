@@ -91,7 +91,8 @@ dword LoadMemory
   }
   else
   {
-    var pAddr = Fst (AddressTranslation (vAddr, LOAD));
+    pAddr_, c = AddressTranslation (vAddr, LOAD);
+    var pAddr = pAddr_;
     if not exceptionSignalled then
     {
       pAddr <- AdjustEndian (MemType, pAddr);
@@ -118,6 +119,8 @@ dword LoadMemory
       };
       if link then
       {
+        when c == 2 do
+          #UNPREDICTABLE("load linked on uncached address");
         LLbit <- Some (true);
         CP0.LLAddr <- [pAddr]
       }

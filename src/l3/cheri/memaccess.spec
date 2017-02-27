@@ -138,6 +138,8 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
 
             if link then
             {
+                when CCA == 2 do
+                    #UNPREDICTABLE("load linked on uncached address");
                 LLbit <- Some (true);
                 CP0.LLAddr <- [pAddr]
             }
@@ -192,6 +194,8 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
 
         if link then
         {
+            when CCA == 2 do
+                #UNPREDICTABLE("load linked on uncached address");
             LLbit <- Some (true);
             CP0.LLAddr <- [pAddr]
         }
