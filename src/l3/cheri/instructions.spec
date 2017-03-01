@@ -1032,7 +1032,7 @@ define COP2 > CHERICOP2 > CCall (cs::reg, cb::reg) =
         SignalCapException(capExcPermExe,cs)
     else if getPerms(CAPR(cb)).Permit_Execute then
         SignalCapException(capExcPermExe,cb)
-    else if getOffset(CAPR(cs)) >= getLength(CAPR(cs)) then
+    else if getOffset(CAPR(cs)) >=+ getLength(CAPR(cs)) then
         SignalCapException(capExcLength,cs)
     else SignalCapException(capExcCall,cs)
 
