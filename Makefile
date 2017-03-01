@@ -156,7 +156,7 @@ SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 
 # memory subsystem params
 L1SIZE ?= 16384
-L1WAYS ?= 1
+L1WAYS ?= 4
 L1LINESIZE ?= 128
 L2SIZE ?= 65536
 L2WAYS ?= 4
