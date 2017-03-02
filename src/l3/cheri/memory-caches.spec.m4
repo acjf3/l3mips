@@ -176,13 +176,13 @@ string log_mem_read (addr::MemAddr, data::MemData) =
 nat L1LINEPERL2LINE = L2LINESIZE div L1LINESIZE
 -- address size in bits (40 bits)
 nat L1ADDRWIDTH = 40
--- size of offset feild in bits
+-- size of offset field in bits
 nat L1OFFSETWIDTH = Log2(L1LINESIZE)
--- size of index feild in bits
-nat L1INDEXWIDTH = Log2(L1SIZE div L1LINESIZE)
--- size of tag feild in bits
+-- size of index field in bits
+nat L1INDEXWIDTH = Log2(L1DSIZE div L1LINESIZE)
+-- size of tag field in bits
 nat L1TAGWIDTH = L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH
--- size of linenumber feild in bits
+-- size of linenumber field in bits
 nat L1LINENUMBERWIDTH = L1ADDRWIDTH-L1OFFSETWIDTH
 
 type L1Offset = bits(L1OFFSETWIDTH)

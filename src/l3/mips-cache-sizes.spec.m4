@@ -3,16 +3,22 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+---------------------------------------------------------------------------
 -- L1 compile time values (direct mapped L1)
 ---------------------------------------------------------------------------
 
--- L1 cache size in bytes (default 16KB)
-nat `L1SIZE' = L1SIZE
--- L1 associativity (default direct mapped)
-nat `L1WAYS' = L1WAYS
--- L1 line size in bytes (default 32B)
+-- L1 instruction cache size in bytes
+nat `L1ISIZE' = L1ISIZE
+-- L1 instruction cache associativity
+nat `L1IWAYS' = L1IWAYS
+-- L1 data cache size in bytes
+nat `L1DSIZE' = L1DSIZE
+-- L1 data cache associativity
+nat `L1DWAYS' = L1DWAYS
+-- L1 line size in bytes
 nat `L1LINESIZE' = L1LINESIZE
 
+---------------------------------------------------------------------------
 -- L2 compile time values
 ---------------------------------------------------------------------------
 

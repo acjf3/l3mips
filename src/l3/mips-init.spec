@@ -17,14 +17,14 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    -- Configuration register 1 (mimic BERI)
    CP0.Config1.M  <- true;      -- true if config register 2 exists
    CP0.Config1.MMUSize <- 15;   -- TLB has MMUSize+1 entries
-   CP0.Config1.IS <- [Log2(L1SIZE div L1LINESIZE div L1WAYS div 64)];
+   CP0.Config1.IS <- [Log2(L1ISIZE div L1LINESIZE div L1IWAYS div 64)];
                                                 -- Icache sets per way
    CP0.Config1.IL <- [Log2(L1LINESIZE div 2)];  -- Icache line size
-   CP0.Config1.IA <- [L1WAYS-1];                -- Icache associativity
-   CP0.Config1.DS <- [Log2(L1SIZE div L1LINESIZE div L1WAYS div 64)];
+   CP0.Config1.IA <- [L1IWAYS-1];               -- Icache associativity
+   CP0.Config1.DS <- [Log2(L1DSIZE div L1LINESIZE div L1DWAYS div 64)];
                                                 -- Dcache sets per way
    CP0.Config1.DL <- [Log2(L1LINESIZE div 2)];  -- Dcache line size
-   CP0.Config1.DA <- [L1WAYS-1];                -- Dcache associativity
+   CP0.Config1.DA <- [L1DWAYS-1];               -- Dcache associativity
    CP0.Config1.C2 <- hasCP2;    -- Coprocessor 2 available?
    CP0.Config1.MD <- false;     -- MDMX ASE implemented?
    CP0.Config1.PCR <- false;    -- Performance counter registers implemented?

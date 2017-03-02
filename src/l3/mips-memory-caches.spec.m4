@@ -112,7 +112,7 @@ nat L1ADDRWIDTH = 40
 -- size of offset feild in bits
 nat L1OFFSETWIDTH = Log2 (L1LINESIZE)
 -- size of index feild in bits
-nat L1INDEXWIDTH = Log2 (L1SIZE div L1LINESIZE)
+nat L1INDEXWIDTH = Log2 (L1DSIZE div L1LINESIZE)
 -- size of tag feild in bits
 nat L1TAGWIDTH = L1ADDRWIDTH-L1INDEXWIDTH-L1OFFSETWIDTH
 -- size of linenumber feild in bits
