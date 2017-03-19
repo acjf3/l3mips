@@ -22,7 +22,9 @@ endif
 ifdef CAP
 L3SRCBASE+=cheri/cap-params.spec
 L3SRCBASE+=cheri/cap-common.spec
-ifeq ($(CAP), c128c1)
+ifeq ($(CAP), c128posits1)
+L3SRCBASE+=cheri/cap128-compressed-posits-1.spec
+else ifeq ($(CAP), c128c1)
 L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
 else ifeq ($(CAP), c128c3)
 L3SRCBASE+=cheri/cap128-compressed-candidate-3.spec

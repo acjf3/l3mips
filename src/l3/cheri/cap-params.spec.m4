@@ -4,6 +4,15 @@
 ---------------------------------------------------------------------------
 
 ifelse(dnl
+CAP,c128posits1,dnl params for 128 bits wide posits compressed capabilities
+`dnl
+define(`CAPBYTEWIDTH', 16)dnl
+define(`CAPADDR', `bits(36)')dnl
+define(`CAPRAWBITS', `bits(128)')dnl
+define(`UPERMS', `8')dnl
+define(`OTYPEWIDTH', `24')dnl
+'dnl
+,dnl
 CAP,c128c1,dnl params for 128 bits wide compressed capabilities
 `dnl
 define(`CAPBYTEWIDTH', 16)dnl
