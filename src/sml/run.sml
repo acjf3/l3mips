@@ -342,7 +342,11 @@ fun next_loop mx =
                 else fn _ => ()
     val i = mips.instCnt
     fun loop () =
-      ( mips.switchCore (scheduleNext ())
+      let
+        val nextcore = scheduleNext ()
+      in
+        mips.switchCoreTLB nextcore
+      ; mips.switchCore nextcore
       ; uart ()
       ; mips.Next ()
       ; print_watcher ()
@@ -350,7 +354,7 @@ fun next_loop mx =
       ; stats (!i)
       ; i := !i + 1
       ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
-      )
+      end
   in
     i := 0; loop ()
   end

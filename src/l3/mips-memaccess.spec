@@ -92,10 +92,9 @@ dword LoadMemory
   else
   {
     pAddr_, c = AddressTranslation (vAddr, LOAD);
-    var pAddr = pAddr_;
-    if not exceptionSignalled then
+    if exceptionSignalled then return UNKNOWN else
     {
-      pAddr <- AdjustEndian (MemType, pAddr);
+      var pAddr = AdjustEndian (MemType, pAddr_);
       -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
       a = pAddr<39:3>;
       var ret;
@@ -109,12 +108,15 @@ dword LoadMemory
       {
         var found = false;
         for core in 0 .. totalCore - 1 do
-          when a >=+ PIC_base_address([core]) and
-                a <+ PIC_base_address([core]) + 1072 do
+        {
+          id = [core];
+          base = PIC_base_address(id);
+          when base <=+ a and a <+ base + 1072 do
           {
             found <- true;
-            ret <- PIC_load([core], a)
-          };
+            ret <- PIC_load(id, a)
+          }
+        };
         when not found do ret <- ReadData (a)
       };
       if link then
@@ -132,7 +134,6 @@ dword LoadMemory
       watchForLoad (pAddr, ret);
       return ret
     }
-    else return UNKNOWN
   }
 
 -- Pimitive memory store. Big-endian.
@@ -155,19 +156,16 @@ bool StoreMemory
     var sc_success = true;
     when not exceptionSignalled do
     {
-      sc_success <- if cond then
+      sc_success <- not cond or
         match LLbit
         {
           case None => #UNPREDICTABLE ("conditional store: LLbit not set")
           case Some (false) => false
           case Some (true) =>
-            if CP0.LLAddr == [pAddr] then
-              true
-            else
-              #UNPREDICTABLE
-                ("conditional store: address doesn't match previous LL address")
-        }
-        else true;
+            CP0.LLAddr == [pAddr] or
+            #UNPREDICTABLE
+               ("conditional store: address doesn't match previous LL address")
+        };
       a = pAddr<39:3>;
       b = [AccessLength] + 0n1;
       l = 64 - (b + [vAddr<2:0>]) * 0n8;
@@ -178,20 +176,23 @@ bool StoreMemory
       {
         var found = false;
         for core in 0 .. totalCore - 1 do
-           when a >=+ PIC_base_address([core]) and
-                 a <+ PIC_base_address([core]) + 1072 do
+        {
+           id = [core];
+           base = PIC_base_address (id);
+           when base <=+ a and a <+ base + 1072 do
            {
               found <- true;
-              PIC_store([core], a, mask, MemElem)
-           };
+              PIC_store(id, a, mask, MemElem)
+           }
+         };
          when not found and sc_success do
          {
             for core in 0 .. totalCore - 1 do
-            {   i = [core];
-                st = all_state (i);
-                when i <> procID and st.c_LLbit == Some (true) and
+            {   id = [core];
+                st = all_state (id);
+                when id <> procID and st.c_LLbit == Some (true) and
                      st.c_CP0.LLAddr<39:3> == pAddr<39:3> do
-                        all_state(i).c_LLbit <- Some (false)
+                        all_state(id).c_LLbit <- Some (false)
             };
             WriteData(a, MemElem, mask)
          }

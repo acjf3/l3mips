@@ -4,6 +4,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+unit switchCoreTLB (n:nat) = nothing
+
 pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType) =
 {
     unmapped, valid = CheckSegment (vAddr);
@@ -13,9 +15,9 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType
             case Some (addr, cca) =>
             {
                 check_cca(cca);
-                ([addr], cca)
+                return ([addr], cca)
             }
-            case _ => ([vAddr], 0)
+            case _ => return ([vAddr], 0)
         }
     else
     {

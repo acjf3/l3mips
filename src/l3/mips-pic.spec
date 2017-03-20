@@ -30,17 +30,23 @@ declare
 
 unit PIC_update (id :: id) =
 {
-  ext`128 = ZeroExtend(PIC_external_intrs(id));
   config_regs = PIC_config_regs(id);
-  var ip :: bits(8);
-  ip <- 0;
-  when PIC_ip_bits(id) <> 0 or ext <> 0 do
-    for i in 0 .. 127 do
-      when PIC_ip_bits(id)<i> or ext<i> do
+  ext`128 = ZeroExtend(PIC_external_intrs(id));
+  ip_bits = PIC_ip_bits(id) || ext;
+  var ip = 0`8;
+  when ip_bits <> 0 do
+  {
+    var i = 0n127;
+    foreach b in [ip_bits] do
+    {
+      when b do
       {
         reg = config_regs([i]);
         ip<[reg.IRQ]> <- ip<[reg.IRQ]> or reg.EN
       };
+      i <- i - 1
+    }
+  };
   -- (IRQs 5, 6 and 7 currently ignored)
   if id == procID then
     c_state.c_CP0.Cause.IP<6:2> <- ip<4:0>

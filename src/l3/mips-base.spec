@@ -143,12 +143,10 @@ bool BigEndianMem = CP0.Config.BE
 bits(1) ReverseEndian = [CP0.Status.RE and UserMode]
 bits(1) BigEndianCPU  = [BigEndianMem] ?? ReverseEndian
 
-bool NotWordValue(value::dword) =
-{  top = value<63:32>;
-   if value<31> then
-      top <> 0xFFFF_FFFF
-   else
-      top <> 0x0
+bool NotWordValue (value::dword) =
+{
+   top = value<63:31>;
+   return top != 0 and top != 0x1_FFFF_FFFF
 }
 
 unit CheckBranch =

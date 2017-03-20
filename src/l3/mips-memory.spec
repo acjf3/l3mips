@@ -72,8 +72,9 @@ dword ReadData (pAddr::dwordAddr) =
 unit WriteData (pAddr::dwordAddr, data::dword, mask::dword) =
 {
     memStats.data_writes <- memStats.data_writes + 1;
-    MEM(pAddr) <- MEM(pAddr) && ~mask || data && mask;
-    mark_log (4, log_mem_write (pAddr, MEM(pAddr)))
+    d = MEM(pAddr) && ~mask || data && mask;
+    MEM(pAddr) <- d;
+    mark_log (4, log_mem_write (pAddr, d))
 }
 
 word ReadInst (a::pAddr) =

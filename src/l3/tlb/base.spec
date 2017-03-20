@@ -16,8 +16,10 @@ type TLBDirectMap = bits(8) -> TLBEntry option
 
 declare
 {
-   c_TLB_direct :: id -> TLBDirectMap
-   c_TLB_assoc  :: id -> TLBAssocMap
+   all_TLB_direct :: id -> TLBDirectMap
+   all_TLB_assoc  :: id -> TLBAssocMap
+   c_TLB_direct :: TLBDirectMap
+   c_TLB_assoc  :: TLBAssocMap
    UNPREDICTABLE_TLB :: unit -> unit
 }
 
@@ -26,52 +28,61 @@ declare
 
 component TLB_direct (i::bits(8)) :: TLBEntry option
 {
-   value = { var m = c_TLB_direct(procID); m(i) }
-   assign value = { var m = c_TLB_direct(procID)
-                  ; m(i) <- value
-                  ; c_TLB_direct(procID) <- m }
+   value = c_TLB_direct(i)
+   assign value = c_TLB_direct(i) <- value
 }
 
 component TLB_assoc (i::bits(4)) :: TLBEntry option
 {
-   value = { var m = c_TLB_assoc(procID); m(i) }
-   assign value = { var m = c_TLB_assoc(procID)
-                  ; m(i) <- value
-                  ; c_TLB_assoc(procID) <- m}
+   value = c_TLB_assoc(i)
+   assign value = c_TLB_assoc(i) <- value
 }
+
+unit switchCoreTLB (n::nat) =
+   when n <> [procID] do
+   {
+     all_TLB_direct (procID) <- c_TLB_direct;
+     all_TLB_assoc (procID) <- c_TLB_assoc;
+     i = [n];
+     c_TLB_direct <- all_TLB_direct (i);
+     c_TLB_assoc <- all_TLB_assoc (i)
+   }
+
+inline bool MatchingEntry (r::bits(2), vpn2::bits(27), e::TLBEntry) =
+  if e.R == r and (e.G or e.ASID == CP0.EntryHi.ASID) then
+  {
+    nmask`27 = ~[e.Mask];
+    return (e.VPN2 && nmask == vpn2 && nmask)
+  }
+  else
+    false
 
 (bits(9) * TLBEntry) list LookupTLB (r::bits(2), vpn2::bits(27)) =
 {
     var found = Nil;
-    match TLB_direct (vpn2<7:0>)
+    when CP0.Config6.LTLB do
     {
-        case Some (e) =>
-        {
-            index`9 = if [vpn2<7:0>] >= TLBAssocEntries then
-                      [vpn2<7:0>] else [TLBDirectEntries] + [vpn2<7:0>];
-            nmask`27 = ~[e.Mask];
-            when CP0.Config6.LTLB do
-                found <- if e.VPN2 && nmask == vpn2 && nmask and e.R == r
-                         and (e.G or e.ASID == CP0.EntryHi.ASID) then
-                            list {(index, e)}
-                         else Nil
-        }
-        case _ => found <- Nil
+       b = vpn2<7:0>;
+       match TLB_direct (b)
+       {
+          case Some (e) =>
+            when MatchingEntry (r, vpn2, e) do
+            {
+              index`9 = if TLBAssocEntries <= [b] then
+                          [b]
+                        else [TLBDirectEntries] + [b];
+              found <- list {(index, e)}
+            }
+          case _ => nothing
+       }
     };
     for i in 0 .. TLBAssocEntries - 1 do
-    {
-        match TLB_assoc ([i])
-        {
-            case Some (e) =>
-            {
-                nmask`27 = ~[e.Mask];
-                when e.VPN2 && nmask == vpn2 && nmask and e.R == r
-                     and (e.G or e.ASID == CP0.EntryHi.ASID) do
-                     found <- ([i], e) @ found
-            }
-            case _ => nothing
-        }
-   };
+       match TLB_assoc ([i])
+       {
+          case Some (e) =>
+             when MatchingEntry (r, vpn2, e) do found <- ([i], e) @ found
+          case _ => nothing
+       };
    return found
 }
 
@@ -92,31 +103,33 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
 
 (pAddr * CCA) option * bool CheckSegment (vAddr::vAddr) =
    if UserMode then
-      None, vAddr <+ 0x0000_0100_0000_0000      -- xuseg
+     None, vAddr <+ 0x0000_0100_0000_0000       -- xuseg
    else if SupervisorMode then
-      None,
-      vAddr <+ 0x0000_0100_0000_0000 or         -- xsuseg
-      (0x4000_0000_0000_0000 <=+ vAddr and
-      vAddr <+ 0x4000_0100_0000_0000) or        -- xsseg
-      (0xFFFF_FFFF_C000_0000 <=+ vAddr and
+     None,
+     vAddr <+ 0x0000_0100_0000_0000             -- xsuseg
+     or
+     (0x4000_0000_0000_0000 <=+ vAddr and
+      vAddr <+ 0x4000_0100_0000_0000)           -- xsseg
+     or
+     (0xFFFF_FFFF_C000_0000 <=+ vAddr and
       vAddr <+ 0xFFFF_FFFF_E000_0000)           -- csseg
-   else if vAddr <+ 0x0000_0100_0000_0000 then  -- xkuseg
-      None, true
-   else if 0x4000_0000_0000_0000 <=+ vAddr and
-           vAddr <+  0x4000_0100_0000_0000 then -- xksseg
-      None, true
-   else if 0x8000_0000_0000_0000 <=+ vAddr and
-           vAddr <+  0xC000_0000_0000_0000 then -- xkphys (unmapped)
-      Some (vAddr<39:0>, vAddr<61:59>), vAddr<58:40> == 0
-   else if 0xC000_0000_0000_0000 <=+ vAddr and
-           vAddr <+  0xC000_00FF_8000_0000 then -- xkseg
-      None, true
-   else if 0xFFFF_FFFF_8000_0000 <=+ vAddr and
-           vAddr <+  0xFFFF_FFFF_A000_0000 then -- ckseg0 (unmapped)
-      Some (vAddr<39:0> - 0xFF_8000_0000, CP0.Config.K0), true
-   else if 0xFFFF_FFFF_A000_0000 <=+ vAddr and
-           vAddr <+  0xFFFF_FFFF_C000_0000 then -- ckseg1 (unmapped+uncached)
+   else if vAddr <+ 0xC000_0000_0000_0000 then
+      if vAddr <+ 0x4000_0000_0000_0000 then
+         None, vAddr <+ 0x0000_0100_0000_0000   -- xkuseg/cksseg3
+      else if 0x8000_0000_0000_0000 <=+ vAddr then
+         Some (vAddr<39:0>, vAddr<61:59>), vAddr<58:40> == 0
+                                                -- xkphys (unmapped)
+      else
+         None, vAddr <+ 0x4000_0100_0000_0000   -- xksseg/cksseg3
+   else if vAddr <+ 0xFFFF_FFFF_A000_0000 then
+      if 0xFFFF_FFFF_8000_0000 <=+ vAddr then
+         Some (vAddr<39:0> - 0xFF_8000_0000, CP0.Config.K0), true
+                                                -- ckseg0 (unmapped)
+      else
+         None, vAddr <+ 0xC000_00FF_8000_0000   -- xkseg/cksseg3
+   else if vAddr <+ 0xFFFF_FFFF_C000_0000 then
       Some (vAddr<39:0> - 0xFF_A000_0000, 2), true
+                                                -- ckseg1 (unmapped+uncached)
    else
       None, 0xFFFF_FFFF_C000_0000 <=+ vAddr     -- cksseg/ckseg3
 
@@ -132,10 +145,5 @@ nat option checkMask (mask::bits(12)) = match mask
     case _                => None
 }
 
-unit check_cca (cca::bits(3)) = match cca
-{
-    case 0 => #UNPREDICTABLE("CCA 0 Reserved")
-    case 1 => #UNPREDICTABLE("CCA 1 Reserved")
-    case 7 => #UNPREDICTABLE("CCA 7 Reserved")
-    case _ => nothing
-}
+unit check_cca (cca::bits(3)) =
+  when cca in set {0, 1, 7} do #UNPREDICTABLE("CCA " : [cca] : " Reserved")
