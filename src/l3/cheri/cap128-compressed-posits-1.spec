@@ -123,12 +123,6 @@ nat getExp (cap::Capability) = if cap.r0 then [cap.e0] else
     };
     start::nat  = (nb_cont * 6) + 2;
     offset::nat = if IsSome(term) then ValOf(term) else 0;
-    --println("getExp");
-    --println("tokens:":printBitList(getTokens(cap)));
-    --println("Reverse(tokens):":printBitList(Reverse(getTokens(cap))));
-    --println("start  = ":[start]);
-    --println("offset = ":[offset]);
-    --println("e0     = ":[cap.e0]);
     (start + offset + [cap.e0])
 }
 
@@ -498,8 +492,6 @@ Capability defaultCap =
     new_cap.r0       <- r0;
     new_cap.sFields  <- sFields;
     new_cap.cursor   <- 0;
-    println("DEFAULT CAP :");
-    println(log_cap_write(new_cap));
     new_cap
 }
 
