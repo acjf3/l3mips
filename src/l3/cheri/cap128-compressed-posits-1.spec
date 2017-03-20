@@ -20,24 +20,24 @@ record SealedFields
 
 construct SFields {Sealed :: SealedFields, Unsealed :: UnsealedFields}
 
+-- NB: bit negation of positions 15 and 14 are for 0 in mem representation of the null cap
 SFields decSFields (raw::bits(41)) = if raw<40> then
 {
     -- sealed
     var sf :: SealedFields;
     sf.otype <- raw<39:16>;
-    sf.bitsTopBase <- raw<15:0>;
+    sf.bitsTopBase <- ~raw<15:14> : raw<13:0>;
     Sealed(sf)
 } else {
     -- unsealed
     var uf :: UnsealedFields;
-    uf.bitsTopBase <- raw<39:0>;
+    uf.bitsTopBase <- raw<39:16> : ~raw<15:14> : raw<13:0>;
     Unsealed(uf)
 }
-
 bits(41) encSFields (sFields::SFields) = match sFields
 {
-    case Unsealed(uf) => '0':uf.bitsTopBase
-    case Sealed(sf)   => '1':sf.otype:sf.bitsTopBase
+    case Unsealed(uf) => '0' : uf.bitsTopBase<39:16> : ~uf.bitsTopBase<15:14> : uf.bitsTopBase<13:0>
+    case Sealed(sf)   => '1' : sf.otype : ~sf.bitsTopBase<15:14> : sf.bitsTopBase<13:0>
 }
 
 construct RepRegion {Low :: bits(20), Hi :: bits(20)}
