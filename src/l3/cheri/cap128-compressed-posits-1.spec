@@ -70,12 +70,21 @@ record Capability
         - {'01','10','11'} are termination tokens
 --}
 
+{--
+string printBitList (lst::bits(n) list) =
+{
+    var str = "{ ";
+    foreach e in lst do str <- str : hex(e) : ", ";
+    (str : "}")
+}
+--}
+
 -- token size = 2 bits
 bits(2) list tokenize (f::bits(n)) =
 {
     -- TODO check for n divisible by token size (2 bits)
     var tok_list = Nil;
-    for i in ((n div 2)-1) .. 1 do
+    for i in 0 .. ((n div 2)-1) do
     {
         tok_list <- Cons (f<(2*i)+1:2*i>, tok_list)
     };
@@ -98,7 +107,7 @@ UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
 bits(11) encPerms (p::Perms) = &p<10:0>
 Perms decPerms (p::bits(11)) = Perms(SignExtend(p))
 
-nat getExp (cap::Capability) = if not cap.r0 then [cap.e0] else
+nat getExp (cap::Capability) = if cap.r0 then [cap.e0] else
 {
     var term = None;
     var nb_cont::nat = 0;
@@ -108,16 +117,12 @@ nat getExp (cap::Capability) = if not cap.r0 then [cap.e0] else
         -- continuation
         case '00' => nb_cont <- nb_cont + 1
         -- termination
-        case x    => term <- Some (x)
+        case '01' => term <- Some (0)
+        case '10' => term <- Some (2)
+        case '11' => term <- Some (4)
     };
-    start  = (nb_cont * 6) + 2;
-    offset = match term
-    {
-        case Some('01') => 0
-        case Some('10') => 2
-        case Some('11') => 4
-        case _ => 0
-    };
+    start::nat  = (nb_cont * 6) + 2;
+    offset::nat = if IsSome(term) then ValOf(term) else 0;
     (start + offset + [cap.e0])
 }
 
@@ -155,10 +160,10 @@ bits(20) getBaseBits (cap::Capability) = Snd(getBoundBits(cap))
 
 bool * bool * SFields encPosit(exp::nat,top::bits(20),base::bits(20),otype::bits(24) option) =
 {
-    e0 = exp mod 2;
-    r0 = exp > 1;
-    nb_cont = (exp - e0 - 2) div 6;
-    offset  = exp - nb_cont * 6 - e0 - 2;
+    e0 = exp mod 2; -- e0 is the parity of the exponent
+    r0 = not (exp > 1); -- r0 need continuation for exp > 1, and continuation is encoded as 0s
+    nb_cont = (exp - e0 - 2) div 6; -- how many continuation tokens required
+    offset  = exp - nb_cont * 6 - e0 - 2; -- offset within termination token
     ttok = match offset
     {
         case 0 => '01'
@@ -245,40 +250,6 @@ nat countLeadingZeros  (data::bits(64)) = innerZeroCount ([data], 0)
 nat countTrailingZeros (data::bits(20)) = innerZeroCount ([Reverse(data)], 0)
 
 nat idxMSNZ (data::bits(64)) = 63-countLeadingZeros(data)
-
----------------------------------------
--- standard capabilities definitions --
---------------------------------------------------------------------------------
-
-Capability defaultCap =
-{
-    var new_cap :: Capability;
-    new_cap.tag      <- true;
-    new_cap.uperms   <- UPerms(~0);
-    new_cap.perms    <- Perms(~0);
-    new_cap.reserved <- 0;
-    e0, r0, sFields = encPosit(45,0x80000,0x0,None);
-    new_cap.e0       <- e0;
-    new_cap.r0       <- r0;
-    new_cap.sFields  <- sFields;
-    new_cap.cursor   <- 0;
-    new_cap
-}
-
-Capability nullCap =
-{
-    var new_cap :: Capability;
-    new_cap.tag      <- false;
-    new_cap.uperms   <- UPerms(0);
-    new_cap.perms    <- Perms(0);
-    new_cap.reserved <- 0;
-    e0, r0, sFields = encPosit(48,0x0,0x0,None);
-    new_cap.e0       <- e0;
-    new_cap.r0       <- r0;
-    new_cap.sFields  <- sFields;
-    new_cap.cursor   <- 0;
-    new_cap
-}
 
 ------------------------------------
 -- capability "typeclass" getters --
@@ -443,23 +414,6 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
 
 bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
-bool isCapRepresentable(cap::Capability,
-                        newSealed::bool,
-                        newOffset::bits(64)) =
-{
-    base   = getBase(cap);
-    length = getLength(cap);
-    var test_cap = defaultCap;
-    test_cap <- setOffset(test_cap, base);
-    test_cap <- setBounds(test_cap, length);
-    test_cap <- setOffset(test_cap, newOffset);
-    test_cap <- setSealed(test_cap, newSealed);
-    if getBase(test_cap)   == base   and
-       getLength(test_cap) == length and
-       getOffset(test_cap) == newOffset then
-       true else false
-}
-
 CAPRAWBITS capToBits (cap :: Capability) = 
     cap.cursor:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:[cap.e0]:[cap.r0]:encSFields(cap.sFields)
 
@@ -492,11 +446,13 @@ else
 string cap_inner_rep (cap::Capability) =
 {
     t, b = getBoundBits(cap);
+    e = getExp(cap);
     "v:":(if cap.tag then "1" else "0"):
     " uperms:":hex(cap.&uperms<3:0>):
     " perms:":hex(cap.&perms<10:0>):
-    " e0:":[cap.e0]:
-    " r0:":[cap.r0]:
+    " exp:":[e]:
+    " e0:":if cap.e0 then "1" else "0":
+    " r0:":if cap.r0 then "1" else "0":
     match cap.sFields
     {
         case Sealed(sf)   =>
@@ -519,3 +475,54 @@ string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
 string log_store_cap (pAddr::pAddr, cap::Capability) = "MEM[":hex (pAddr):"] <- ":log_cap_write(cap)
 string log_load_cap (pAddr::pAddr, cap::Capability) =  log_cap_write(cap) : " <- MEM[":hex (pAddr):"]"
+
+---------------------------------------
+-- standard capabilities definitions --
+--------------------------------------------------------------------------------
+
+Capability defaultCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag      <- true;
+    new_cap.uperms   <- UPerms(~0);
+    new_cap.perms    <- Perms(~0);
+    new_cap.reserved <- 0;
+    e0, r0, sFields = encPosit(45,0x80000,0x0,None);
+    new_cap.e0       <- e0;
+    new_cap.r0       <- r0;
+    new_cap.sFields  <- sFields;
+    new_cap.cursor   <- 0;
+    new_cap
+}
+
+Capability nullCap =
+{
+    var new_cap :: Capability;
+    new_cap.tag      <- false;
+    new_cap.uperms   <- UPerms(0);
+    new_cap.perms    <- Perms(0);
+    new_cap.reserved <- 0;
+    e0, r0, sFields = encPosit(48,0x0,0x0,None);
+    new_cap.e0       <- e0;
+    new_cap.r0       <- r0;
+    new_cap.sFields  <- sFields;
+    new_cap.cursor   <- 0;
+    new_cap
+}
+
+bool isCapRepresentable(cap::Capability,
+                        newSealed::bool,
+                        newOffset::bits(64)) =
+{
+    base   = getBase(cap);
+    length = getLength(cap);
+    var test_cap = defaultCap;
+    test_cap <- setOffset(test_cap, base);
+    test_cap <- setBounds(test_cap, length);
+    test_cap <- setOffset(test_cap, newOffset);
+    test_cap <- setSealed(test_cap, newSealed);
+    if getBase(test_cap)   == base   and
+       getLength(test_cap) == length and
+       getOffset(test_cap) == newOffset then
+       true else false
+}
