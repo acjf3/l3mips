@@ -146,9 +146,32 @@ L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 HOLSRCDIR=src/hol
 SMLSRCDIR=src/sml
 L3_SML_LIB ?= `l3 --lib-path`
+L3SMLLIB=$(shell l3 --lib-path)
 
 # generating the sml source list
 #######################################
+SMLLIBSRC+=$(L3SMLLIB)/Runtime.sig
+SMLLIBSRC+=$(L3SMLLIB)/Runtime.sml
+SMLLIBSRC+=$(L3SMLLIB)/IntExtra.sig
+SMLLIBSRC+=$(L3SMLLIB)/IntExtra.sml
+SMLLIBSRC+=$(L3SMLLIB)/Nat.sig
+SMLLIBSRC+=$(L3SMLLIB)/Nat.sml
+SMLLIBSRC+=$(L3SMLLIB)/Set.sig
+SMLLIBSRC+=$(L3SMLLIB)/Set.sml
+SMLLIBSRC+=$(L3SMLLIB)/L3.sig
+SMLLIBSRC+=$(L3SMLLIB)/L3.sml
+SMLLIBSRC+=$(L3SMLLIB)/Bitstring.sig
+SMLLIBSRC+=$(L3SMLLIB)/Bitstring.sml
+SMLLIBSRC+=$(L3SMLLIB)/BitsN.sig
+SMLLIBSRC+=$(L3SMLLIB)/BitsN.sml
+SMLLIBSRC+=$(L3SMLLIB)/Ptree.sig
+SMLLIBSRC+=$(L3SMLLIB)/Ptree.sml
+SMLLIBSRC+=$(L3SMLLIB)/MutableMap.sig
+SMLLIBSRC+=$(L3SMLLIB)/MutableMap.sml
+SMLLIBSRC+=$(L3SMLLIB)/FP.sig
+SMLLIBSRC+=$(L3SMLLIB)/FP.sml
+SMLLIBSRC+=$(L3SMLLIB)/NO_FP.sml
+SMLLIBSRC+=$(L3SMLLIB)/FP64.sml
 SMLSRCBASE+=mips.sig
 SMLSRCBASE+=mips.sml
 SMLSRCBASE+=run.sml
@@ -183,6 +206,7 @@ ifdef CACHE
 NAME_STR:=$(NAME_STR)-l2_$(L2SIZE)B_$(L2WAYS)ways_$(L2LINESIZE)Bpl
 endif
 SIM ?= $(NAME_STR)
+SIMPOLY ?= $(shell pwd)/$(NAME_STR)-poly
 
 SIM_PROFILE ?= l3mips_prof
 SIM_COVERAGE ?= l3mips_coverage
@@ -214,18 +238,22 @@ ${L3SRCDIR}/cheri/%.spec: ${L3SRCDIR}/cheri/%.spec.m4
 	m4 -I ${L3SRCDIR}/cheri/ -D CAP=$(CAP) -D L2SIZE=$(L2SIZE) -D L2WAYS=$(L2WAYS) -D L2LINESIZE=$(L2LINESIZE) -D L1ISIZE=$(L1ISIZE) -D L1IWAYS=$(L1IWAYS) -D L1DSIZE=$(L1DSIZE) -D L1DWAYS=$(L1DWAYS) -D L1LINESIZE=$(L1LINESIZE) $^ > $@
 
 MLTON ?= mlton
+POLYC ?= polyc
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
-	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
+	echo 'SMLExport.setIntInf true; SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
 
-${SIM}: ${SMLSRC}
-	$(MLTON) -inline 1000 -default-type intinf -verbose 1 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+poly: ${SMLSRC} ${SMLLIBSRC} ${SMLSRCDIR}/run-poly.sml
+	cd ${SMLSRCDIR} && $(POLYC) -o ${SIMPOLY} run-poly.sml
 
-${SIM_PROFILE}: ${SMLSRC}
-	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+${SIM}: ${SMLSRC} ${SMLLIBSRC}
+	$(MLTON) -inline 1000 -default-type intinf -verbose 2 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
-${SIM_COVERAGE}: ${SMLSRC}
-	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 1 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+${SIM_PROFILE}: ${SMLSRC} ${SMLLIBSRC}
+	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+
+${SIM_COVERAGE}: ${SMLSRC} ${SMLLIBSRC}
+	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml

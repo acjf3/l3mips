@@ -28,3 +28,4 @@ ann "nonexhaustiveMatch ignore" in
   mips.sml
 end
 run.sml
+run-mlton.sml

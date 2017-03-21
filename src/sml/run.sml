@@ -21,7 +21,7 @@ val watch_oob_cap = ref false
 val rdhwr_extra = ref false
 val nb_core = ref 1
 val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
-val dump_stat_freq = ref (NONE: int option)
+val dump_stat_freq = ref (NONE: IntInf.int option)
 val stats_fmt = ref (NONE: string option)
 val cpu_time = ref (Timer.startCPUTimer())
 val schedule = ref (NONE: TextIO.instream option)
@@ -270,12 +270,13 @@ fun print_stats i =
 
 local
   fun log_string n =
-    case mips.Map.lookup (!mips.log, n) of
+    case mips.Map.lookup (!mips.log, Nat.fromNativeInt n) of
        [] => ""
      | l => String.concatWith "\n" (List.rev l) ^ "\n"
 in
   fun print_traces lvl =
-    streamPrint trace_out (String.concat (List.tabulate (lvl + 1, log_string)))
+    streamPrint trace_out
+      (String.concat (List.tabulate (Nat.toNativeInt lvl + 1, log_string)))
 end
 
 local
@@ -500,7 +501,7 @@ fun processOptions s commandLine =
         (x::xs, rest2)
       end
 
-val () =
+fun main () =
    case getArguments () of
       ["--help"] => printUsage ()
     | l =>
