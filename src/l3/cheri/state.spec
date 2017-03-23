@@ -28,32 +28,30 @@ declare
    c_capr            :: CapRegFile        -- capability register file
 }
 
-unit switchCoreCAP (n::nat) =
-   when n <> [procID] do
-   {
-      all_BranchDelayPCC (procID) <- BranchDelayPCC;
-      all_BranchToPCC (procID) <- BranchToPCC;
-      all_capcause (procID) <- capcause;
-      all_pcc (procID) <- c_pcc;
-      all_capr (procID) <- c_capr;
-      i = [n];
-      BranchDelayPCC <- all_BranchDelayPCC (i);
-      BranchToPCC <- all_BranchToPCC (i);
-      capcause <- all_capcause (i);
-      c_pcc <- all_pcc (i);
-      c_capr <- all_capr (i)
-   }
+unit switchCoreCAP (i::id) =
+{
+   all_BranchDelayPCC (procID) <- BranchDelayPCC;
+   all_BranchToPCC (procID) <- BranchToPCC;
+   all_capcause (procID) <- capcause;
+   all_pcc (procID) <- c_pcc;
+   all_capr (procID) <- c_capr;
+   BranchDelayPCC <- all_BranchDelayPCC (i);
+   BranchToPCC <- all_BranchToPCC (i);
+   capcause <- all_capcause (i);
+   c_pcc <- all_pcc (i);
+   c_capr <- all_capr (i)
+}
 
 unit dumpCRegs () =
 {
     mark_log (0, "======   Registers   ======")
   ; mark_log (0, "Core = " : [[procID]::nat])
-  ; mark_log (0, "DEBUG CAP PCC   \\t" : log_cap_write(all_pcc(procID)))
+  ; mark_log (0, "DEBUG CAP PCC   \t" : log_cap_write(all_pcc(procID)))
   ; m = all_capr(procID)
   ; for i in 0 .. 31 do
     mark_log (0, "DEBUG CAP REG " :
         (if i<10 then " " else "") : [[i]::nat] :
-        "\\t" : log_cap_write(m([i])))
+        "\t" : log_cap_write(m([i])))
 }
 
 component PCC :: Capability

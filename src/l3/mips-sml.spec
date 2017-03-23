@@ -10,6 +10,30 @@ nat PSIZE = 40         -- 40-bit physical memory
 declare done :: bool   -- Flag to request termination
 
 --------------------------------------------------
+-- Core switching
+--------------------------------------------------
+
+-- Switch cores by saving the current core state in the global map and then
+-- update to the current core state to be that of core "i".
+
+nat switchCore (n::nat) =
+{
+   old = [procID];
+   when n <> old do
+   {
+      i = [n];
+      switchCoreTLB (i);
+      switchCoreCAP (i);
+      all_gpr (procID) <- c_gpr;
+      all_state (procID) <- c_state;
+      c_gpr <- all_gpr (i);
+      c_state <- all_state (i);
+      procID <- i
+   };
+   return old
+}
+
+--------------------------------------------------
 -- Stats dump and reset
 --------------------------------------------------
 
@@ -34,24 +58,24 @@ match fmt
             out <- "inst,ips,";
             out <- out : csvHeaderCoreStats : ",";
             out <- out : csvHeaderMemAccessStats : ",";
-            out <- out : csvHeaderMemStats : "\\n";
+            out <- out : csvHeaderMemStats : "\n";
             csv_stats_header_done <- true
         };
         out <- out:[inst]:",":ips:",";
         out <- out : csvCoreStats : ",";
         out <- out : csvMemAccessStats : ",";
-        out <- out : csvMemStats : "\\n";
+        out <- out : csvMemStats : "\n";
         out
     }
     case _ =>
     {
         var out = "";
-        out <- "===========================================================\\n";
-        out <- "instruction #" : [inst] : " (":ips:" inst/sec)\\n";
+        out <- "===========================================================\n";
+        out <- "instruction #" : [inst] : " (":ips:" inst/sec)\n";
         for i in 0 .. totalCore-1 do
-            out <- out : "-- Core " : [i] : " stats --\\n" : printCoreStats : "\\n";
-        out <- out : " -- Memory accesses stats --\\n" : printMemAccessStats : "\\n";
-        out <- out : " -- Memory stats --\\n" : printMemStats : "\\n";
+            out <- out : "-- Core " : [i] : " stats --\n" : printCoreStats : "\n";
+        out <- out : " -- Memory accesses stats --\n" : printMemAccessStats : "\n";
+        out <- out : " -- Memory stats --\n" : printMemStats : "\n";
         out
     }
 }

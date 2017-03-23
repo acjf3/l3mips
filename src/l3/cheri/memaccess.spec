@@ -45,7 +45,7 @@ unit initMemAccessStats =
 
 string printMemAccessStats =
     PadRight (#" ", 16, "bytes_read")    : " = " :
-    PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\\n" :
+    PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\n" :
     PadRight (#" ", 16, "bytes_written") : " = " :
     PadLeft (#" ", 9, [memAccessStats.bytes_written])
 

@@ -472,7 +472,7 @@ string log_cap_write (cap::Capability) =
     " type:":hex (getType(cap)):
     " offset:":hex (getOffset(cap)):
     " base:":hex (getBase(cap)):
-    " length:":hex (getLength(cap)):"\\n(":cap_inner_rep(cap):")"
+    " length:":hex (getLength(cap)):"\n(":cap_inner_rep(cap):")"
 
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)

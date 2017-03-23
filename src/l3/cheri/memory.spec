@@ -54,7 +54,7 @@ MemStats nullMemStats =
 }
 
 string strStat (name::string,data::nat) =
-    PadRight (#" ", 30, name)  : " = " : PadLeft (#" ", 10, [data])  : "\\n"
+    PadRight (#" ", 30, name)  : " = " : PadLeft (#" ", 10, [data])  : "\n"
 
 string strMemStats (pfx::string, memStats::MemStats) =
     strStat(pfx:"data_reads", memStats.data_reads):
@@ -64,14 +64,14 @@ string strMemStats (pfx::string, memStats::MemStats) =
     strStat(pfx:"invalid_cap_reads", memStats.invalid_cap_reads):
     strStat(pfx:"valid_cap_writes", memStats.valid_cap_writes):
     strStat(pfx:"invalid_cap_writes", memStats.invalid_cap_writes):
-    strStat(pfx:"working_set", memStats.working_set): " memory locations or " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\\n" :
-    strStat(pfx:"mem_4K_touched", memStats.mem_4K_touched): " (": [4096 div CAPBYTEWIDTH] :" memory locations or 4K bytes)\\n" :
-    strStat(pfx:"tags_now_set", memStats.tags_now_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
-    strStat(pfx:"tags_ever_set", memStats.tags_ever_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\\n" :
-    strStat(pfx:"tags_4K_now_set", memStats.tags_4K_now_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\\n" :
-    strStat(pfx:"tags_4K_ever_set", memStats.tags_4K_ever_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\\n" :
-    strStat(pfx:"tags_16K_now_set", memStats.tags_16K_now_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\\n" :
-    strStat(pfx:"tags_16K_ever_set", memStats.tags_16K_ever_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\\n"
+    strStat(pfx:"working_set", memStats.working_set): " memory locations or " : [memStats.working_set * CAPBYTEWIDTH] : " bytes\n" :
+    strStat(pfx:"mem_4K_touched", memStats.mem_4K_touched): " (": [4096 div CAPBYTEWIDTH] :" memory locations or 4K bytes)\n" :
+    strStat(pfx:"tags_now_set", memStats.tags_now_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\n" :
+    strStat(pfx:"tags_ever_set", memStats.tags_ever_set): " (one per memory location or " : [CAPBYTEWIDTH] : " bytes)\n" :
+    strStat(pfx:"tags_4K_now_set", memStats.tags_4K_now_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\n" :
+    strStat(pfx:"tags_4K_ever_set", memStats.tags_4K_ever_set): " (one per ": [4096 div CAPBYTEWIDTH] :" memory location or 4K bytes)\n" :
+    strStat(pfx:"tags_16K_now_set", memStats.tags_16K_now_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\n" :
+    strStat(pfx:"tags_16K_ever_set", memStats.tags_16K_ever_set): " (one per ": [16384 div CAPBYTEWIDTH] :" memory location or 16K bytes)\n"
 
 string strCsvHeaderMemStats (pfx::string) =
     pfx:"data_reads,":
@@ -126,8 +126,8 @@ declare staticMemStats  :: MemStats
 declare dynamicMemStats :: MemStats
 
 string printMemStats =
-    "static memory count:\\n" : strMemStats("static_",staticMemStats) :
-    "dynamic mem stats (for last sampled quantum)\\n" : strMemStats("dynamic_",dynamicMemStats)
+    "static memory count:\n" : strMemStats("static_",staticMemStats) :
+    "dynamic mem stats (for last sampled quantum)\n" : strMemStats("dynamic_",dynamicMemStats)
 string csvHeaderMemStats = strCsvHeaderMemStats("static_"):",":strCsvHeaderMemStats("dynamic_")
 string csvMemStats = strCsvMemStats(staticMemStats):",":strCsvMemStats(dynamicMemStats)
 

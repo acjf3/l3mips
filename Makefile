@@ -2,154 +2,205 @@
 # Makefile for the L3 mips simulator ##
 #######################################
 
-# generating the L3 source list
-# /!\ inclusion order matters /!\
-#######################################
+####################################
+# generating the L3 source list    #
+# /!\ inclusion order matters /!\  #
+####################################
 L3SRCDIR=src/l3
 
+#########################
+# Basic Types and State #
+#########################
 ifdef CAP
-L3SRCBASE+=cheri/tlb-types.spec
+  L3SRCBASE+=cheri/tlb-types.spec
 else
-L3SRCBASE+=tlb/types.spec
+  L3SRCBASE+=tlb/types.spec
 endif
 L3SRCBASE+=mips-types.spec
 L3SRCBASE+=mips-log.spec
 L3SRCBASE+=mips-base.spec
+
+################
+# PIC and UART #
+################
 ifndef SIMPLEMEM
-L3SRCBASE+=mips-pic.spec
-L3SRCBASE+=mips-uart.spec
+  L3SRCBASE+=mips-pic.spec
+  L3SRCBASE+=mips-uart.spec
 endif
+
+###############################
+# Capabilities and Exceptions #
+###############################
 ifdef CAP
-L3SRCBASE+=cheri/cap-params.spec
-L3SRCBASE+=cheri/cap-common.spec
-ifeq ($(CAP), c128posits1)
-L3SRCBASE+=cheri/cap128-compressed-posits-1.spec
-else ifeq ($(CAP), c128c1)
-L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
-else ifeq ($(CAP), c128c3)
-L3SRCBASE+=cheri/cap128-compressed-candidate-3.spec
-  ifdef FAST_REP_CHECK
-  L3SRCBASE+=cheri/cap128-compressed-candidate-3-fast-representable-check.spec
+  L3SRCBASE+=cheri/cap-params.spec
+  L3SRCBASE+=cheri/cap-common.spec
+  ifeq ($(CAP), c128posits1)
+    L3SRCBASE+=cheri/cap128-compressed-posits-1.spec
+  else ifeq ($(CAP), c128c1)
+    L3SRCBASE+=cheri/cap128-compressed-candidate-1.spec
+  else ifeq ($(CAP), c128c3)
+    L3SRCBASE+=cheri/cap128-compressed-candidate-3.spec
+    ifdef FAST_REP_CHECK
+      L3SRCBASE+=cheri/cap128-compressed-candidate-3-fast-representable-check.spec
+    else
+      L3SRCBASE+=cheri/cap128-compressed-candidate-3-representable-check.spec
+    endif
+  else ifeq ($(CAP), p64)
+    L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap64-precise.spec
+  else ifeq ($(CAP), p128)
+    L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap128-precise.spec
   else
-  L3SRCBASE+=cheri/cap128-compressed-candidate-3-representable-check.spec
+    L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap256-precise.spec
   endif
-else ifeq ($(CAP), p64)
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap64-precise.spec
-else ifeq ($(CAP), p128)
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap128-precise.spec
+  L3SRCBASE+=cheri/state.spec
+  L3SRCBASE+=cheri/exception.spec
 else
-L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap256-precise.spec
+  L3SRCBASE+=mips-exception.spec
 endif
-L3SRCBASE+=cheri/state.spec
-L3SRCBASE+=cheri/exception.spec
-else
-L3SRCBASE+=mips-exception.spec
-endif
+
+#######
+# TLB #
+#######
 L3SRCBASE+=tlb/base.spec
 ifdef NOTRANSLATE
-ifdef CAP
-L3SRCBASE+=cheri/tlb-notranslate.spec
+  ifdef CAP
+    L3SRCBASE+=cheri/tlb-notranslate.spec
+  else
+    L3SRCBASE+=tlb/notranslate.spec
+  endif
 else
-L3SRCBASE+=tlb/notranslate.spec
-endif
-else
-ifdef CAP
-L3SRCBASE+=cheri/tlb-translate.spec
-else
-L3SRCBASE+=tlb/translate.spec
-endif
+  ifdef CAP
+    L3SRCBASE+=cheri/tlb-translate.spec
+  else
+    L3SRCBASE+=tlb/translate.spec
+  endif
 endif
 L3SRCBASE+=tlb/instructions.spec
+
+#########
+# Misc. #
+#########
 L3SRCBASE+=mips-encode-utils.spec
 L3SRCBASE+=mips-cache-sizes.spec
+
+#################
+# Memory Access #
+#################
 ifdef CAP
-ifdef SIMPLEMEM
-L3SRCBASE+=cheri/memaccess-simple.spec
+  ifdef SIMPLEMEM
+    L3SRCBASE+=cheri/memaccess-simple.spec
+  else
+    ifdef CACHE
+      L3SRCBASE+=cheri/cache-sizes.spec
+      L3SRCBASE+=cheri/memory-caches.spec
+    else
+      L3SRCBASE+=cheri/memory.spec
+    endif
+    L3SRCBASE+=cheri/memory-sml-helpers.spec
+    L3SRCBASE+=cheri/memaccess.spec
+  endif
 else
-ifdef CACHE
-L3SRCBASE+=cheri/cache-sizes.spec
-L3SRCBASE+=cheri/memory-caches.spec
-else
-L3SRCBASE+=cheri/memory.spec
+  ifdef SIMPLEMEM
+    L3SRCBASE+=mips-memaccess-simple.spec
+  else
+    ifdef CACHE
+      L3SRCBASE+=mips-memory-caches.spec
+    else
+      L3SRCBASE+=mips-memory.spec
+    endif
+    L3SRCBASE+=mips-memaccess.spec
+  endif
 endif
-L3SRCBASE+=cheri/memory-sml-helpers.spec
-L3SRCBASE+=cheri/memaccess.spec
-endif
-else
-ifdef SIMPLEMEM
-L3SRCBASE+=mips-memaccess-simple.spec
-else
-ifdef CACHE
-L3SRCBASE+=mips-memory-caches.spec
-else
-L3SRCBASE+=mips-memory.spec
-endif
-L3SRCBASE+=mips-memaccess.spec
-endif
-endif
+
 L3SRCBASE+=mips-sml.spec
+
+##################################
+# Coprocessor 1 (Floating Point) #
+##################################
 ifdef FPU
-L3SRCBASE+=fpu/fpu-log.spec
-L3SRCBASE+=fpu/state.spec
-L3SRCBASE+=fpu/instructions.spec
+  L3SRCBASE+=fpu/fpu-log.spec
+  L3SRCBASE+=fpu/state.spec
+  L3SRCBASE+=fpu/instructions.spec
 else
-L3SRCBASE+=cp1-null/instructions.spec
+  L3SRCBASE+=cp1-null/instructions.spec
 endif
+
+################################
+# Coprocessor 2 (Capabilities) #
+################################
 ifdef CAP
-L3SRCBASE+=cheri/instructions.spec
+  L3SRCBASE+=cheri/instructions.spec
 else
-L3SRCBASE+=cp2-null/instructions.spec
+  L3SRCBASE+=cp2-null/instructions.spec
 endif
+
+#####################
+# MIPS Instructions #
+#####################
 L3SRCBASE+=mips-instructions.spec
+
+######################
+# Instruction Decode #
+######################
 ifdef FPU
-L3SRCBASE+=fpu/decode.spec
+  L3SRCBASE+=fpu/decode.spec
 else
-L3SRCBASE+=cp1-null/decode.spec
+  L3SRCBASE+=cp1-null/decode.spec
 endif
 ifdef CAP
-L3SRCBASE+=cheri/decode.spec
+  L3SRCBASE+=cheri/decode.spec
 else
-L3SRCBASE+=cp2-null/decode.spec
+  L3SRCBASE+=cp2-null/decode.spec
 endif
 L3SRCBASE+=mips-decode.spec
+
+######################
+# Instruction Encode #
+######################
 ifdef FPU
-L3SRCBASE+=fpu/encode.spec
+  L3SRCBASE+=fpu/encode.spec
 else
-L3SRCBASE+=cp1-null/encode.spec
+  L3SRCBASE+=cp1-null/encode.spec
 endif
 ifdef CAP
-L3SRCBASE+=cheri/encode.spec
+  L3SRCBASE+=cheri/encode.spec
 else
-L3SRCBASE+=cp2-null/encode.spec
+  L3SRCBASE+=cp2-null/encode.spec
 endif
 L3SRCBASE+=mips-encode.spec
+
+###########################################
+# Initialisation and Next State Functions #
+###########################################
 ifdef FPU
-L3SRCBASE+=fpu/init.spec
+  L3SRCBASE+=fpu/init.spec
 else
-L3SRCBASE+=cp1-null/init.spec
+  L3SRCBASE+=cp1-null/init.spec
 endif
 ifdef CAP
-L3SRCBASE+=cheri/next.spec
-L3SRCBASE+=cheri/init.spec
+  L3SRCBASE+=cheri/next.spec
+  L3SRCBASE+=cheri/init.spec
 else
-L3SRCBASE+=mips-next.spec
-L3SRCBASE+=cp2-null/init.spec
+  L3SRCBASE+=mips-next.spec
+  L3SRCBASE+=cp2-null/init.spec
 endif
 ifndef SIMPLEMEM
-L3SRCBASE+=mips-init.spec
+  L3SRCBASE+=mips-init.spec
 endif
 
 L3SRC=$(patsubst %, $(L3SRCDIR)/%, $(L3SRCBASE))
 
-# hol / sml sources
-#######################################
+# =========================================================================== #
+
+#####################
+# HOL / SML sources #
+#####################
 HOLSRCDIR=src/hol
 SMLSRCDIR=src/sml
 L3_SML_LIB ?= `l3 --lib-path`
 L3SMLLIB=$(shell l3 --lib-path)
 
 # generating the sml source list
-#######################################
 SMLLIBSRC+=$(L3SMLLIB)/Runtime.sig
 SMLLIBSRC+=$(L3SMLLIB)/Runtime.sml
 SMLLIBSRC+=$(L3SMLLIB)/IntExtra.sig
@@ -214,8 +265,11 @@ SIM_COVERAGE ?= l3mips_coverage
 M4_CHERI_FILES = $(basename $(wildcard ${L3SRCDIR}/cheri/*.spec.m4))
 M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
 
-# make targets
-#######################################
+# =========================================================================== #
+
+################
+# make targets #
+################
 
 all: $(SIM)
 

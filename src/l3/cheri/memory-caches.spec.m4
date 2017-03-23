@@ -64,7 +64,7 @@ unit initMemStats =
 }
 
 string MemStateLine (s::string, n::nat) =
-   PadRight (#" ", 35, s) : " = " : PadLeft (#" ", 9, [n]) : "\\n"
+   PadRight (#" ", 35, s) : " = " : PadLeft (#" ", 9, [n]) : "\n"
 
 string printMemStats =
     -- data / inst / cap measures

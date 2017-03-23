@@ -45,24 +45,6 @@ declare {
 -- capabilities in the capability case
 declare watchOOBCap :: bool
 
--- Switch cores by saving the current core state in the global map and then
--- update to the current core state to be that of core "i".
-
-nat switchCore (n::nat) =
-{
-   old = [procID];
-   when n <> old do
-   {
-      i = [n];
-      all_gpr (procID) <- c_gpr;
-      all_state (procID) <- c_state;
-      c_gpr <- all_gpr (i);
-      c_state <- all_state (i);
-      procID <- i
-   };
-   return old
-}
-
 -- The following components provide read/write access to state of the
 -- core whose id equals procID.  For example, writing "gpr(r)" refers
 -- general purpose register "r" in the core whose id equals procID.
@@ -158,9 +140,9 @@ unit dumpRegs () =
 {
     mark_log (0, "======   Registers   ======")
   ; mark_log (0, "DEBUG MIPS COREID " : [[procID]::nat])
-  ; mark_log (0, "DEBUG MIPS PC\\t" : hex (PC))
+  ; mark_log (0, "DEBUG MIPS PC\t" : hex (PC))
   ; for i in 0 .. 31 do
-      mark_log (0, "DEBUG MIPS REG " : (if i < 10 then " " else "") : [i] : "\\t" :
+      mark_log (0, "DEBUG MIPS REG " : (if i < 10 then " " else "") : [i] : "\t" :
                 hex (GPR([i])))
 }
 
@@ -180,7 +162,7 @@ unit initCoreStats =
 
 string printCoreStats =
     PadRight (#" ", 16, "branch_taken") : " = " :
-    PadLeft (#" ", 9, [coreStats.branch_taken]) : "\\n" :
+    PadLeft (#" ", 9, [coreStats.branch_taken]) : "\n" :
     PadRight (#" ", 16, "branch_not_taken") : " = " :
     PadLeft (#" ", 9, [coreStats.branch_not_taken])
 

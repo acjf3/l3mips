@@ -9,12 +9,12 @@
 
 declare {
   trace_level :: nat
-  log         :: nat -> string list   -- One log per "trace level"
-  watcher     :: string list
+  log         :: nat -> string   -- One log per "trace level"
+  watcher     :: string
   print       :: string -> unit
 }
 
-unit println (s::string) = print (s : "\\n")
+unit println (s::string) = print (s : "\n")
 
 string cpr (r::reg) =
    "c0_" :
@@ -80,19 +80,21 @@ string log_r_mem (addr::bits(37), data::dword) =
    "data <- MEM[" : hex (addr:'000') : "]: " : hex(data)
 
 inline unit mark_watcher (s::string) =
-   when not PROVER_EXPORT do watcher <- s @ watcher
+   when not PROVER_EXPORT do watcher <- watcher : s : "\n"
 
-unit clear_watcher =
-   when not PROVER_EXPORT do watcher <- Nil
+unit clear_watcher = when not PROVER_EXPORT do watcher <- ""
 
 inline unit mark_log (lvl::nat, s::string) =
    when not PROVER_EXPORT do
-     when lvl <= trace_level do log(lvl) <- s @ log(lvl)
+     when lvl <= trace_level do log(lvl) <- log(lvl) : s : "\n"
 
 inline unit unmark_log (lvl::nat) =
    when not PROVER_EXPORT do
-     when lvl <= trace_level do log(lvl) <- Tail (log(lvl))
+     when lvl <= trace_level do
+     {
+        s = Fst (splitr in set {#"\n"} (log(lvl)));
+        log(lvl) <- Fst (splitr not in set {#"\n"} (s))
+     }
 
 unit clear_logs =
-   when not PROVER_EXPORT do
-     for i in 0 .. trace_level do log(i) <- Nil
+   when not PROVER_EXPORT do for i in 0 .. trace_level do log(i) <- ""

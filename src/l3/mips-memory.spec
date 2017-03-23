@@ -25,9 +25,9 @@ unit initMemStats =
 
 string printMemStats =
     PadRight (#" ", 16, "data_reads")  : " = " :
-    PadLeft (#" ", 9, [memStats.data_reads])  : "\\n" :
+    PadLeft (#" ", 9, [memStats.data_reads])  : "\n" :
     PadRight (#" ", 16, "data_writes") : " = " :
-    PadLeft (#" ", 9, [memStats.data_writes]) : "\\n" :
+    PadLeft (#" ", 9, [memStats.data_writes]) : "\n" :
     PadRight (#" ", 16, "inst_reads")  : " = " :
     PadLeft (#" ", 9, [memStats.inst_reads])
 string csvHeaderMemStats = "data_reads,data_writes,inst_reads"

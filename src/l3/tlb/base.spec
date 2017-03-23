@@ -38,15 +38,13 @@ component TLB_assoc (i::bits(4)) :: TLBEntry option
    assign value = c_TLB_assoc(i) <- value
 }
 
-unit switchCoreTLB (n::nat) =
-   when n <> [procID] do
-   {
-     all_TLB_direct (procID) <- c_TLB_direct;
-     all_TLB_assoc (procID) <- c_TLB_assoc;
-     i = [n];
-     c_TLB_direct <- all_TLB_direct (i);
-     c_TLB_assoc <- all_TLB_assoc (i)
-   }
+unit switchCoreTLB (i::id) =
+{
+   all_TLB_direct (procID) <- c_TLB_direct;
+   all_TLB_assoc (procID) <- c_TLB_assoc;
+   c_TLB_direct <- all_TLB_direct (i);
+   c_TLB_assoc <- all_TLB_assoc (i)
+}
 
 inline bool MatchingEntry (r::bits(2), vpn2::bits(27), e::TLBEntry) =
   if e.R == r and (e.G or e.ASID == CP0.EntryHi.ASID) then

@@ -17,9 +17,9 @@ val watcher_out = ref (NONE: TextIO.outstream option)
 val trace_out = ref (NONE: TextIO.outstream option)
 val stats_out = ref (NONE: TextIO.outstream option)
 val non_blocking_input = ref false
-val watch_oob_cap = ref false
 val rdhwr_extra = ref false
 val nb_core = ref 1
+val watch_oob_cap = ref false
 val watch_paddr = ref (NONE: BitsN.nbit option) (* 40-bits phy addr *)
 val dump_stat_freq = ref (NONE: IntInf.int option)
 val stats_fmt = ref (NONE: string option)
@@ -253,41 +253,26 @@ fun uart () =
    else uart_countdown := !uart_countdown - 1
 
 fun print_stats i =
-  let
-    val t = Timer.checkCPUTimer (!cpu_time)
-    val ips = Real.fromLargeInt i / Time.toReal (#usr t)
-  in
-      case Option.map (fn f => i mod f) (!dump_stat_freq) of
-         SOME 0 =>
-           let
-              val sstr = mips.dumpStats (i, (Real.toString ips, !stats_fmt))
-            in
-              mips.clearDynamicStats ()
-            ; streamPrint stats_out (sstr)
-            end
-       | _ => ()
-  end
+  case Option.map (fn f => i mod f) (!dump_stat_freq) of
+     SOME 0 =>
+        let
+          val t = Timer.checkCPUTimer (!cpu_time)
+          val ips = Real.fromLargeInt i / Time.toReal (#usr t)
+        in
+          streamPrint stats_out
+            (mips.dumpStats (i, (Real.toString ips, !stats_fmt)))
+          before mips.clearDynamicStats ()
+        end
+   | _ => ()
 
-local
-  fun log_string n =
-    case mips.Map.lookup (!mips.log, Nat.fromNativeInt n) of
-       [] => ""
-     | l => String.concatWith "\n" (List.rev l) ^ "\n"
-in
-  fun print_traces lvl =
-    streamPrint trace_out
-      (String.concat (List.tabulate (Nat.toNativeInt lvl + 1, log_string)))
-end
+fun print_traces lvl =
+  streamPrint trace_out
+    (String.concat
+       (List.tabulate
+          (Nat.toNativeInt lvl + 1,
+           fn n => mips.Map.lookup (!mips.log, Nat.fromNativeInt n))))
 
-local
-  fun watcher_string () =
-    case !mips.watcher of
-       [] => ""
-     | l => String.concatWith "\n" (List.rev l) ^ "\n"
-in
-  fun print_watcher () =
-    streamPrint watcher_out (watcher_string())
-end
+fun print_watcher () = streamPrint watcher_out (!mips.watcher)
 
 (* ------------------------------------------------------------------------
    Schedule (denoting order in which cores are interleaved)
@@ -343,12 +328,7 @@ fun next_loop mx =
                 else fn _ => ()
     val i = mips.instCnt
     fun loop () =
-      let
-        val nextcore = scheduleNext ()
-      in
-        mips.switchCoreTLB nextcore
-      ; mips.switchCoreCAP nextcore
-      ; mips.switchCore nextcore
+      ( mips.switchCore (scheduleNext ())
       ; uart ()
       ; mips.Next ()
       ; print_watcher ()
@@ -356,7 +336,7 @@ fun next_loop mx =
       ; stats (!i)
       ; i := !i + 1
       ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
-      end
+      )
   in
     i := 0; loop ()
   end
