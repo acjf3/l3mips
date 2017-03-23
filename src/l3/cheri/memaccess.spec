@@ -48,8 +48,10 @@ string printMemAccessStats =
     PadLeft (#" ", 9, [memAccessStats.bytes_read])  : "\\n" :
     PadRight (#" ", 16, "bytes_written") : " = " :
     PadLeft (#" ", 9, [memAccessStats.bytes_written])
+
 string csvHeaderMemAccessStats = "bytes_read,bytes_written"
-string csvMemAccessStats = [memAccessStats.bytes_read] : "," : [memAccessStats.bytes_written]
+string csvMemAccessStats =
+  [memAccessStats.bytes_read] : "," : [memAccessStats.bytes_written]
 
 -- watch paddr
 
@@ -95,7 +97,8 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 }
 
 -- virtual address computation
-vAddr getVirtualAddress (addr::bits(64)) = addr + getBase(CAPR(0)) + getOffset(CAPR(0))
+vAddr getVirtualAddress (addr::bits(64)) =
+  addr + getBase(CAPR(0)) + getOffset(CAPR(0))
 
 -----------------
 -- Data accesses
@@ -115,12 +118,12 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
         tmp, CCA, S, L = AddressTranslation (vAddr, LOAD);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-        if not exceptionSignalled then
+        if exceptionSignalled then UNKNOWN else
         {
             a = pAddr<39:3>;
             var ret;
-
             var found = false;
+
             if a == JTAG_UART.base_address then
             {
                 found <- true;
@@ -129,12 +132,14 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
                 when pAddr<2:0> == 0 do JTAG_UART_load
             }
             else for core in 0 .. totalCore - 1 do
-                when a >=+ PIC_base_address([core]) and
-                      a <+ PIC_base_address([core]) + 1072 do
+            {
+                base = PIC_base_address([core]);
+                when base <=+ a and a <+ base + 1072 do
                 {
                     found <- true;
                     ret <- PIC_load([core], a)
-                };
+                }
+            };
 
             if link then
             {
@@ -156,23 +161,27 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
             watchForLoad(pAddr, ret);
             ret
         }
-        else UNKNOWN
     }
 }
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
-    if not getTag(CAPR(0))
+    capr0 = CAPR(0);
+    if not getTag(capr0)
         then {SignalCapException(capExcTag,0); UNKNOWN}
-    else if getSealed(CAPR(0))
+    else if getSealed(capr0)
         then {SignalCapException(capExcSeal,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Load
+    else if not getPerms(capr0).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
-    else if (vAddr <+ getBase(CAPR(0)))
-        then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
-        then {SignalCapException(capExcLength,0); UNKNOWN}
-    else LoadMemoryCap(MemType, needAlign, vAddr, link)
+    else
+    {
+       base, len = getBaseAndLength(capr0);
+       if vAddr <+ base
+          then {SignalCapException(capExcLength,0); UNKNOWN}
+       else if vAddr + ZeroExtend(AccessLength) >+ base + len
+          then {SignalCapException(capExcLength,0); UNKNOWN}
+       else LoadMemoryCap(MemType, needAlign, vAddr, link)
+    }
 }
 
 inline nat capbottom = Log2(CAPBYTEWIDTH)-3
@@ -180,17 +189,18 @@ inline nat capbottom = Log2(CAPBYTEWIDTH)-3
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
     pAddr, CCA, S, L = AddressTranslation (vAddr, LOAD);
-    if not exceptionSignalled then
+    if exceptionSignalled then UNKNOWN else
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
 
         if a == JTAG_UART.base_address<36:capbottom> then
             #UNPREDICTABLE ("Capability load attempted on UART")
-        else
-            for core in 0 .. (totalCore - 1) do
-                when a >=+ PIC_base_address([core])<36:capbottom>
-                     and a <+ (PIC_base_address([core])+1072)<36:capbottom> do
-                    #UNPREDICTABLE ("Capability load attempted on PIC");
+        else for core in 0 .. totalCore - 1 do
+        {
+           base = PIC_base_address([core]);
+           when base<36:capbottom> <=+ a and a <+ (base+1072)<36:capbottom> do
+              #UNPREDICTABLE ("Capability load attempted on PIC")
+        };
 
         if link then
         {
@@ -213,7 +223,6 @@ Capability LoadCap (vAddr::vAddr, link::bool) =
         watchForCapLoad(pAddr, cap);
         return cap
     }
-    else return UNKNOWN
 }
 
 bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, needAlign::bool,
@@ -235,7 +244,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
         {
             a = pAddr<39:3>;
             l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
-            mask::bits(64) = [2 ** (l + ([AccessLength] + 1) * 0n8) - 2 ** l];
+            mask`64 = 1 << (l + ([AccessLength] + 1) * 0n8) - 1 << l;
 
             var found = false;
             if a == JTAG_UART.base_address then
@@ -244,12 +253,14 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
                 JTAG_UART_store (mask, MemElem)
             }
             else for core in 0 .. totalCore - 1 do
-                when a >=+ PIC_base_address([core]) and
-                     a <+ PIC_base_address([core]) + 1072 do
+            {
+                base = PIC_base_address([core]);
+                when base <=+ a and a <+ base + 1072 do
                 {
                     found <- true;
                     PIC_store([core], a, mask, MemElem)
-                };
+                }
+            };
 
             when cond do match LLbit
             {
@@ -287,20 +298,25 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
     }
 }
 
-bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword,
-                   vAddr::vAddr, cond::bool) =
+bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool,
+                  MemElem::dword, vAddr::vAddr, cond::bool) =
 {
-    if not getTag(CAPR(0))
+    capr0 = CAPR(0);
+    if not getTag(capr0)
         then {SignalCapException(capExcTag,0); UNKNOWN}
-    else if getSealed(CAPR(0))
+    else if getSealed(capr0)
         then {SignalCapException(capExcSeal,0); UNKNOWN}
-    else if not getPerms(CAPR(0)).Permit_Store
+    else if not getPerms(capr0).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN}
-    else if (vAddr <+ getBase(CAPR(0)))
-        then {SignalCapException(capExcLength,0); UNKNOWN}
-    else if (vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
-        then {SignalCapException(capExcLength,0); UNKNOWN}
-    else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, vAddr, cond)
+    else
+    {
+        base, len = getBaseAndLength(capr0);
+        if vAddr <+ base
+            then {SignalCapException(capExcLength,0); UNKNOWN}
+        else if vAddr + ZeroExtend(AccessLength) >+ base + len
+            then {SignalCapException(capExcLength,0); UNKNOWN}
+        else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, vAddr, cond)
+    }
 }
 
 bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
@@ -313,11 +329,12 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 
         if a == JTAG_UART.base_address<36:capbottom> then
             #UNPREDICTABLE ("Capability store attempted on UART")
-        else
-            for core in 0 .. (totalCore - 1) do
-                when a >=+ PIC_base_address([core])<36:capbottom>
-                     and a <+ (PIC_base_address([core])+1072)<36:capbottom> do
-                    #UNPREDICTABLE ("Capability store attempted on PIC");
+        else for core in 0 .. totalCore - 1 do
+        {
+            base = PIC_base_address([core]);
+            when base<36:capbottom> <=+ a and a <+ (base+1072)<36:capbottom> do
+               #UNPREDICTABLE ("Capability store attempted on PIC")
+        };
 
         when cond do match LLbit
         {
@@ -383,16 +400,23 @@ word option Fetch =
     if exceptionSignalled then None
     else if PC<1:0> == 0 then
     {
-        vAddr = PC + getBase(PCC);
-        if not getTag(PCC) then {SignalCapException_noReg(capExcTag); None}
-        else if getSealed(PCC) then {SignalCapException_noReg(capExcSeal); None}
-        else if (vAddr <+ getBase(PCC)) then {SignalCapException_noReg(capExcLength); None}
+        base, len = getBaseAndLength(PCC);
+        vAddr = PC + base;
+        if not getTag(PCC)
+           then {SignalCapException_noReg(capExcTag); None}
+        else if getSealed(PCC)
+           then {SignalCapException_noReg(capExcSeal); None}
+        else if vAddr <+ base
+           then {SignalCapException_noReg(capExcLength); None}
         -- TODO need to take care of the 65 bit check (base+length overflows) everywhere else
         -- TODO and the +4 for instruction bounds check and the +access size on data bounds check
         -- TODO and whether inequalities are large or strict in all bounds checks
-        else if (('0':vAddr)+4 >+ [getBase(PCC)] + [getLength(PCC)]) then {SignalCapException_noReg(capExcLength); None}
-        else if not getPerms(PCC).Permit_Execute then {SignalCapException_noReg(capExcPermExe); None}
-        else {
+        else if ('0':vAddr)+4 >+ [base] + [len]
+           then {SignalCapException_noReg(capExcLength); None}
+        else if not getPerms(PCC).Permit_Execute
+           then {SignalCapException_noReg(capExcPermExe); None}
+        else
+        {
             pc, cca = AddressTranslation (vAddr, LOAD);
             if exceptionSignalled then None else Some (ReadInst (pc))
         }

@@ -3,6 +3,12 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+inline pAddr * CCA * bool * bool
+  SignalTLBException2 (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
+{
+   _ = SignalTLBException (e, asid, vAddr); UNKNOWN
+}
+
 pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessType) =
 {
     unmapped, valid = CheckSegment (vAddr);
@@ -21,40 +27,38 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessTy
                     {
                         exc = if AccessType == LOAD then XTLBRefillL
                               else XTLBRefillS;
-                        _ = SignalTLBException (exc, CP0.EntryHi.ASID, vAddr);
-                        UNKNOWN
+                        SignalTLBException2 (exc, CP0.EntryHi.ASID, vAddr)
                     }
-                    case list {(_, e)} => match checkMask (e.Mask)
-                    {
-                        case Some(EvenOddBit) =>
-                        {
-                            S, L, PFN, C, D, V =
-                            if vAddr<EvenOddBit> then
-                                e.S1, e.L1, e.PFN1, e.C1, e.D1, e.V1
-                            else
-                                e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
-
-                            if V then
-                                if not D and AccessType == STORE then
-                                    { _ = SignalTLBException (Mod, e.ASID, vAddr); UNKNOWN }
+                    case list {(_, e)} =>
+                      match checkMask (e.Mask)
+                      {
+                          case Some(EvenOddBit) =>
+                          {
+                              S, L, PFN, C, D, V =
+                                if vAddr<EvenOddBit> then
+                                    e.S1, e.L1, e.PFN1, e.C1, e.D1, e.V1
                                 else
-                                {
-                                    PFN_     = [PFN]   :: bool list;
-                                    vAddr_   = [vAddr] :: bool list;
-                                    pAddr    = PFN_<27:EvenOddBit-12>
-                                       : vAddr_<EvenOddBit-1:0>;
-                                    check_cca(C);
-                                    ([pAddr], C, S, L)
-                                }
-                            else
-                            {
-                                exc = if AccessType == LOAD then TLBL else TLBS;
-                                _ = SignalTLBException (exc, e.ASID, vAddr);
-                                UNKNOWN
-                            }
-                        }
-                        case _ => #UNPREDICTABLE ("TLB: bad mask")
-                    }
+                                    e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
+
+                              if V then
+                                  if not D and AccessType == STORE then
+                                      SignalTLBException2 (Mod, e.ASID, vAddr)
+                                  else
+                                  {
+                                      check_cca(C);
+                                      pAddr :: pAddr =
+                                         [PFN && [0xFFFF`16 : ~e.Mask]] << 12 ||
+                                         [vAddr && [e.Mask : 0xFFF`12]];
+                                      return (pAddr, C, S, L)
+                                  }
+                              else
+                              {
+                                  exc = if AccessType == LOAD then TLBL else TLBS;
+                                  SignalTLBException2 (exc, e.ASID, vAddr)
+                              }
+                          }
+                          case _ => #UNPREDICTABLE ("TLB: bad mask")
+                      }
                     case _ => #UNPREDICTABLE ("TLB: multiple matches")
                 }
         }
@@ -76,35 +80,20 @@ pAddr option tlbTryTranslation (vAddr::vAddr) =
         case Some (pAddr, cca) => ret <- Some(pAddr)
         case None => match LookupTLB (vAddr<63:62>, vAddr<39:13>)
         {
-            case list {(_, e)} => match checkMask (e.Mask)
+            case list {(_, e)} =>
+            match checkMask (e.Mask)
             {
                 case Some(EvenOddBit) =>
                 {
-                    EvenOddBit = match e.Mask
-                    {
-                        case 0b0000_0000_0000 => 12
-                        case 0b0000_0000_0011 => 14
-                        case 0b0000_0000_1111 => 16
-                        case 0b0000_0011_1111 => 18
-                        case 0b0000_1111_1111 => 20
-                        case 0b0011_1111_1111 => 22
-                        case 0b1111_1111_1111 => 24
-                        case _                => #UNPREDICTABLE ("TLB: bad mask")
-                    };
-
                     S, L, PFN, C, D, V =
-                    if vAddr<EvenOddBit> then
-                        e.S1, e.L1, e.PFN1, e.C1, e.D1, e.V1
-                    else
-                        e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
+                      if vAddr<EvenOddBit> then
+                          e.S1, e.L1, e.PFN1, e.C1, e.D1, e.V1
+                      else
+                          e.S0, e.L0, e.PFN0, e.C0, e.D0, e.V0;
 
                     when V do
-                    {
-                        PFN_     = [PFN]   :: bool list;
-                        vAddr_   = [vAddr] :: bool list;
-                        pAddr    = PFN_<27:EvenOddBit-12> : vAddr_<EvenOddBit-1:0>;
-                        ret <- Some([pAddr])
-                    }
+                      ret <- Some([PFN && [0xFFFF`16 : ~e.Mask]] << 12 ||
+                                  [vAddr && [e.Mask : 0xFFF`12]])
                 }
                 case _ => #UNPREDICTABLE ("TLB: bad mask")
             }

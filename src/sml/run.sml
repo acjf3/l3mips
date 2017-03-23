@@ -347,6 +347,7 @@ fun next_loop mx =
         val nextcore = scheduleNext ()
       in
         mips.switchCoreTLB nextcore
+      ; mips.switchCoreCAP nextcore
       ; mips.switchCore nextcore
       ; uart ()
       ; mips.Next ()

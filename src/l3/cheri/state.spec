@@ -3,6 +3,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+type CapRegFile = reg -> Capability
+
 register CapCause :: bits (16)
 {
     15-8 : ExcCode  -- 8 bits exception code
@@ -11,67 +13,65 @@ register CapCause :: bits (16)
 
 declare
 {
-    c_BranchDelayPCC    :: id -> (bits(64) * Capability) option
-    c_BranchToPCC       :: id -> (bits(64) * Capability) option
+   -- State of all cores
+   all_BranchDelayPCC:: id -> (bits(64) * Capability) option
+   all_BranchToPCC   :: id -> (bits(64) * Capability) option
+   all_capcause      :: id -> CapCause    -- capability exception cause register
+   all_pcc           :: id -> Capability  -- program counter capability
+   all_capr          :: id -> CapRegFile  -- capability register file
+
+   -- State of current core
+   BranchDelayPCC    :: (bits(64) * Capability) option
+   BranchToPCC       :: (bits(64) * Capability) option
+   capcause          :: CapCause          -- capability exception cause register
+   c_pcc             :: Capability        -- program counter capability
+   c_capr            :: CapRegFile        -- capability register file
 }
 
-component BranchDelayPCC :: (bits(64) * Capability) option
-{
-   value = c_BranchDelayPCC(procID)
-   assign value = c_BranchDelayPCC(procID) <- value
-}
-
-component BranchToPCC :: (bits(64) * Capability) option
-{
-   value = c_BranchToPCC(procID)
-   assign value = c_BranchToPCC(procID) <- value
-}
-
-type CapRegFile = reg -> Capability
-
-declare
-{
-    c_capcause:: id -> CapCause      -- capability exception cause register
-    c_pcc     :: id -> Capability    -- program counter capability
-    c_capr    :: id -> CapRegFile    -- capability register file
-}
+unit switchCoreCAP (n::nat) =
+   when n <> [procID] do
+   {
+      all_BranchDelayPCC (procID) <- BranchDelayPCC;
+      all_BranchToPCC (procID) <- BranchToPCC;
+      all_capcause (procID) <- capcause;
+      all_pcc (procID) <- c_pcc;
+      all_capr (procID) <- c_capr;
+      i = [n];
+      BranchDelayPCC <- all_BranchDelayPCC (i);
+      BranchToPCC <- all_BranchToPCC (i);
+      capcause <- all_capcause (i);
+      c_pcc <- all_pcc (i);
+      c_capr <- all_capr (i)
+   }
 
 unit dumpCRegs () =
 {
     mark_log (0, "======   Registers   ======")
   ; mark_log (0, "Core = " : [[procID]::nat])
-  ; mark_log (0, "DEBUG CAP PCC   \\t" : log_cap_write(c_pcc(procID)))
-  ; m = c_capr(procID)
+  ; mark_log (0, "DEBUG CAP PCC   \\t" : log_cap_write(all_pcc(procID)))
+  ; m = all_capr(procID)
   ; for i in 0 .. 31 do
     mark_log (0, "DEBUG CAP REG " :
         (if i<10 then " " else "") : [[i]::nat] :
         "\\t" : log_cap_write(m([i])))
 }
 
-component capcause :: CapCause
-{
-   value = c_capcause(procID)
-   assign value = c_capcause(procID) <- value
-}
-
 component PCC :: Capability
 {
-    value = c_pcc(procID)
+    value = c_pcc
     assign value =
     {
-        c_pcc(procID) <- value;
+        c_pcc <- value;
         mark_log (2, log_cpp_write (value))
     }
 }
 
 component CAPR (n::reg) :: Capability
 {
-    value = { m = c_capr(procID); m(n) }
+    value = c_capr(n)
     assign value =
     {
-        var m = c_capr(procID);
-        m(n) <- value;
-        c_capr(procID) <- m;
+        c_capr(n) <- value;
         mark_log (2, log_creg_write (n, value))
     }
 }

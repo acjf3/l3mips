@@ -40,4 +40,4 @@ register Perms :: bits (32)
 }
 
 bool allow_system_reg_access(p::Perms, r::reg) =
-((r == 31 or r == 30 or r == 29 or r == 27 or r == 28) and not p.Access_System_Registers)
+  27 <=+ r and not p.Access_System_Registers

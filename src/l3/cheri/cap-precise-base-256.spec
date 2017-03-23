@@ -72,6 +72,8 @@ bits(64) getOffset (cap::Capability) = cap.cursor - cap.base
 bits(64) getBase   (cap::Capability) = cap.base
 bits(64) getLength (cap::Capability) = cap.length
 
+bits(64) * bits(64) getBaseAndLength (cap::Capability) = (cap.base, cap.length)
+
 ------------------------------------
 -- capability "typeclass" setters --
 --------------------------------------------------------------------------------

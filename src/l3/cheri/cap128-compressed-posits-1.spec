@@ -296,6 +296,9 @@ bits(64) getLength (cap::Capability) =
     if len<64> then ~0 else len<63:0>
 }
 
+bits(64) * bits(64) getBaseAndLength (cap::Capability) =
+  return (getBase(cap), getLength(cap))
+
 ------------------------------------
 -- capability "typeclass" setters --
 --------------------------------------------------------------------------------

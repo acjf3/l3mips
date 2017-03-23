@@ -69,7 +69,7 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
         case Sealed(sf)   => (0`10):sf.topBits, (0`10):sf.baseBits
     };
     ptr = cap.cursor<cap.exp+19:cap.exp>;
-    var repBound::bits(21) = (('0':tb)+('0':bb))>>+1;
+    var repBound`21 = (('0':tb)+('0':bb))>>+1;
     when tb >+ bb do repBound <- repBound + (1 << 19);
     pr = if ptr <+ [repBound] then Hi (ptr) else Low (ptr);
     tr = if tb  <+ [repBound] then Hi (tb)  else Low (tb);
@@ -86,47 +86,47 @@ RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
     };
     e = cap.exp;
     ptr = cap.cursor<e+19:e>;
-    var repBound::bits(20) = bb - 0x1000;
+    repBound`20 = bb - 0x1000;
     pr = if ptr <+ repBound then Hi (ptr) else Low (ptr);
     tr = if tb  <+ repBound then Hi (tb)  else Low (tb);
     br = if bb  <+ repBound then Hi (bb)  else Low (bb);
     (pr, tr, br)
 }
 
-nat getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
-{
-    e = cap.exp;                    -- exponent
-    s = 2**(e+20);                  -- region size
-    c::nat = [cap.cursor];          -- cursor
-    cAlign::nat = c - (c mod s);    -- aligned cursor
+inline bits(65) getBoundAux
+   (ptr::RepRegion, bound::RepRegion, cAlign::bits(65), e::nat, s::nat) =
     match (ptr, bound)
     {
         -- same region as cursor => no correction
-        case Low(p), Low(b) => [cAlign + [b]*2**e]
-        case Hi(p) , Hi(b)  => [cAlign + [b]*2**e]
+        case Low(_), Low(b) => cAlign + [b] << e
+        case Hi(_) , Hi(b)  => cAlign + [b] << e
         -- region above cursor => add a region size
-        case Low(p), Hi(b)  => [cAlign + [b]*2**e + s]
+        case Low(_), Hi(b)  => cAlign + [b] << e + 1 << s
         -- region below cursor => take away a region size
-        case Hi(p) , Low(b) => [cAlign + [b]*2**e - s]
+        case Hi(_), Low(b)  => cAlign + [b] << e - 1 << s
     }
-}
 
-bits(64) getTop (cap::Capability) =
+bits(65) getBound (cap::Capability, ptr::RepRegion, bound::RepRegion) =
 {
-    pr, tr, br = getRepRegions(cap);
-    [getBound(cap, pr, tr)]
+    e = cap.exp;               -- exponent
+    s = e+20;                  -- region size
+    c`65 = [cap.cursor];       -- cursor
+    cAlign = c >>+ s << s;     -- aligned cursor
+    getBoundAux (ptr, bound, cAlign, e, s)
 }
 
-nat innerZeroCount (data::bool list, acc::nat) = match data
+bits(65) * bits(65) getBounds
+  (cap::Capability, ptr::RepRegion, bound1::RepRegion, bound2::RepRegion) =
 {
-    case Nil => acc
-    case Cons(hd, tl) => if hd then acc else innerZeroCount (tl, acc + 1)
+    e = cap.exp;               -- exponent
+    s = e+20;                  -- region size
+    c`65 = [cap.cursor];       -- cursor
+    cAlign = c >>+ s << s;     -- aligned cursor
+    return (getBoundAux (ptr, bound1, cAlign, e, s),
+            getBoundAux (ptr, bound2, cAlign, e, s))
 }
 
-nat countLeadingZeros  (data::bits(64)) = innerZeroCount ([data], 0)
-nat countTrailingZeros (data::bits(20)) = innerZeroCount ([Reverse(data)], 0)
-
-nat idxMSNZ (data::bits(64)) = 63-countLeadingZeros(data)
+nat idxMSNZ (data::bits(64)) = if data == 0 then 0 else [Log2 (data)]
 
 ---------------------------------------
 -- standard capabilities definitions --
@@ -186,6 +186,12 @@ bool getSealed (cap::Capability) = match cap.sFields
     case _          => false
 }
 
+bits(64) getTop (cap::Capability) =
+{
+    pr, tr, br = getRepRegions(cap);
+    [getBound(cap, pr, tr)]
+}
+
 bits(64) getBase (cap::Capability) =
 {
     pr, tr, br = getRepRegions(cap);
@@ -194,20 +200,14 @@ bits(64) getBase (cap::Capability) =
 
 bits(64) getOffset (cap::Capability) = cap.cursor - getBase(cap)
 
-bits(65) getFullLength (cap::Capability) =
+bits(64) * bits(64) getBaseAndLength (cap::Capability) =
 {
-    pr, tr, br = getRepRegions(cap);
-    b = getBound (cap, pr, br);
-    t = getBound (cap, pr, tr);
+    t, b = getBounds (cap, getRepRegions(cap));
     len = t - b;
-    [len]
+    return ([b], if len<64> then ~0 else [len])
 }
 
-bits(64) getLength (cap::Capability) =
-{
-    len = getFullLength(cap);
-    if len<64> then ~0 else len<63:0>
-}
+bits(64) getLength (cap::Capability) = Snd (getBaseAndLength (cap))
 
 ------------------------------------
 -- capability "typeclass" setters --
@@ -229,16 +229,15 @@ Capability setBounds (cap::Capability, length::bits(64)) =
         case Unsealed(uf) =>
         {
             -- aranges for a minimun 2 pages (2*4K) out of bounds buffer to be present
-            inflated_length::bits(65) = ZeroExtend(length) + (ZeroExtend(length) >> 6);
+            inflated_length`65 = ZeroExtend(length) + (ZeroExtend(length) >> 6);
             -- deriving e from the inflated length
-            --e = [Log2(inflated_length >>+ 19)]; XXX Don't know why this doesn't work
             var e = idxMSNZ([inflated_length >>+ 19]);
             when e mod 4 <> 0 do e <- e + (4 - (e mod 4));
             -- deriving the new base
             newBase = cap.cursor;
             newBaseBits = newBase<e+19:e>; -- no need to round down explicitly
             -- deriving the new top
-            newTop::bits(65) = ZeroExtend(cap.cursor) + ZeroExtend(length);
+            newTop`65 = ZeroExtend(cap.cursor) + ZeroExtend(length);
             var newTopBits = newTop<e+19:e>;
             when (newTop && ~(~0 << e)) <> 0 do newTopBits <- newTopBits + 1; -- round up if significant bits are lost
             -- fold the derived values back in new_cap
@@ -277,7 +276,7 @@ Capability setSealed (cap::Capability, sealed::bool) =
         {
             -- construct the new base and top bits upper 12 bits
             e = cap.exp;
-            lowbits::bits(12) = cap.cursor<11+e:e>;
+            lowbits`12 = cap.cursor<11+e:e>;
             -- assemble the new unsealed fields
             var uf::UnsealedFields;
             uf.baseBits <- sf.baseBits:lowbits;
