@@ -21,8 +21,9 @@ $(L3_SML_LIB)/FPConvert.sig
 $(L3_SML_LIB)/FPConvert.sml
 $(L3_SML_LIB)/Ptree.sig
 $(L3_SML_LIB)/Ptree.sml
-$(L3_SML_LIB)/MutableMap.sig
-$(L3_SML_LIB)/MutableMap.sml
+$(L3_SML_LIB)/Map.sml
+$(L3_SML_LIB)/MutableMapFunctor.sml
+$(L3_SML_LIB)/MutableMap24.sml
 mips.sig
 ann "nonexhaustiveMatch ignore" in
   mips.sml

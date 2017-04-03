@@ -34,8 +34,8 @@ structure PackReal64Little = PackRealLittle;
 
 val () =
   List.app (useSigSml L3_LIB_PATH)
-    ["IntExtra", "Nat", "Set", "L3", "Bitstring", "BitsN", "Ptree",
-     "MutableMap", "Runtime", "FP", "FP64", "NO_FP"];
+    ["IntExtra", "Nat", "Set", "L3", "Bitstring", "BitsN", "Ptree", "Map",
+     "MutableMapFunctor", "MutableMap16", "Runtime", "FP", "FP64", "NO_FP"];
 
 structure FP32 = NO_FP;
 
