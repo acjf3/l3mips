@@ -168,6 +168,7 @@ inline instruction Decode011_100 (s::int, t::int, i::int) =
 inline instruction SimpleDecode (w::word) =
    match w
    {
+      case '000 000 rs rt rd 00000 000 001' => MOVCIDecode (rs, rt, rd)
       case '000 000 00000 rt rd imm5 000 000' => Shift (SLL (rt, rd, imm5))
       case '000 000 00000 rt rd imm5 000 010' => Shift (SRL (rt, rd, imm5))
       case '000 000 00000 rt rd imm5 000 011' => Shift (SRA (rt, rd, imm5))
@@ -297,18 +298,18 @@ inline instruction SimpleDecode (w::word) =
       case '101 111 base opn immediate' => CACHE (base, opn, immediate)
       case '011 111 00000 rt rd 00000 111011' => RDHWR (rt, rd)
       case '010 000 1000 0000 0000 0000 0000 100000' => WAIT
-      -- Coprocessor 2 and reserved instructions
+      -- Coprocessor and reserved instructions
+      case '010 001 v' => COP1Decode (v)
       case '010 010 v' => COP2Decode (v)
-      case '11 b 010 r cb rt offset v`3' =>
-         if b == '1' then
-            SWC2Decode (r, cb, rt, offset, v)
-         else
-            LWC2Decode (r, cb, rt, offset, v)
-      case '11 b 110 c cb rt offset' =>
-         if b == '1' then
-            SDC2Decode (c, cb, rt, offset)
-         else
-            LDC2Decode (c, cb, rt, offset)
+      case '010 011 v' => COP3Decode (v)
+      case '110 001 rs rt immediate' => LWC1Decode (rt, immediate, rs)
+      case '111 001 rs rt immediate' => SWC1Decode (rt, immediate, rs)
+      case '110 101 rs rt immediate' => LDC1Decode (rt, immediate, rs)
+      case '111 101 rs rt immediate' => SDC1Decode (rt, immediate, rs)
+      case '110 010 r cb rt offset v' => LWC2Decode (r, cb, rt, offset, v)
+      case '111 010 r cb rt offset v' => SWC2Decode (r, cb, rt, offset, v)
+      case '110 110 c cb rt offset' => LDC2Decode (c, cb, rt, offset)
+      case '111 110 c cb rt offset' => SDC2Decode (c, cb, rt, offset)
       case _ => ReservedInstruction
    }
 
