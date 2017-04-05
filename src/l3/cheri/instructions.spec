@@ -882,8 +882,6 @@ define COP2 > CHERICOP2 > CJR (cb::reg) =
             SignalCapException(capExcSeal,cb)
         else if not getPerms(CAPR(cb)).Permit_Execute then
             SignalCapException(capExcPermExe,cb)
-        else if not getPerms(CAPR(cb)).Global then
-            SignalCapException(capExcGlobal,cb)
         else if getOffset(CAPR(cb)) + 4 >+ getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
         else if (getBase(CAPR(cb)) + getOffset(CAPR(cb)))<1:0> <> '00' then
@@ -916,8 +914,6 @@ define COP2 > CHERICOP2 > CJALR (cd::reg, cb::reg) =
             SignalCapException(capExcSeal,cb)
         else if not getPerms(CAPR(cb)).Permit_Execute then
             SignalCapException(capExcPermExe,cb)
-        else if not getPerms(CAPR(cb)).Global then
-            SignalCapException(capExcGlobal,cb)
         else if getOffset(CAPR(cb)) + 4 >+ getLength(CAPR(cb)) then
             SignalCapException(capExcLength,cb)
         else if (getBase(CAPR(cb)) + getOffset(CAPR(cb)))<1:0> <> '00' then
