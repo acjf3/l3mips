@@ -566,8 +566,6 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load_Capability then
-        SignalCapException(capExcPermLoadCap,cb)
     else
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
@@ -584,7 +582,9 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         }
         else
         {
-            tmp = LoadCap([addr], false);
+            var tmp = LoadCap([addr], false);
+            when not getPerms(CAPR(cb)).Permit_Load_Capability do
+                tmp <- setTag(tmp, false);
             when not exceptionSignalled do CAPR(cd) <- tmp;
             LLbit <- None
         }
@@ -734,8 +734,6 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Load_Capability then
-        SignalCapException(capExcPermLoadCap,cb)
     else if addr + [CAPBYTEWIDTH] >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
     else if addr <+ getBase(CAPR(cb)) then
@@ -747,7 +745,9 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
     }
     else
     {
-        ret_cap = LoadCap(addr, true);
+        var ret_cap = LoadCap(addr, true);
+        when not getPerms(CAPR(cb)).Permit_Load_Capability do
+            ret_cap <- setTag(ret_cap, false);
         when not exceptionSignalled do CAPR(cd) <- ret_cap
     }
 }
