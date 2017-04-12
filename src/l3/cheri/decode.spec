@@ -47,6 +47,8 @@ instruction COP2Decode (v::bits(26)) =
            case '10000 cd cb _ 1111'            => CLLC(cd, cb)
            case '10000 rs cb rd _ 00 tt'        => CSCx(rs, cb, rd, tt)
            case '10000 cs cb rd _ 0111'         => CSCC(cs, cb, rd)
+           case '00000 cd cb rt 011100'         => CMOVN(cd, cb, rt)
+           case '00000 cd cb rt 011011'         => CMOVZ(cd, cb, rt)
            case _                               => UnknownCapInstruction
        }))
 
