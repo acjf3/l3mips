@@ -20,6 +20,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000 rd 00000 _ 00100'        => CGet(CGetCause(rd))
            case '00100 00000 00000 rt _ 100'    => CSet(CSetCause(rt))
            case '00001 cd cb rt _'              => CSet(CSetBounds(cd, cb, rt))
+           case '00000 cd cb rt 001001'         => CSet(CSetBoundsExact(cd, cb, rt))
            case '01101 cd cb rt _ 000'          => CSet(CIncOffset(cd, cb, rt))
            case '01111 regset mask'             => CSet(CClearRegs(regset, mask))
            case '00100 cd cb _ 101'             => CSet(CClearTag(cd, cb))

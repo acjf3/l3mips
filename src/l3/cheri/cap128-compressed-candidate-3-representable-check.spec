@@ -3,19 +3,26 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-bool isCapRepresentable(cap::Capability,
-                        newSealed::bool,
-                        newOffset::bits(64)) =
+bool canRepCap( cap::Capability,
+                newSeal::bool,
+                newOffset::bits(64),
+                newLength::bits(64)) =
 {
-    base   = getBase(cap);
-    length = getLength(cap);
+    base = getBase(cap);
     var test_cap = defaultCap;
     test_cap <- setOffset(test_cap, base);
-    test_cap <- setBounds(test_cap, length);
+    test_cap <- setBounds(test_cap, newLength);
     test_cap <- setOffset(test_cap, newOffset);
-    test_cap <- setSealed(test_cap, newSealed);
-    if getBase(test_cap)   == base   and
-       getLength(test_cap) == length and
-       getOffset(test_cap) == newOffset then
+    test_cap <- setSealed(test_cap, newSeal);
+    if getBase(test_cap) == base and
+       getOffset(test_cap) == newOffset and
+       getLength(test_cap) == newLength and
+       getSealed(test_cap) == newSeal then
        true else false
 }
+bool canRepOffset(cap::Capability, newOffset::bits(64)) =
+    canRepCap(cap,getSealed(cap),newOffset,getLength(cap))
+bool canRepSeal(cap::Capability, newSeal::bool) =
+    canRepCap(cap,newSeal,getOffset(cap),getLength(cap))
+bool canRepBounds(cap::Capability, newLength::bits(64)) =
+    canRepCap(cap,getSealed(cap),getOffset(cap),newLength)

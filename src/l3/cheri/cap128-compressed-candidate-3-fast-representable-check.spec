@@ -3,9 +3,9 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-bool isCapRepresentable(cap::Capability,
-                        newSealed::bool,
-                        newOffset::bits(64)) =
+bool canRepCap( cap::Capability,
+                newSealed::bool,
+                newOffset::bits(64)) =
 {
     tb, bb = match cap.sFields
     {
@@ -24,4 +24,24 @@ bool isCapRepresentable(cap::Capability,
     inLimits = if i >= 0 then imid <+ (edge - addr - 1)
                else imid >=+ (edge - addr) and edge != addr;
     return ((inRange and inLimits) or e >= 44) and sealOk
+}
+bool canRepOffset(cap::Capability, newOffset::bits(64)) =
+    canRepCap(cap,getSealed(cap),newOffset)
+bool canRepSeal(cap::Capability, newSeal::bool) =
+    canRepCap(cap,newSeal,getOffset(cap))
+bool canRepBounds(cap::Capability, newLength::bits(64)) =
+{
+    base = getBase(cap);
+    offset = getOffset(cap);
+    sealed = getSealed(cap);
+    var test_cap = defaultCap;
+    test_cap <- setOffset(test_cap, base + offset);
+    test_cap <- setBounds(test_cap, newLength);
+    test_cap <- setOffset(test_cap, 0);
+    test_cap <- setSealed(test_cap, sealed);
+    if getBase(test_cap) == base + offset and
+       getOffset(test_cap) == 0 and
+       getLength(test_cap) == newLength and
+       getSealed(test_cap) == sealed then
+       true else false
 }
