@@ -734,8 +734,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             SignalCapException(capExcLength,cb)
         else
         {
-            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], false);
-            nothing
+            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], false)
         }
     }
 

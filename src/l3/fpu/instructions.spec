@@ -904,8 +904,7 @@ define COP1 > SDC1 (ft::reg, offset::bits(16), base::reg) =
     {
         vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
         datadoubleword = FGR(ft);
-        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false);
-        nothing
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false)
     }
 
 -----------------------------------
@@ -918,8 +917,7 @@ define COP1 > SDXC1 (fs::reg, index::reg, base::reg) =
     {
         vAddr = getVirtualAddress(GPR(index) + GPR(base));
         datadoubleword = FGR(fs);
-        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false);
-        nothing
+        _ = StoreMemory(DOUBLEWORD, DOUBLEWORD, true, datadoubleword, vAddr, false)
     }
 
 -----------------------------------
@@ -971,8 +969,7 @@ define COP1 > SWC1 (ft::reg, offset::bits(16), base::reg) =
         vAddr = getVirtualAddress(SignExtend (offset) + GPR(base));
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false);
-        nothing
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false)
     }
 
 -----------------------------------
@@ -986,8 +983,7 @@ define COP1 > SWXC1 (ft::reg, index::reg, base::reg) =
         vAddr = getVirtualAddress(GPR (index) + GPR(base));
         bytesel = vAddr<2:0> ?? (BigEndianCPU : '00');
         datadoubleword = FGR(ft) << (0n8 * [bytesel]);
-        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false);
-        nothing
+        _ = StoreMemory (WORD, WORD, true, datadoubleword, vAddr, false)
     }
 
 -----------------------------------

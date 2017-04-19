@@ -712,8 +712,7 @@ match firstptr (L2DataToDwordList (data))
                 case None =>
                 {
                     mark_log (5, "firstPtr prefetcher triggered");
-                    _ = L2ServeMiss (ptr, past_addr_list);
-                    nothing
+                    _ = L2ServeMiss (ptr, past_addr_list)
                 }
                 case _    => nothing
             }
@@ -731,8 +730,7 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
                     case None =>
                     {
                         mark_log (5, "allPtr prefetcher triggered");
-                        _ = L2ServeMiss (ptr, past_addr_list);
-                        nothing
+                        _ = L2ServeMiss (ptr, past_addr_list)
                     }
                     case _ => nothing
                 }
@@ -753,8 +751,7 @@ match firstcap (data)
                         case None =>
                         {
                             mark_log (5, "firstCap prefetcher triggered");
-                            _ = L2ServeMiss (paddr, past_addr_list);
-                            nothing
+                            _ = L2ServeMiss (paddr, past_addr_list)
                         }
                         case _ => nothing
                     }
@@ -778,8 +775,7 @@ foreach elem in data do match elem
                         case None =>
                         {
                             mark_log (5, "allCap prefetcher triggered");
-                            _ = L2ServeMiss (paddr, past_addr_list);
-                            nothing
+                            _ = L2ServeMiss (paddr, past_addr_list)
                         }
                         case _ => nothing
                     }
