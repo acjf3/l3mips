@@ -868,14 +868,10 @@ bool storeDoubleword (base::reg, rt::reg, offset::bits(16), cond::bool) =
 --
 
 define Store > SW (base::reg, rt::reg, offset::bits(16)) =
-{
    _ = storeWord (base, rt, offset, false)
-}
 
 define Store > SD (base::reg, rt::reg, offset::bits(16)) =
-{
    _ = storeDoubleword (base, rt, offset, false)
-}
 
 define Store > SC (base::reg, rt::reg, offset::bits(16)) =
 {

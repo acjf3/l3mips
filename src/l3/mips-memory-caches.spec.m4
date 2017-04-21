@@ -627,7 +627,7 @@ match firstptr (L2DataToDwordList (data))
         {
             case Some (ptr) => when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
             {
-                case None => { _ = L2ServeMiss (ptr, past_addr_list) }
+                case None => _ = L2ServeMiss (ptr, past_addr_list)
                 case _    => nothing
             }
             case _ => nothing
@@ -641,7 +641,7 @@ foreach elem in L2DataToDwordList (data) do match tlbTryTranslation (elem)
                 memStats.l2_tlb_hit <- memStats.l2_tlb_hit + 1;
                 when not aliasWithAddrList (ptr, past_addr_list) do match L2Hit (ptr)
                 {
-                    case None => { _ = L2ServeMiss (ptr, past_addr_list) }
+                    case None => _ = L2ServeMiss (ptr, past_addr_list)
                     case _ => nothing
                 }
             }

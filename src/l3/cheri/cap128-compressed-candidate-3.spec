@@ -137,7 +137,7 @@ Capability defaultCap =
     var new_cap :: Capability;
     new_cap.tag      <- true;
     new_cap.uperms   <- UPerms(~0);
-    new_cap.perms    <- Perms(~0);
+    new_cap.perms    <- Perms(0x7FF`32);
     new_cap.reserved <- 0;
     new_cap.exp      <- 45;
     var uf :: UnsealedFields;
