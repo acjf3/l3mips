@@ -3,7 +3,7 @@
 -- (c) 2015 Michael Roe
 ---------------------------------------------------------------------------
 
-string COP1InstructionToString (i::instruction) = 
+string COP1InstructionToString (i::instruction) =
     match i
     {
         case COP1(j) =>
@@ -41,18 +41,18 @@ string COP1InstructionToString (i::instruction) =
                 case CTC1(rt, fs) => op2r("ctc1", rt, fs)
                 case CVT_D_L(fd, fs) => op2r("cvt.d.l", fd, fs)
                 case CVT_D_S(fd, fs) => op2r("cvt.d.s", fd, fs)
-		case CVT_D_W(fd, fs) => op2r("cvt.d.w", fd, fs)
-		case CVT_L_D(fd, fs) => op2r("cvt.l.d", fd, fs)
-		case CVT_L_S(fd, fs) => op2r("cvt.l.s", fd, fs)
+                case CVT_D_W(fd, fs) => op2r("cvt.d.w", fd, fs)
+                case CVT_L_D(fd, fs) => op2r("cvt.l.d", fd, fs)
+                case CVT_L_S(fd, fs) => op2r("cvt.l.s", fd, fs)
                 case CVT_S_L(fd, fs) => op2r("cvt.s.l", fd, fs)
                 case CVT_S_D(fd, fs) => op2r("cvt.s.d", fd, fs)
                 case CVT_S_W(fd, fs) => op2r("cvt.s.w", fd, fs)
-		case CVT_W_D(fd, fs) => op2r("cvt.w.d", fd, fs)
-		case CVT_W_S(fd, fs) => op2r("cvt,w,s", fd, fs)
+                case CVT_W_D(fd, fs) => op2r("cvt.w.d", fd, fs)
+                case CVT_W_S(fd, fs) => op2r("cvt,w,s", fd, fs)
                 case DIV_D(fd, fs, ft) => op3r("div.d", fd, fs, ft)
                 case DIV_S(fd, fs, ft) => op3r("div.s", fd, fs, ft)
-		case DMFC1(rt, fs) => op2r("dmfc1", rt, fs)
-		case DMTC1(rt, fs) => op2r("dmtc1", rt, fs)
+                case DMFC1(rt, fs) => op2r("dmfc1", rt, fs)
+                case DMTC1(rt, fs) => op2r("dmtc1", rt, fs)
                 case FLOOR_L_D(fd, fs) => op2r("floor.l.d", fd, fs)
                 case FLOOR_L_S(fd, fs) => op2r("floor.l.s", fd, fs)
                 case FLOOR_W_D(fd, fs) => op2r("floor.w.d", fd, fs)
@@ -94,7 +94,7 @@ string COP1InstructionToString (i::instruction) =
                 case SUB_D(fd, fs, ft) => op3r("sub.d", fd, fs, ft)
                 case SUB_S(fd, fs, ft) => op3r("sub.s", fd, fs, ft)
                 case SQRT_D(fd, fs) => op2r("sqrt.d", fd, fs)
-                case SQRT_S(fd, fs) => op2r("sqrt.s", fd, fs) 
+                case SQRT_S(fd, fs) => op2r("sqrt.s", fd, fs)
                 case TRUNC_L_D(fd, fs) => op2r("trunc.l.d", fd, fs)
                 case TRUNC_L_S(fd, fs) => op2r("trunc.l.s", fd, fs)
                 case TRUNC_W_D(fd, fs) => op2r("trunc.w.d", fd, fs)

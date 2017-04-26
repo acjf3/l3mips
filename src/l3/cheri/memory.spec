@@ -131,7 +131,7 @@ string printMemStats =
 string csvHeaderMemStats = strCsvHeaderMemStats("static_"):",":strCsvHeaderMemStats("dynamic_")
 string csvMemStats = strCsvMemStats(staticMemStats):",":strCsvMemStats(dynamicMemStats)
 
-unit initMemStats = 
+unit initMemStats =
 {
     staticMemStats   <- nullMemStats;
     dynamicMemStats  <- nullMemStats

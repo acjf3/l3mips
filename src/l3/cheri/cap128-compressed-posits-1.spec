@@ -417,7 +417,7 @@ Capability setType (cap::Capability, otype::OType) = match cap.sFields
 
 bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
-CAPRAWBITS capToBits (cap :: Capability) = 
+CAPRAWBITS capToBits (cap :: Capability) =
     cap.cursor:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:[cap.e0]:[cap.r0]:encSFields(cap.sFields)
 
 Capability bitsToCap (raw :: CAPRAWBITS) =

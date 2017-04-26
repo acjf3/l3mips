@@ -22,7 +22,7 @@
 --
 -- The Java language rule is that positive out of range values become
 -- MAXINT, negative out of range values become MININT.
--- 
+--
 -- Later versions of the MIPS ISA provide Java-compatible behaviour if
 -- fcsr.NAN2008 is set.
 ---------------------------------------------------------------------------
@@ -1094,7 +1094,7 @@ define COP1 > CFC1(rt::reg, fs::reg) =
 -----------------------------------
 -- CTC1 rt, fs
 -----------------------------------
-define COP1 > CTC1(rt:: reg, fs::reg) = 
+define COP1 > CTC1(rt:: reg, fs::reg) =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
@@ -1124,7 +1124,7 @@ define COP1 > CTC1(rt:: reg, fs::reg) =
 -------------------------------------------------------------
 -- Unknown Floating Point Instruction.
 -------------------------------------------------------------
-define COP1 > UnknownFPInstruction = 
+define COP1 > UnknownFPInstruction =
     if not CP0.Status.CU1 then
         SignalCP1UnusableException
     else
