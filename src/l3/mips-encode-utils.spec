@@ -56,6 +56,20 @@ string op2roi (s::string, r1::reg, r2::reg, n::bits(N)) =
 string opmem (s::string, r1::reg, r2::reg, n::bits(N)) =
    op1ri(s,r1,n) : "(" : reg_name(r2) : ")"
 
+inline string fp_reg_name (n::reg) = "$f" : [[n]::nat]
+inline string fpc (n::reg) = ", " : fp_reg_name(n)
+
+string op1fpr (s::string, n::reg) = PadRight (#" ", 8, s) : fp_reg_name(n)
+string op1fpri (s::string, r1::reg, n::bits(N)) = op1fpr(s,r1) : i(n)
+string op2fpr (s::string, r1::reg, r2::reg) = op1fpr(s,r1) : fpc(r2)
+string op2rfpr (s::string, r1::reg, r2::reg) = op1r(s,r1) : fpc(r2)
+string op3fpr (s::string, r1::reg, r2::reg, r3::reg) = op2fpr(s,r1,r2) : fpc(r3)
+string op4fpr (s::string, r1::reg, r2::reg, r3::reg, r4::reg) =
+  op3fpr(s,r1,r2,r3) : fpc(r4)
+
+string opfpmem (s::string, r1::reg, r2::reg, n::bits(N)) =
+   op1fpri(s,r1,n) : "(" : reg_name(r2) : ")"
+
 word form1 (rs::reg, rt::reg, rd::reg, imm5::bits(5), function::bits(6)) =
    '000000' : rs : rt : rd : imm5 : function
 
