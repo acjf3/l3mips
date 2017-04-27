@@ -57,6 +57,7 @@ string opmem (s::string, r1::reg, r2::reg, n::bits(N)) =
    op1ri(s,r1,n) : "(" : reg_name(r2) : ")"
 
 inline string fp_reg_name (n::reg) = "$f" : [[n]::nat]
+inline string fcc (n::bits(3)) = ", $fcc" : [[n]::nat]
 inline string fpc (n::reg) = ", " : fp_reg_name(n)
 
 string op1fpr (s::string, n::reg) = PadRight (#" ", 8, s) : fp_reg_name(n)
