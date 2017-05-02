@@ -38,38 +38,51 @@ string reg_name (n::reg) =
 
 inline string c (n::reg) = ", " : reg_name(n)
 string ihex (n::bits(N)) = (if n <+ 10 then "" else "0x") : ToLower([n])
-inline string i (n::bits(N)) = ", " : ihex(n)
-inline string oi (n::bits(N)) = if n == 0 then "" else i(n)
+inline string ai (n::bits(N)) = ihex([n]`32 << 2)
+inline string lai (n::bits(N)) = ihex([n + 1]`32 << 2)
+inline string oi (n::bits(N)) = if n == 0 then "" else ihex(n)
+inline string mnemonic (s::string) = PadRight (#" ", 12, s : " ")
 
-string op1i (s::string, n::bits(N)) =
-   PadRight (#" ", 12, s) : "0x" : ToLower([n])
-string op1r (s::string, n::reg) = PadRight (#" ", 12, s) : reg_name(n)
-string op1ri (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : i(n)
+string op1i (s::string, n::bits(N)) = mnemonic(s) : ihex(n)
+string op1ai (s::string, n::bits(N)) = mnemonic(s) : ai(n)
+string op1lai (s::string, n::bits(N)) = mnemonic(s): lai(n)
+string op1r (s::string, n::reg) = mnemonic(s) : reg_name(n)
+string op1ri (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : ", " : ihex(n)
+string op1rai (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : ", " : ai(n)
+string op1rlai (s::string, r1::reg, n::bits(N)) = op1r(s,r1) : ", " : lai(n)
 string op2r (s::string, r1::reg, r2::reg) = op1r(s,r1) : c(r2)
-string op2ri (s::string, r1::reg, r2::reg, n::bits(N)) = op2r(s,r1,r2) : i(n)
+string op2ri (s::string, r1::reg, r2::reg, n::bits(N)) =
+  op2r(s,r1,r2) : ", " : ihex(n)
+string op2rai (s::string, r1::reg, r2::reg, n::bits(N)) =
+  op2r(s,r1,r2) : ", " : ai(n)
+string op2rlai (s::string, r1::reg, r2::reg, n::bits(N)) =
+  op2r(s,r1,r2) : ", " : lai(n)
 string op3r (s::string, r1::reg, r2::reg, r3::reg) = op2r(s,r1,r2) : c(r3)
-string op3ro (s::string, r1::reg, r2::reg, r3::reg, n::bits(N)) =
-   op2r(s,r1,r3) : i(n) : "(" : reg_name(r2) : ")"
 string op2roi (s::string, r1::reg, r2::reg, n::bits(N)) =
-   op1r(s,r1) : ", " : cpr (r2) : oi(n)
+  op1r(s,r1) : ", " : cpr (r2) : oi(n)
 
 string opmem (s::string, r1::reg, r2::reg, n::bits(N)) =
-   op1ri(s,r1,n) : "(" : reg_name(r2) : ")"
+  op1ri(s,r1,n) : "(" : reg_name(r2) : ")"
 
 inline string fp_reg_name (n::reg) = "$f" : [[n]::nat]
 inline string fcc (n::bits(3)) = ", $fcc" : [[n]::nat]
 inline string fpc (n::reg) = ", " : fp_reg_name(n)
 
-string op1fpr (s::string, n::reg) = PadRight (#" ", 8, s) : fp_reg_name(n)
-string op1fpri (s::string, r1::reg, n::bits(N)) = op1fpr(s,r1) : i(n)
+string op1fpr (s::string, n::reg) = mnemonic(s) : fp_reg_name(n)
+string op1fpri (s::string, r1::reg, n::bits(N)) = op1fpr(s,r1) : ", " : ihex(n)
 string op2fpr (s::string, r1::reg, r2::reg) = op1fpr(s,r1) : fpc(r2)
 string op2rfpr (s::string, r1::reg, r2::reg) = op1r(s,r1) : fpc(r2)
+string op2rcfpr (s::string, r1::reg, r2::reg) =
+  op1r(s,r1) :  ", $" : [[r2]::nat]
 string op3fpr (s::string, r1::reg, r2::reg, r3::reg) = op2fpr(s,r1,r2) : fpc(r3)
 string op4fpr (s::string, r1::reg, r2::reg, r3::reg, r4::reg) =
   op3fpr(s,r1,r2,r3) : fpc(r4)
 
 string opfpmem (s::string, r1::reg, r2::reg, n::bits(N)) =
    op1fpri(s,r1,n) : "(" : reg_name(r2) : ")"
+
+string opfpmem2 (s::string, r1::reg, r2::reg, r3::reg) =
+   op1fpr(s,r1) : ", " : reg_name(r3) : "(" : reg_name(r2) : ")"
 
 word form1 (rs::reg, rt::reg, rd::reg, imm5::bits(5), function::bits(6)) =
    '000000' : rs : rt : rd : imm5 : function

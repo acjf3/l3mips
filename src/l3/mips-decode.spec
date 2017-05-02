@@ -386,17 +386,13 @@ if PROVER_EXPORT then SimpleDecode (w) else
       case 0b111_111 => Store (SD ([s], [t], [i]))
       -- Coprocessor 2 and reserved instructions
       case 0b110_001 => LWC1Decode([t]`5, [i]`16, [s]`5)
-      case 0b110_010 =>
-         match [i] { case 'rt oset v' => LWC2Decode ([s], [t], rt, oset, v) }
+      case 0b110_010 => {'rt oset v' = [i]; LWC2Decode ([s], [t], rt, oset, v)}
       case 0b111_001 => SWC1Decode([t]`5, [i]`16, [s]`5)
-      case 0b111_010 =>
-         match [i] { case 'rt oset v' => SWC2Decode ([s], [t], rt, oset, v) }
+      case 0b111_010 => {'rt oset v' = [i]; SWC2Decode ([s], [t], rt, oset, v)}
       case 0b110_101 => LDC1Decode([t]`5, [i]`16, [s]`5)
-      case 0b110_110 =>
-         match [i] { case 'rt offset' => LDC2Decode ([s], [t], rt, offset) }
+      case 0b110_110 => {'rt offset' = [i]; LDC2Decode ([s], [t], rt, offset)}
       case 0b111_101 => SDC1Decode([t]`5, [i]`16, [s]`5)
-      case 0b111_110 =>
-         match [i] { case 'rt offset' => SDC2Decode ([s], [t], rt, offset) }
+      case 0b111_110 => {'rt offset' = [i]; SDC2Decode ([s], [t], rt, offset)}
       case _ => ReservedInstruction
    }
 }
