@@ -306,7 +306,7 @@ ${SIM}: ${SMLSRC} ${SMLLIBSRC}
 	$(MLTON) -inline 1000 -default-type intinf -verbose 2 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
 ${SIM_PROFILE}: ${SMLSRC} ${SMLLIBSRC}
-	$(MLTON) -profile time -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -profile time -profile-include '.*' -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
 
 ${SIM_COVERAGE}: ${SMLSRC} ${SMLLIBSRC}
 	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)

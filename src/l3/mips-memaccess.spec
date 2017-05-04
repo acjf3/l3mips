@@ -7,10 +7,8 @@
 
 word flip_endian_word (w::word) =
 {
-   c, d = QuotRem ([[w]::nat], 256);
-   b, c = QuotRem (c, 256);
-   a, b = QuotRem (b, 256);
-   return ([d]`8 : [c]`8 : [b]`8 : [a]`8)
+   'a`8 b`8 c`8 d' = w;
+   return (d : c : b : a)
 }
 
 bool Aligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
@@ -172,7 +170,7 @@ bool StoreMemory
       a = pAddr<39:3>;
       b = [AccessLength] + 0n1;
       l = 64 - (b + [vAddr<2:0>]) * 0n8;
-      mask`64 = [2 ** (l + b * 0n8) - 2 ** l];
+      mask`64 = 1 << (l + b * 0n8) - 1 << l;
       if a == JTAG_UART.base_address then
         JTAG_UART_store (mask, MemElem)
       else

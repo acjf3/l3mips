@@ -9,7 +9,7 @@
 val be = ref true (* big-endian *)
 val trace_level = mips.trace_level
 val time_run = ref true
-val uart_delay = ref 5000
+val uart_delay = ref 50000
 val uart_countdown = ref (!uart_delay)
 val uart_in = ref (NONE: TextIO.instream option)
 val uart_out = ref (NONE: TextIO.outstream option)
@@ -326,13 +326,16 @@ fun next_loop mx =
   let
     val stats = if Option.isSome (!dump_stat_freq) then print_stats
                 else fn _ => ()
+    val traces = if 0 < !trace_level then
+                   let val lvl = !trace_level in fn () => print_traces lvl end
+                 else fn () => ()
     val i = mips.instCnt
     fun loop () =
       ( mips.switchCore (scheduleNext ())
       ; uart ()
       ; mips.Next ()
       ; print_watcher ()
-      ; print_traces (!trace_level)
+      ; traces ()
       ; stats (!i)
       ; i := !i + 1
       ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
