@@ -66,6 +66,8 @@ string opmem (s::string, r1::reg, r2::reg, n::bits(N)) =
 
 inline string fp_reg_name (n::reg) = "$f" : [[n]::nat]
 inline string fcc (n::bits(3)) = ", $fcc" : [[n]::nat]
+inline string ofcc (n::bits(3)) =
+  if n == 0 then "" else "$fcc" : [[n]::nat] : ", "
 inline string fpc (n::reg) = ", " : fp_reg_name(n)
 
 string op1fpr (s::string, n::reg) = mnemonic(s) : fp_reg_name(n)
@@ -74,6 +76,8 @@ string op2fpr (s::string, r1::reg, r2::reg) = op1fpr(s,r1) : fpc(r2)
 string op2rfpr (s::string, r1::reg, r2::reg) = op1r(s,r1) : fpc(r2)
 string op2rcfpr (s::string, r1::reg, r2::reg) =
   op1r(s,r1) :  ", $" : [[r2]::nat]
+string op2ccfpr (s::string, r1::reg, r2::reg, n::bits(3)) =
+  mnemonic(s) : ofcc(n) : fp_reg_name(r1) : fpc(r2)
 string op3fpr (s::string, r1::reg, r2::reg, r3::reg) = op2fpr(s,r1,r2) : fpc(r3)
 string op4fpr (s::string, r1::reg, r2::reg, r3::reg, r4::reg) =
   op3fpr(s,r1,r2,r3) : fpc(r4)
