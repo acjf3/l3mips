@@ -326,16 +326,13 @@ fun next_loop mx =
   let
     val stats = if Option.isSome (!dump_stat_freq) then print_stats
                 else fn _ => ()
-    val traces = if 0 < !trace_level then
-                   let val lvl = !trace_level in fn () => print_traces lvl end
-                 else fn () => ()
     val i = mips.instCnt
     fun loop () =
       ( mips.switchCore (scheduleNext ())
       ; uart ()
       ; mips.Next ()
       ; print_watcher ()
-      ; traces ()
+      ; print_traces (!trace_level)
       ; stats (!i)
       ; i := !i + 1
       ; if !mips.done orelse !i = mx then end_sim (!i) else loop ()
