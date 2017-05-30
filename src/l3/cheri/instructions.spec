@@ -124,8 +124,14 @@ define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
         SignalCapException(capExcAccessSysReg,cb)
+    else if getSealed(CAPR(cb)) then
+    {
+        var t = 0;
+        t<23:0> <- getType(CAPR(cb));
+        GPR(rd) <- t
+    }
     else
-        GPR(rd) <- ZeroExtend(getType(CAPR(cb)))
+        GPR(rd) <- ~0
 
 -----------------------------------
 -- CGetPCC cd
