@@ -96,6 +96,8 @@ string COP2InstructionToString (i::instruction) =
                 case CSCC(cs, cb, rd)             => op_gr_cr_cr("cscc", rd, cs, cb)
                 case CMOVN(cd, cb, rt)            => op_cr_cr_gr("cmovn", cd, cb, rt)
                 case CMOVZ(cd, cb, rt)            => op_cr_cr_gr("cmovz", cd, cb, rt)
+                case CBuildCap(cd, cb, ct)        => op_cr_cr_cr("cbuildcap", cd, cb, ct)
+                case CCopyType(cd, cb, ct)        => op_cr_cr_cr("ccopytype", cd, cb, ct)
                 case UnknownCapInstruction        => "unknown_cap_inst"
             }
         case _ => "unmatched_cap_inst"

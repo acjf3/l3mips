@@ -918,6 +918,68 @@ define COP2 > CHERICOP2 > CMOVZ (cd::reg, cb::reg, rt::reg) =
         CAPR(cd) <- CAPR(cb)
 
 -----------------------------------
+-- CBuildCap
+-----------------------------------
+define COP2 > CHERICOP2 > CBuildCap (cd::reg, cb::reg, ct::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if register_inaccessible(ct) then
+        SignalCapException(capExcAccessSysReg,ct)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if getBase(CAPR(ct)) <=+ getBase(CAPR(cb)) then
+        SignalCapException(capExcLength,cb)
+    else if (getBase(CAPR(ct)) + getLength(CAPR(ct))) >=+ (getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+        SignalCapException(capExcLength,cb)
+    else if getLength(CAPR(ct)) <= 0 then
+        SignalCapException(capExcLength,ct)
+    else if &getPerms(CAPR(ct))<14:0> && &getPerms(CAPR(cb))<14:0> <> &getPerms(CAPR(ct))<14:0> then
+        SignalCapException(capExcUser,cb)
+    else if &getUPerms(CAPR(ct))<(UPERMS-1):0> && &getUPerms(CAPR(cb))<(UPERMS-1):0> <> &getUPerms(CAPR(ct))<(UPERMS-1):0> then
+        SignalCapException(capExcUser,cb)
+    else
+    {
+        var new_cap = CAPR(cb);
+        raw = CAPR(ct);
+        new_cap  <- setOffset(new_cap, getBase(raw));
+        new_cap  <- setBounds(new_cap, getLength(raw));
+        new_cap  <- setPerms(new_cap, getPerms(raw));
+        new_cap  <- setUPerms(new_cap, getUPerms(raw));
+        new_cap  <- setOffset(new_cap, getOffset(raw));
+        new_cap  <- setSealed(new_cap, false);
+        CAPR(cd) <- new_cap
+    }
+
+-----------------------------------
+-- CCopyType
+-----------------------------------
+define COP2 > CHERICOP2 > CCopyType (cd::reg, cb::reg, ct::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if register_inaccessible(ct) then
+        SignalCapException(capExcAccessSysReg,ct)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not canRepOffset (CAPR(cb), ZeroExtend(getType(CAPR(ct))) - getBase(CAPR(cb))) then
+        SignalCapException(capExcInexact,cb)
+    else if getSealed(CAPR(ct)) then
+        CAPR(cd) <- setOffset(CAPR(cb), ZeroExtend(getType(CAPR(ct))) - getBase(CAPR(cb)))
+    else
+        CAPR(cd) <- setOffset(CAPR(cb), ~0)
+
+-----------------------------------
 -- CJR
 -----------------------------------
 define COP2 > CHERICOP2 > CJR (cb::reg) =
