@@ -933,9 +933,9 @@ define COP2 > CHERICOP2 > CBuildCap (cd::reg, cb::reg, ct::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if getBase(CAPR(ct)) <=+ getBase(CAPR(cb)) then
+    else if getBase(CAPR(ct)) <+ getBase(CAPR(cb)) then
         SignalCapException(capExcLength,cb)
-    else if (getBase(CAPR(ct)) + getLength(CAPR(ct))) >=+ (getBase(CAPR(cb)) + getLength(CAPR(cb))) then
+    else if (getBase(CAPR(ct)) + getLength(CAPR(ct))) >+ (getBase(CAPR(cb)) + getLength(CAPR(cb))) then
         SignalCapException(capExcLength,cb)
     else if getLength(CAPR(ct)) <= 0 then
         SignalCapException(capExcLength,ct)
