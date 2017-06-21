@@ -14,15 +14,19 @@ register CapCause :: bits (16)
 declare
 {
    -- State of all cores
-   all_BranchDelayPCC:: id -> (bits(64) * Capability) option
-   all_BranchToPCC   :: id -> (bits(64) * Capability) option
-   all_capcause      :: id -> CapCause    -- capability exception cause register
-   all_pcc           :: id -> Capability  -- program counter capability
-   all_capr          :: id -> CapRegFile  -- capability register file
+   all_BranchDelayPCC   :: id -> (bits(64) * Capability) option
+   all_BranchToPCC      :: id -> (bits(64) * Capability) option
+   all_CCallBranchDelay :: id -> bool
+   all_CCallBranch      :: id -> bool
+   all_capcause         :: id -> CapCause    -- capability exception cause register
+   all_pcc              :: id -> Capability  -- program counter capability
+   all_capr             :: id -> CapRegFile  -- capability register file
 
    -- State of current core
    BranchDelayPCC    :: (bits(64) * Capability) option
    BranchToPCC       :: (bits(64) * Capability) option
+   CCallBranchDelay  :: bool
+   CCallBranch       :: bool
    capcause          :: CapCause          -- capability exception cause register
    c_pcc             :: Capability        -- program counter capability
    c_capr            :: CapRegFile        -- capability register file
@@ -32,11 +36,15 @@ unit switchCoreCAP (i::id) =
 {
    all_BranchDelayPCC (procID) <- BranchDelayPCC;
    all_BranchToPCC (procID) <- BranchToPCC;
+   all_CCallBranchDelay (procID) <- CCallBranchDelay;
+   all_CCallBranch (procID) <- CCallBranch;
    all_capcause (procID) <- capcause;
    all_pcc (procID) <- c_pcc;
    all_capr (procID) <- c_capr;
    BranchDelayPCC <- all_BranchDelayPCC (i);
    BranchToPCC <- all_BranchToPCC (i);
+   CCallBranchDelay <- all_CCallBranchDelay (i);
+   CCallBranch <- all_CCallBranch (i);
    capcause <- all_capcause (i);
    c_pcc <- all_pcc (i);
    c_capr <- all_capr (i)
@@ -114,3 +122,8 @@ component EPCC :: Capability
     value = CAPR(31)
     assign value = CAPR(31) <- value
 }
+
+bool allow_system_reg_access(p::Perms, r::reg) =
+  if r >=+ 27 and not p.Access_System_Registers then false
+  else if r == 26 and CCallBranchDelay then false
+  else true

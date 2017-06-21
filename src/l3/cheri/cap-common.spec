@@ -27,8 +27,9 @@ register UPerms :: bits (32)
 
 register Perms :: bits (32)
 {
-    31-11, 9-8 : Reserved
+    31-11, 9 : Reserved
     10 : Access_System_Registers
+     8 : Permit_CCall
      7 : Permit_Seal
      6 : Permit_Store_Local_Capability
      5 : Permit_Store_Capability
@@ -38,6 +39,3 @@ register Perms :: bits (32)
      1 : Permit_Execute
      0 : Global
 }
-
-bool allow_system_reg_access(p::Perms, r::reg) =
-  27 <=+ r and not p.Access_System_Registers

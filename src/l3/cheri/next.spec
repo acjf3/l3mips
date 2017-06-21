@@ -34,24 +34,30 @@ unit Next =
         case Some (addr), None, None, None =>
         {
             BranchDelay <- None;
+            CCallBranchDelay <- false;
             PC <- addr
         }
         case None, Some (addr), None, None =>
         {
             BranchDelay <- Some (addr);
+            CCallBranchDelay <- CCallBranch;
             BranchTo <- None;
+            CCallBranch <- false;
             PC <- PC + 4
         }
         case None, None, Some (addr, cap), None =>
         {
             BranchDelayPCC <- None;
+            CCallBranchDelay <- false;
             PC <- addr;
             PCC <- cap
         }
         case None, None, None, Some (addr, cap) =>
         {
             BranchDelayPCC <- Some (addr, cap);
+            CCallBranchDelay <- CCallBranch;
             BranchToPCC <- None;
+            CCallBranch <- false;
             PC <- PC + 4
         }
         case _ => #UNPREDICTABLE("Branch follows branch")
