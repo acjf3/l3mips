@@ -917,6 +917,7 @@ define COP2 > CHERICOP2 > CMOVZ (cd::reg, cb::reg, rt::reg) =
     else when GPR(rt) == 0 do
         CAPR(cd) <- CAPR(cb)
 
+{-
 -----------------------------------
 -- CBuildCap
 -----------------------------------
@@ -978,6 +979,7 @@ define COP2 > CHERICOP2 > CCopyType (cd::reg, cb::reg, ct::reg) =
         CAPR(cd) <- setOffset(CAPR(cb), ZeroExtend(getType(CAPR(ct))) - getBase(CAPR(cb)))
     else
         CAPR(cd) <- setOffset(CAPR(cb), ~0)
+-}
 
 -----------------------------------
 -- CJR
