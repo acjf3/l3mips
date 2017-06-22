@@ -125,11 +125,7 @@ define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException(capExcAccessSysReg,cb)
     else if getSealed(CAPR(cb)) then
-    {
-        var t = 0;
-        t<23:0> <- getType(CAPR(cb));
-        GPR(rd) <- t
-    }
+        GPR(rd) <- ZeroExtend(getType(CAPR(cb)))
     else
         GPR(rd) <- ~0
 
