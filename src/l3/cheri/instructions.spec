@@ -1179,10 +1179,12 @@ define COP2 > CHERICOP2 > CCall1 (cs::reg, cb::reg) =
     else
     {
         CheckBranch;
-        PCC <- setSealed(CAPR(cs), false);
+        new_PCC = setSealed(CAPR(cs), false);
+        PCC <- setType(new_PCC, 0);
         BranchTo <- Some (getOffset(CAPR(cs)));
         CCallBranch <- true;
-        IDC <- setSealed(CAPR(cb), false)
+        new_IDC = setSealed(CAPR(cb), false);
+        IDC <- setType(new_IDC, 0)
     }
 
 -----------------------------------
