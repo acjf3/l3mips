@@ -221,15 +221,20 @@ SMLLIBSRC+=$(L3SMLLIB)/Map.sml
 SMLLIBSRC+=$(L3SMLLIB)/MutableMapFunctor.sml
 SMLLIBSRC+=$(L3SMLLIB)/MutableMap16.sml
 SMLLIBSRC+=$(L3SMLLIB)/MutableMap24.sml
+SMLLIBSRC+=$(L3SMLLIB)/SSE.sig
+SMLLIBSRC+=$(L3SMLLIB)/PolySSE.sml
+SMLLIBSRC+=$(L3SMLLIB)/MLtonSSE.sml
 SMLLIBSRC+=$(L3SMLLIB)/FP.sig
-SMLLIBSRC+=$(L3SMLLIB)/FP.sml
-SMLLIBSRC+=$(L3SMLLIB)/NO_FP.sml
+SMLLIBSRC+=$(L3SMLLIB)/FP32.sml
 SMLLIBSRC+=$(L3SMLLIB)/FP64.sml
+SMLLIBSRC+=$(L3SMLLIB)/FPConvert.sig
+SMLLIBSRC+=$(L3SMLLIB)/FPConvert.sml
 SMLSRCBASE+=mips.sig
 SMLSRCBASE+=mips.sml
 SMLSRCBASE+=run.sml
 SMLSRCBASE+=l3mips.mlb
 MLBFILE=l3mips.mlb
+SSE_FILES=$(L3SMLLIB)/sse_float.c $(L3SMLLIB)/mlton_sse_float.c
 SMLSRC=$(patsubst %, $(SMLSRCDIR)/%, $(SMLSRCBASE))
 
 # memory subsystem params
@@ -303,13 +308,13 @@ poly: ${SMLSRC} ${SMLLIBSRC} ${SMLSRCDIR}/run-poly.sml
 	cd ${SMLSRCDIR} && $(POLYC) -o ${SIMPOLY} run-poly.sml
 
 ${SIM}: ${SMLSRC} ${SMLLIBSRC}
-	$(MLTON) -inline 1000 -default-type intinf -verbose 2 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -default-ann 'allowFFI true' -inline 1000 -default-type intinf -verbose 2 -output ${SIM} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE) $(SSE_FILES)
 
 ${SIM_PROFILE}: ${SMLSRC} ${SMLLIBSRC}
-	$(MLTON) -profile time -profile-include '.*' -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -default-ann 'allowFFI true' -profile time -profile-include '.*' -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_PROFILE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE) $(SSE_FILES)
 
 ${SIM_COVERAGE}: ${SMLSRC} ${SMLLIBSRC}
-	$(MLTON) -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE)
+	$(MLTON) -default-ann 'allowFFI true' -profile count -profile-branch true -inline 1000 -default-type intinf -verbose 2 -output ./${SIM_COVERAGE} -mlb-path-var 'L3_SML_LIB '$(L3_SML_LIB) ${SMLSRCDIR}/$(MLBFILE) $(SSE_FILES)
 
 clean:
 	rm -f ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml

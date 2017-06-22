@@ -13,8 +13,9 @@ $(L3_SML_LIB)/Bitstring.sig
 $(L3_SML_LIB)/Bitstring.sml
 $(L3_SML_LIB)/BitsN.sig
 $(L3_SML_LIB)/BitsN.sml
+$(L3_SML_LIB)/SSE.sig
+$(L3_SML_LIB)/MLtonSSE.sml
 $(L3_SML_LIB)/FP.sig
-$(L3_SML_LIB)/FP.sml
 $(L3_SML_LIB)/FP32.sml
 $(L3_SML_LIB)/FP64.sml
 $(L3_SML_LIB)/FPConvert.sig

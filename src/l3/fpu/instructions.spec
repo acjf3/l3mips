@@ -44,6 +44,16 @@ dword IntToDWordMIPS(v::int) =
         [v]`dword
 
 -----------------------------------
+-- IEEE 754:1985 behaviour for Abs and Neg
+-----------------------------------
+
+word FP32_Abs1985 (a::word) = if FP32_IsNan (a) then a else FP32_Abs (a)
+word FP32_Neg1985 (a::word) = if FP32_IsNan (a) then a else FP32_Neg (a)
+
+dword FP64_Abs1985 (a::dword) = if FP64_IsNan (a) then a else FP64_Abs (a)
+dword FP64_Neg1985 (a::dword) = if FP64_IsNan (a) then a else FP64_Neg (a)
+
+-----------------------------------
 -- Post-processing after a floating point operation, including flushing
 -- denormalized results to zero.
 -----------------------------------

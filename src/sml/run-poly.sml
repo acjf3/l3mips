@@ -35,11 +35,13 @@ structure PackReal64Little = PackRealLittle;
 val () =
   List.app (useSigSml L3_LIB_PATH)
     ["IntExtra", "Nat", "Set", "L3", "Bitstring", "BitsN", "Ptree", "Map",
-     "MutableMapFunctor", "MutableMap16", "Runtime", "FP", "FP64", "NO_FP"];
+     "MutableMapFunctor", "MutableMap16", "Runtime"];
 
-structure FP32 = NO_FP;
+val () = L3.setLibDir (OS.Path.toString L3_LIB_PATH);
 
 val () =
-  ( useSigSml L3_LIB_PATH "FPConvert"
-  ; List.app (useSigSml (OS.Path.fromString OS.Path.currentArc)) ["mips", "run"]
-  )
+  List.app (useSigSml L3_LIB_PATH)
+     ["SSE", "PolySSE", "FP", "FP32", "FP64", "FPConvert"];
+
+val () =
+  List.app (useSigSml (OS.Path.fromString OS.Path.currentArc)) ["mips", "run"]
