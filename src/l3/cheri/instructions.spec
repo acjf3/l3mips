@@ -51,7 +51,7 @@ define COP2 > CHERICOP2 > CGet > CGetBase (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException(capExcAccessSysReg,cb)
     else
-        GPR(rd) <- getBase(CAPR(cb))
+        GPR(rd) <- SignExtend(getBase(CAPR(cb))<31:0>)
 
 -----------------------------------
 -- CGetOffset rd, cb
@@ -62,7 +62,7 @@ define COP2 > CHERICOP2 > CGet > CGetOffset (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException(capExcAccessSysReg,cb)
     else
-        GPR(rd) <- getOffset(CAPR(cb))
+        GPR(rd) <- SignExtend(getOffset(CAPR(cb))<31:0>)
 
 -----------------------------------
 -- CGetLen rd, cb
@@ -73,7 +73,7 @@ define COP2 > CHERICOP2 > CGet > CGetLen (rd::reg, cb::reg) =
     else if register_inaccessible(cb) then
         SignalCapException(capExcAccessSysReg,cb)
     else
-        GPR(rd) <- getLength(CAPR(cb))
+        GPR(rd) <- SignExtend(getLength(CAPR(cb))<31:0>)
 
 -----------------------------------
 -- CGetTag rd, cb
@@ -151,14 +151,14 @@ define COP2 > CHERICOP2 > CGet > CGetPCCSetOffset (cd::reg, rs::reg) =
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
         SignalCapException(capExcAccessSysReg,cd)
-    else if not canRepOffset (PCC, GPR(rs)) then
+    else if not canRepOffset (PCC, SignExtend(GPR(rs)<31:0>)) then
     {
-        CAPR(cd) <- setOffset(nullCap, getBase(PCC) + GPR(rs));
+        CAPR(cd) <- setOffset(nullCap, getBase(PCC) + SignExtend(GPR(rs)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
     else
     {
-        CAPR(cd) <- setOffset(PCC, GPR(rs));
+        CAPR(cd) <- setOffset(PCC, SignExtend(GPR(rs)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
 
@@ -203,14 +203,14 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) and GPR(rt) <> 0 then
         SignalCapException(capExcSeal,cb)
-    else if not canRepOffset (CAPR(cb), getOffset(CAPR(cb)) + GPR(rt)) then
+    else if not canRepOffset (CAPR(cb), getOffset(CAPR(cb)) + SignExtend(GPR(rt)<31:0>)) then
     {
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
     else
     {
-        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
 
@@ -257,10 +257,10 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else if cursor <+ base then
         SignalCapException(capExcLength,cb)
-    else if ('0':cursor) + ('0':GPR(rt)) >+ ('0':base) + ('0':length) then
+    else if ('0':cursor) + ('0':ZeroExtend(GPR(rt)<31:0>)) >+ ('0':base) + ('0':length) then
         SignalCapException(capExcLength,cb)
     else
-        CAPR(cd) <- setBounds(CAPR(cb), GPR(rt))
+        CAPR(cd) <- setBounds(CAPR(cb), ZeroExtend(GPR(rt)<31:0>))
 }
 
 -----------------------------------
@@ -283,12 +283,12 @@ define COP2 > CHERICOP2 > CSet > CSetBoundsExact (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcSeal,cb)
     else if cursor <+ base then
         SignalCapException(capExcLength,cb)
-    else if ('0':cursor) + ('0':GPR(rt)) >+ ('0':base) + ('0':length) then
+    else if ('0':cursor) + ('0':ZeroExtend(GPR(rt)<31:0>)) >+ ('0':base) + ('0':length) then
         SignalCapException(capExcLength,cb)
-    else if not canRepBounds(CAPR(cb),GPR(rt)) then
+    else if not canRepBounds(CAPR(cb),ZeroExtend(GPR(rt)<31:0>)) then
         SignalCapException(capExcInexact,cb)
     else
-        CAPR(cd) <- setBounds(CAPR(cb), GPR(rt))
+        CAPR(cd) <- setBounds(CAPR(cb), ZeroExtend(GPR(rt)<31:0>))
 }
 
 -----------------------------------
@@ -397,14 +397,14 @@ define COP2 > CHERICOP2 > CSet > CSetOffset (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcAccessSysReg,cb)
     else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not canRepOffset (CAPR(cb), GPR(rt)) then
+    else if not canRepOffset (CAPR(cb), SignExtend(GPR(rt)<31:0>)) then
     {
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
     else
     {
-        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt));
+        CAPR(cd) <- setOffset(CAPR(cb), SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
 
@@ -419,7 +419,7 @@ define COP2 > CHERICOP2 > CSub (rd::reg, cb::reg, ct::reg) =
     else if register_inaccessible(ct) then
         SignalCapException(capExcAccessSysReg,ct)
     else
-        GPR(rd) <- getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct)) - getOffset(CAPR(ct))
+        GPR(rd) <- SignExtend((getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct)) - getOffset(CAPR(ct)))<31:0>)
 
 -----------------------------------
 -- CCheckPerm
@@ -480,14 +480,14 @@ define COP2 > CHERICOP2 > CSet > CFromPtr (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not canRepOffset (CAPR(cb), GPR(rt)) then
+    else if not canRepOffset (CAPR(cb), SignExtend(GPR(rt)<31:0>)) then
     {
-        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + GPR(rt));
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
     else
     {
-        CAPR(cd) <- setOffset(CAPR(cb), GPR(rt));
+        CAPR(cd) <- setOffset(CAPR(cb), SignExtend(GPR(rt)<31:0>));
         watchOOB(CAPR(cd), PC)
     }
 
@@ -506,7 +506,7 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
     else if not getTag(CAPR(cb)) then
         GPR(rd) <- 0
     else
-        GPR(rd) <- getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct))
+        GPR(rd) <- SignExtend((getBase(CAPR(cb)) + getOffset(CAPR(cb)) - getBase(CAPR(ct)))<31:0>)
 
 -----------------------------------
 -- CPtrCmp
@@ -639,7 +639,8 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
         extOff = offset:'000';
-        addr   = cursor + GPR(rt) + SignExtend(extOff);
+        addr   = cursor + SignExtend(GPR(rt)<31:0>) + SignExtend(extOff);
+        if addr + [CAPBYTEWIDTH] >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         if ('0':addr) + [CAPBYTEWIDTH] >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if addr <+ getBase(CAPR(cb)) then
@@ -674,7 +675,8 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
         extOff = offset:'000';
-        addr   = cursor + GPR(rt) + SignExtend(extOff);
+        addr   = cursor + SignExtend(GPR(rt)<31:0>) + SignExtend(extOff);
+        if addr + [CAPBYTEWIDTH] >+ getBase(CAPR(cb)) + getLength(CAPR(cb)) then
         if ('0':addr) + [CAPBYTEWIDTH] >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
         else if addr <+ getBase(CAPR(cb)) then
@@ -713,7 +715,7 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
         cap_cb = CAPR(cb);
         cursor = getBase(cap_cb) + getOffset(cap_cb);
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
-        addr   = cursor + GPR(rt) + SignExtend(extOff);
+        addr   = cursor + SignExtend(GPR(rt)<31:0>) + SignExtend(extOff);
         var size;
         var access;
         var bytesel = '000';
@@ -781,7 +783,7 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         cap_cb = CAPR(cb);
         cursor = getBase(cap_cb) + getOffset(cap_cb); -- mod 2^64 ?
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
-        addr   = cursor + GPR(rt) + SignExtend(extOff);
+        addr   = cursor + SignExtend(GPR(rt)<31:0>) + SignExtend(extOff);
         var size;
         var access;
         var bytesel = '000';
