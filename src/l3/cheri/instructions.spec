@@ -638,7 +638,7 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
     else
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
-        extOff = offset:'0000';
+        extOff = offset:'000';
         addr   = cursor + GPR(rt) + SignExtend(extOff);
         if ('0':addr) + [CAPBYTEWIDTH] >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
@@ -673,7 +673,7 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
     else
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
-        extOff = offset:'0000';
+        extOff = offset:'000';
         addr   = cursor + GPR(rt) + SignExtend(extOff);
         if ('0':addr) + [CAPBYTEWIDTH] >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
             SignalCapException(capExcLength,cb)
