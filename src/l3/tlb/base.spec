@@ -84,18 +84,23 @@ inline bool MatchingEntry (r::bits(2), vpn2::bits(27), e::TLBEntry) =
    return found
 }
 
-pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
+unit SignalTLBException_internal (asid::bits(8), vAddr::vAddr) =
 {
    r = vAddr<63:62>;
    vpn2 = vAddr<39:13>;
-   SignalException (e);
    CP0.BadVAddr <- vAddr;
    CP0.EntryHi.R <- r;
    CP0.EntryHi.VPN2 <- vpn2;
    CP0.EntryHi.ASID <- asid;
    CP0.XContext.R <- r;
    CP0.XContext.BadVPN2 <- vpn2;
-   CP0.Context.BadVPN2 <- vAddr<31:13>;
+   CP0.Context.BadVPN2 <- vAddr<31:13>
+}
+
+pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
+{
+   SignalTLBException_internal(asid,vAddr);
+   SignalException (e);
    UNKNOWN
 }
 

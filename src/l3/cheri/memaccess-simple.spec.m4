@@ -269,10 +269,7 @@ bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
     LLbit <- None;
 
     if (S and getTag(cap)) then
-    {
-        CP0.BadVAddr <- vAddr;
-        SignalCapException_noReg (capExcTLBNoStore)
-    }
+        SignalTLBCapException (capExcTLBNoStore, CP0.EntryHi.ASID, vAddr)
     else
     {
         for core in 0 .. totalCore - 1 do

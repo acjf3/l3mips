@@ -128,3 +128,10 @@ TLBEntry CP0TLBEntry () =
    e.V0 <- eLo0.V;
    return e
 }
+
+unit SignalTLBCapException (capException::CapExceptionType, asid::bits(8), vAddr::vAddr) =
+{
+   SignalTLBException_internal(asid,vAddr);
+   SignalCapException_noReg(capException);
+   UNKNOWN
+}

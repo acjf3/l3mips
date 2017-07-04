@@ -28,3 +28,10 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessTy
 pAddr option tlbTryTranslation (vAddr::vAddr) = None
 
 TLBEntry CP0TLBEntry () = UNKNOWN
+
+unit SignalTLBCapException (capException::CapExceptionType, asid::bits(8), vAddr::vAddr) =
+{
+   SignalTLBException_internal(asid,vAddr);
+   SignalCapException_noReg(capException);
+   UNKNOWN
+}
