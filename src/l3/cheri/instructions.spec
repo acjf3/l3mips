@@ -497,7 +497,7 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
            case 4 => GPR(rd) <- [lessu]
            case 5 => GPR(rd) <- [lessu or equal]
            case 6 => GPR(rd) <- if cap_cb == cap_ct then 1 else 0
-           case _ => SignalException (ResI)
+	   case 7 => GPR(rd) <- if cap_cb == cap_ct then 0 else 1
         }
     }
 
