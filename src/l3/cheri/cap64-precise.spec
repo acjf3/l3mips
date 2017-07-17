@@ -9,7 +9,10 @@ CAPRAWBITS capToBits (cap :: Capability) =
   &cap<191:128>
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
-    Capability('0' : 0xFEEDF00D_DEADBABE::bits(64) : raw : 0xFEEDBABE_DEADF00D::bits(128))
+    if raw == 0 then
+        Capability('0' : 0x0::bits(64) : raw : 0x0::bits(128))
+    else
+        Capability('0' : 0xFEEDF00D_DEADBABE::bits(64) : raw : 0xFEEDBABE_DEADF00D::bits(128))
 
 dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) = raw
 
