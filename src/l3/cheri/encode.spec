@@ -62,6 +62,7 @@ string COP2InstructionToString (i::instruction) =
                         case 0b100 => op_gr_cr_cr("cltu",rd,cb,ct)
                         case 0b101 => op_gr_cr_cr("cleu",rd,cb,ct)
                         case 0b110 => op_gr_cr_cr("cexeq",rd,cb,ct)
+                        case 0b111 => op_gr_cr_cr("cnexeq",rd,cb,ct)
                         case _     => "unmatched_cap_inst"
                     }
                 case CBTU(cb, offset)             => op_cr_imm("cbtu",cb,offset)
