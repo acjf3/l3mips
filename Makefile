@@ -281,13 +281,13 @@ M4_FILES = $(basename $(wildcard ${L3SRCDIR}/*.spec.m4))
 all: $(SIM)
 
 hol: ${L3SRC}
-	echo 'HolExport.sigDocs false; HolExport.bigRecords false; HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri")' | l3
+	echo 'HolExport.spec ("${L3SRC}", "${HOLSRCDIR}/cheri nobigrecords nosigdocs")' | l3
 
 isabelle: ${L3SRC}
 	echo 'IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI")' | l3
 
 isabelle_monadic: ${L3SRC}
-	echo 'IsabelleExport.monadicExport true; IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI_Monadic")' | l3
+	echo 'IsabelleExport.spec ("${L3SRC}", "${HOLSRCDIR}/CHERI_Monadic monadic")' | l3
 
 count: ${L3SRC}
 	@wc -l ${L3SRC}
@@ -302,7 +302,7 @@ MLTON ?= mlton
 POLYC ?= polyc
 
 ${SMLSRCDIR}/mips.sig ${SMLSRCDIR}/mips.sml: ${L3SRC}
-	echo 'SMLExport.setIntInf true; SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips")' | l3
+	echo 'SMLExport.spec ("${L3SRC}", "${SMLSRCDIR}/mips intinf")' | l3
 
 poly: ${SMLSRC} ${SMLLIBSRC} ${SMLSRCDIR}/run-poly.sml
 	cd ${SMLSRCDIR} && $(POLYC) -o ${SIMPOLY} run-poly.sml
