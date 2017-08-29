@@ -50,6 +50,7 @@ instruction COP2Decode (v::bits(26)) =
            case '10000 cs cb rd _ 0111'         => CSCC(cs, cb, rd)
            case '00000 cd cb rt 011100'         => CMOVN(cd, cb, rt)
            case '00000 cd cb rt 011011'         => CMOVZ(cd, cb, rt)
+           --case '00000 rd cb ct 100000'         => CTestSubset(rd, cb, ct)
            --case '00000 cd cb ct 011101'         => CBuildCap(cd, cb, ct)
            --case '00000 cd cb ct 011110'         => CCopyType(cd, cb, ct)
            case _                               => UnknownCapInstruction
