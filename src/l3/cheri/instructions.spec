@@ -320,18 +320,35 @@ define COP2 > CHERICOP2 > CSet > CSetBoundsImmediate (cd::reg, cb::reg, req_leng
 -----------------------------------
 -- CClearRegs
 -----------------------------------
-define COP2 > CHERICOP2 > CSet > CClearRegs (regset::bits(5), mask::bits(16)) =
+-- ClearRegs
+-- ClearLo
+-- ClearHi
+-- CClearLo
+-- CClearHi
+-- FPClearLo
+-- FPClearHi
+-----------------------------------
+construct RegSet {Lo_rs Hi_rs CLo_rs CHi_rs}
+--construct RegSet {Lo_rs Hi_rs CLo_rs CHi_rs FPLo_rs FPHi_rs}
+unit ClearRegs (mask::bits(16), regset::RegSet) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else match regset
     {
-        case 0 => for i in  0 .. 15 do when mask<i> do GPR([i])     <- 0
-        case 1 => for i in 16 .. 31 do when mask<i-16> do GPR([i])  <- 0
-        case 2 => for i in  0 .. 15 do when mask<i> do CAPR([i])    <- nullCap
-        case 3 => when not register_inaccessible_write_attempt(mask) do
+        case Lo_rs => for i in  0 .. 15 do when mask<i> do GPR([i])     <- 0
+        case Hi_rs => for i in 16 .. 31 do when mask<i-16> do GPR([i])  <- 0
+        case CLo_rs => for i in  0 .. 15 do when mask<i> do CAPR([i])    <- nullCap
+        case CHi_rs => when not register_inaccessible_write_attempt(mask) do
                        for i in 16 .. 31 do when mask<i-16> do CAPR([i]) <- nullCap
-        case _ => SignalException (ResI)
+        -- TODO FPClear
+        --case _ => SignalException (ResI)
     }
+define COP2 > CHERICOP2 > ClearLo (mask::bits(16)) = ClearRegs(mask, Lo_rs)
+define COP2 > CHERICOP2 > ClearHi (mask::bits(16)) = ClearRegs(mask, Hi_rs)
+define COP2 > CHERICOP2 > CClearLo (mask::bits(16)) = ClearRegs(mask, CLo_rs)
+define COP2 > CHERICOP2 > CClearHi (mask::bits(16)) = ClearRegs(mask, CHi_rs)
+--define COP2 > CHERICOP2 > FPClearLo (mask::bits(16)) = ClearRegs(mask, FPLo_rs)
+--define COP2 > CHERICOP2 > FPClearHi (mask::bits(16)) = ClearRegs(mask, FPHi_rs)
 
 -----------------------------------
 -- CClearTag
@@ -493,8 +510,17 @@ define COP2 > CHERICOP2 > CGet > CToPtr (rd::reg, cb::reg, ct::reg) =
 
 -----------------------------------
 -- CPtrCmp
+-- CEQ
+-- CNE
+-- CLT
+-- CLE
+-- CLTU
+-- CLEU
+-- CEXEQ
+-- CNEXEQ
 -----------------------------------
-define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
+construct CmpType {EQ NE LT LE LTU LEU EXEQ NEXEQ}
+unit CPtrCmp (rd::reg, cb::reg, ct::reg, t::CmpType) =
     if not CP0.Status.CU2 then
       SignalCP2UnusableException
     else if register_inaccessible(cb) then
@@ -537,16 +563,24 @@ define COP2 > CHERICOP2 > CPtrCmp (rd::reg, cb::reg, ct::reg, t::bits(3)) =
         };
         match t
         {
-           case 0 => GPR(rd) <- [equal]
-           case 1 => GPR(rd) <- [not equal]
-           case 2 => GPR(rd) <- [less]
-           case 3 => GPR(rd) <- [less or equal]
-           case 4 => GPR(rd) <- [lessu]
-           case 5 => GPR(rd) <- [lessu or equal]
-           case 6 => GPR(rd) <- if cap_cb == cap_ct then 1 else 0
-	   case 7 => GPR(rd) <- if cap_cb == cap_ct then 0 else 1
+           case EQ    => GPR(rd) <- [equal]
+           case NE    => GPR(rd) <- [not equal]
+           case LT    => GPR(rd) <- [less]
+           case LE    => GPR(rd) <- [less or equal]
+           case LTU   => GPR(rd) <- [lessu]
+           case LEU   => GPR(rd) <- [lessu or equal]
+           case EXEQ  => GPR(rd) <- if cap_cb == cap_ct then 1 else 0
+           case NEXEQ => GPR(rd) <- if cap_cb == cap_ct then 0 else 1
         }
     }
+define COP2 > CHERICOP2 > CEQ (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, EQ)
+define COP2 > CHERICOP2 > CNE (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, NE)
+define COP2 > CHERICOP2 > CLT (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, LT)
+define COP2 > CHERICOP2 > CLE (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, LE)
+define COP2 > CHERICOP2 > CLTU (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, LTU)
+define COP2 > CHERICOP2 > CLEU (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, LEU)
+define COP2 > CHERICOP2 > CEXEQ (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, EXEQ)
+define COP2 > CHERICOP2 > CNEXEQ (rd::reg, cb::reg, cs::reg) = CPtrCmp(rd, cb, cs, NEXEQ)
 
 -----------------------------------
 -- CBTU
@@ -1186,9 +1220,9 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
     }
 
 -----------------------------------
--- CCall selector 0
+-- CCall
 -----------------------------------
-define COP2 > CHERICOP2 > CCall0 (cs::reg, cb::reg) =
+define COP2 > CHERICOP2 > CCall (cs::reg, cb::reg, selector::bits(11)) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then
@@ -1214,9 +1248,9 @@ define COP2 > CHERICOP2 > CCall0 (cs::reg, cb::reg) =
     else SignalCapException(capExcCall,cs)
 
 -----------------------------------
--- CCall selector 1
+-- CCallFast
 -----------------------------------
-define COP2 > CHERICOP2 > CCall1 (cs::reg, cb::reg) =
+define COP2 > CHERICOP2 > CCallFast (cs::reg, cb::reg) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cs) then

@@ -10,6 +10,7 @@ string imm (n::bits(N)) = if n <+ 10 then [n] else "0x":ToLower([n])
 
 string op_cr(op::string, cr1::reg) = pad(op):cr(cr1)
 string op_gr(op::string, r1::reg) = pad(op):gr(r1)
+string op_imm(op::string, i::bits(N)) = pad(op):imm(i)
 string op_gr_imm(op::string, gr1::reg, i::bits(N)) = pad(op):gr(gr1):", ":imm(i)
 string op_cr_imm(op::string, cr1::reg, i::bits(N)) = pad(op):cr(cr1):", ":imm(i)
 string op_cr_gr(op::string, cr1::reg, r1::reg) = pad(op):cr(cr1):", ":gr(r1)
@@ -29,53 +30,53 @@ string COP2InstructionToString (i::instruction) =
         case COP2(CHERICOP2(j)) =>
             match j
             {
-                case DumpCapReg                             => "mtc2 ?,?,6"
-                case CGet(CGetBase(rd, cb))                 => op_gr_cr("cgetbase",rd,cb)
-                case CGet(CGetOffset(rd, cb))               => op_gr_cr("cgetoffset",rd,cb)
-                case CGet(CGetLen(rd, cb))                  => op_gr_cr("cgetlen",rd,cb)
-                case CGet(CGetTag(rd, cb))                  => op_gr_cr("cgettag",rd,cb)
-                case CGet(CGetSealed(rd, cb))               => op_gr_cr("cgetsealed",rd,cb)
-                case CGet(CGetPerm(rd, cb))                 => op_gr_cr("cgetperm",rd,cb)
-                case CGet(CGetType(rd, cb))                 => op_gr_cr("cgettype",rd,cb)
-                case CGet(CGetPCC(cd))                      => op_cr("cgetpcc",cd)
-                case CGet(CGetPCCSetOffset(cd, rs))         => op_cr_gr("cgetpccsetoffset",cd,rs)
-                case CGet(CGetCause(rd))                    => op_gr("cgetcause",rd)
-                case CSet(CSetCause(rt))                    => op_gr("csetcause",rt)
-                case CSet(CSetBounds(cd, cb, rt))           => op_cr_cr_gr("csetbounds",cd,cb,rt)
-                case CSet(CSetBoundsExact(cd, cb, rt))      => op_cr_cr_gr("csetboundsexact",cd,cb,rt)
-                case CSet(CSetBoundsImmediate(cd, cb, len)) => op_cr_cr_imm("csetboundsimmediate", cd, cb, len)
-                case CSet(CIncOffset(cd, cb, rt))           => op_cr_cr_gr("cincoffset",cd,cb,rt)
-                case CSet(CIncOffsetImmediate(cd, cb, inc)) => op_cr_cr_imm("cincoffsetimmediate", cd, cb, inc)
-                case CSet(CClearRegs(regset, mask))         => op_gr_imm("cclearregs", regset, mask)
-                case CSet(CClearTag(cd, cb))                => op_cr_cr("ccleartag",cd,cb)
-                case CSet(CAndPerm(cd, cb, rt))             => op_cr_cr_gr("candperm",cd,cb,rt)
-                case CSet(CSetOffset(cd, cb, rt))           => op_cr_cr_gr("csetoffset",cd,cb,rt)
-                case CSub(rd, cb, ct)                       => op_gr_cr_cr("csub",rd,cb,ct)
-                case CCheck(CCheckPerm(cs, rt))             => op_cr_gr("ccheckperm",cs,rt)
-                case CCheck(CCheckType(cs, cb))             => op_cr_cr("cchecktype",cs,cb)
-                case CSet(CFromPtr(cd, cb, rt))             => op_cr_cr_gr("cfromptr",cd,cb,rt)
-                case CGet(CToPtr(rd, cb, ct))               => op_gr_cr_cr("ctoptr",rd,cb,ct)
-                case CPtrCmp(rd, cb, ct, t)                 =>
-                    match t
-                    {
-                        case 0b000 => op_gr_cr_cr("ceq",rd,cb,ct)
-                        case 0b001 => op_gr_cr_cr("cne",rd,cb,ct)
-                        case 0b010 => op_gr_cr_cr("clt",rd,cb,ct)
-                        case 0b011 => op_gr_cr_cr("cle",rd,cb,ct)
-                        case 0b100 => op_gr_cr_cr("cltu",rd,cb,ct)
-                        case 0b101 => op_gr_cr_cr("cleu",rd,cb,ct)
-                        case 0b110 => op_gr_cr_cr("cexeq",rd,cb,ct)
-                        case 0b111 => op_gr_cr_cr("cnexeq",rd,cb,ct)
-                        case _     => "unmatched_cap_inst"
-                    }
+                case DumpCapReg                         => "mtc2 ?,?,6"
+                case CGet(CGetBase(rd, cb))             => op_gr_cr("cgetbase",rd,cb)
+                case CGet(CGetOffset(rd, cb))           => op_gr_cr("cgetoffset",rd,cb)
+                case CGet(CGetLen(rd, cb))              => op_gr_cr("cgetlen",rd,cb)
+                case CGet(CGetTag(rd, cb))              => op_gr_cr("cgettag",rd,cb)
+                case CGet(CGetSealed(rd, cb))           => op_gr_cr("cgetsealed",rd,cb)
+                case CGet(CGetPerm(rd, cb))             => op_gr_cr("cgetperm",rd,cb)
+                case CGet(CGetType(rd, cb))             => op_gr_cr("cgettype",rd,cb)
+                case CGet(CGetPCC(cd))                  => op_cr("cgetpcc",cd)
+                case CGet(CGetPCCSetOffset(cd, rs))     => op_cr_gr("cgetpccsetoffset",cd,rs)
+                case CGet(CGetCause(rd))                => op_gr("cgetcause",rd)
+                case CSet(CSetCause(rt))                => op_gr("csetcause",rt)
+                case CSet(CSetBounds(cd, cb, rt))       => op_cr_cr_gr("csetbounds",cd,cb,rt)
+                case CSet(CSetBoundsExact(cd, cb, rt))  => op_cr_cr_gr("csetboundsexact",cd,cb,rt)
+                case CSet(CSetBoundsImmediate(cd, cb, len)) => op_cr_cr_imm("csetboundimmediate",cd,cb,len)
+                case CSet(CIncOffset(cd, cb, rt))       => op_cr_cr_gr("cincoffset",cd,cb,rt)
+                case CSet(CIncOffsetImmediate(cd, cb, inc)) => op_cr_cr_imm("cincoffsetimmediate",cd,cb,inc)
+                case ClearLo(mask)                      => op_imm("clearlo", mask)
+                case ClearHi(mask)                      => op_imm("clearhi", mask)
+                case CClearLo(mask)                     => op_imm("cclearlo", mask)
+                case CClearHi(mask)                     => op_imm("cclearhi", mask)
+--                case FPClearLo(mask)                    => op_imm("fpclearlo", mask)
+--                case FPClearHi(mask)                    => op_imm("fpclearhi", mask)
+                case CSet(CClearTag(cd, cb))            => op_cr_cr("ccleartag",cd,cb)
+                case CSet(CAndPerm(cd, cb, rt))         => op_cr_cr_gr("candperm",cd,cb,rt)
+                case CSet(CSetOffset(cd, cb, rt))       => op_cr_cr_gr("csetoffset",cd,cb,rt)
+                case CSub(rd, cb, ct)                   => op_gr_cr_cr("csub",rd,cb,ct)
+                case CCheck(CCheckPerm(cs, rt))         => op_cr_gr("ccheckperm",cs,rt)
+                case CCheck(CCheckType(cs, cb))         => op_cr_cr("cchecktype",cs,cb)
+                case CSet(CFromPtr(cd, cb, rt))         => op_cr_cr_gr("cfromptr",cd,cb,rt)
+                case CGet(CToPtr(rd, cb, ct))           => op_gr_cr_cr("ctoptr",rd,cb,ct)
+                case CEQ(rd, cb, cs)                    => op_gr_cr_cr("ceq",rd,cb,cs)
+                case CNE(rd, cb, cs)                    => op_gr_cr_cr("cne",rd,cb,cs)
+                case CLT(rd, cb, cs)                    => op_gr_cr_cr("clt",rd,cb,cs)
+                case CLE(rd, cb, cs)                    => op_gr_cr_cr("cle",rd,cb,cs)
+                case CLTU(rd, cb, cs)                   => op_gr_cr_cr("cltu",rd,cb,cs)
+                case CLEU(rd, cb, cs)                   => op_gr_cr_cr("cleu",rd,cb,cs)
+                case CEXEQ(rd, cb, cs)                  => op_gr_cr_cr("cexeq",rd,cb,cs)
+                case CNEXEQ(rd, cb, cs)                 => op_gr_cr_cr("cnexeq",rd,cb,cs)
                 case CBTU(cb, offset)             => op_cr_imm("cbtu",cb,offset)
                 case CBTS(cb, offset)             => op_cr_imm("cbts",cb,offset)
                 case CJR(cb)                      => op_cr("cjr",cb)
                 case CJALR(cd, cb)                => op_cr_cr("cjalr",cb,cd)
                 case CSeal(cd, cs, ct)            => op_cr_cr_cr("cseal",cd,cs,ct)
                 case CUnseal(cd, cs, ct)          => op_cr_cr_cr("cunseal",cd,cs,ct)
-                case CCall0(cs, cb)               => op_cr_cr("ccall0",cs,cb)
-                case CCall1(cs, cb)               => op_cr_cr("ccall1",cs,cb)
+                case CCall(cs, cb, selector)      => op_cr_cr_imm("ccall",cs,cb, selector)
+                case CCallFast(cs, cb)            => op_cr_cr("ccallfast",cs,cb)
                 case CReturn                      => "creturn"
                 case CLLx(rd, cb, stt)            =>
                     match stt
@@ -174,42 +175,74 @@ string SDC2InstructionToString (i::instruction) =
 bits(26) CHERICOP2Encode (j::CHERICOP2) =
     match j
     {
-        case DumpCapReg                     => '00100' : 0 : '110'
-        case CGet(CGetBase(rd, cb))         => '00000' : rd : cb : 0 : '000010'
-        case CGet(CGetOffset(rd, cb))       => '01101' : rd : cb : 0 : '000010'
-        case CGet(CGetLen(rd, cb))          => '00000' : rd : cb : 0 : '000011'
-        case CGet(CGetTag(rd, cb))          => '00000' : rd : cb : 0 : '000101'
-        case CGet(CGetSealed(rd, cb))       => '00000' : rd : cb : 0 : '000110'
-        case CGet(CGetPerm(rd, cb))         => '00000' : rd : cb : 0 : '000000'
-        case CGet(CGetType(rd, cb))         => '00000' : rd : cb : 0 : '000001'
-        case CGet(CGetPCC(cd))              => '00000' : cd : '00000' : '11111' : '111111'
-        case CGet(CGetPCCSetOffset(cd,rs))  => '00000' : cd : rs : '00111' : '111111'
-        case CGet(CGetCause(rd))            => '00000' : rd : '00000' : 0 : '00100'
-        case CSet(CSetCause(rt))            => '00100' : '00000' : '00000' : rt : 0 : '100'
-        case CSet(CSetBounds(cd, cb, rt))   => '00001' : cd : cb : rt : 0
-        case CSet(CSetBoundsExact(cd, cb, rt))      => '00000' : cd : cb : rt : '001001'
-        case CSet(CSetBoundsImmediate(cd, cb, len)) => '10100' : cd : cb : len
-        case CSet(CIncOffset(cd, cb, rt))   => '01101' : cd : cb : rt : 0 : '000'
-        case CSet(CIncOffsetImmediate(cd, cb, inc)) => '01011' : cd : cb : inc
-        case CSet(CClearRegs(regset, mask)) => '01111' : regset : mask
-        case CSet(CClearTag(cd, cb))        => '00100' : cd : cb : 0 : '101'
-        case CSet(CAndPerm(cd, cb, rt))     => '00100' : cd : cb : rt : 0 : '000'
-        case CSet(CSetOffset(cd, cb, rt))   => '01101' : cd : cb : rt : 0 : '001'
-        case CSub(rd, cb, ct)               => '00000' : rd : cb : ct : '001010'
-        case CCheck(CCheckPerm(cs, rt))     => '01011' : cs : 0`5 : rt : 0 : '000'
-        case CCheck(CCheckType(cs, cb))     => '01011' : cs : cb : 0 : '001'
-        case CSet(CFromPtr(cd, cb, rt))     => '00100' : cd : cb : rt : 0 : '111'
-        case CGet(CToPtr(rd, cb, ct))       => '01100' : rd : cb : ct : 0
-        case CPtrCmp(rd, cb, ct, t)         => '01110' : rd : cb : ct : 0 : t
-        case CBTU(cb, offset)               => '01001' : cb : offset
-        case CBTS(cb, offset)               => '01010' : cb : offset
-        case CJR(cb)                        => '01000' : 0`5 : cb : 0
-        case CJALR(cd, cb)                  => '00111' : cd : cb : 0
-        case CSeal(cd, cs, ct)              => '00010' : cd : cs : ct : 0
-        case CUnseal(cd, cs, ct)            => '00011' : cd : cs : ct : 0
-        case CCall0(cs, cb)                 => '00101' : cs : cb : '00000000000'
-        case CCall1(cs, cb)                 => '00101' : cs : cb : '00000000001'
-        case CReturn                        => '00110' : 0
+        case DumpCapReg                         => '00100' : 0 : '110'
+
+        -- Capability-Inspection Instructions
+		case CGet(CGetPerm(rd, cb))        => '00000' : rd :      cb : '00000' : '111111'
+		case CGet(CGetType(rd, cb))        => '00000' : rd :      cb : '00001' : '111111'
+		case CGet(CGetBase(rd, cb))        => '00000' : rd :      cb : '00010' : '111111'
+		case CGet(CGetLen(rd, cb))         => '00000' : rd :      cb : '00011' : '111111'
+		case CGet(CGetTag(rd, cb))         => '00000' : rd :      cb : '00100' : '111111'
+		case CGet(CGetSealed(rd, cb))      => '00000' : rd :      cb : '00101' : '111111'
+		case CGet(CGetOffset(rd, cb))      => '00000' : rd :      cb : '00110' : '111111'
+		case CGet(CGetPCC(cd))             => '00000' : cd : '00000' : '11111' : '111111'
+		case CGet(CGetPCCSetOffset(cd,rs)) => '00000' : cd :      rs : '00111' : '111111'
+
+        -- Capability-Modification Instructions
+		case CSeal(cd, cs, ct)                 => '00000' : cd : cs :      ct : '001011'
+		case CUnseal(cd, cs, ct)               => '00000' : cd : cs :      ct : '001100'
+		case CSet(CAndPerm(cd, cs, rt))        => '00000' : cd : cs :      rt : '001101'
+		case CSet(CSetOffset(cd, cs, rt))      => '00000' : cd : cs :      rt : '001111'
+		case CSet(CSetBounds(cd, cs, rt))      => '00000' : cd : cs :      rt : '010000'
+		case CSet(CSetBoundsExact(cd, cs, rt)) => '00000' : cd : cs :      rt : '001001'
+--TODO        case '10010    cd    cb       length'   => CSet(CSetBoundsImmediate(cd, cb, length))
+		case CSet(CClearTag(cd, cb))           => '00000' : cd : cb : '01011' : '111111'
+		case CSet(CIncOffset(cd, cb, rt))      => '00000' : cd : cb :      rt : '010001'
+--TODO        case '10001    cd    cb    increment'   => CSet(CIncOffsetImmediate(cd, cb, increment))
+
+        -- Pointer-Arithmetic Instructions
+		case CGet(CToPtr(rd, cb, cs))   => '00000' : rd : cb : cs : '010010'
+		case CSet(CFromPtr(cd, cb, rs)) => '00000' : cd : cb : rs : '010011'
+		case CSub(rt, cb, cs)           => '00000' : rt : cb : cs : '001010'
+--TODO?		case CMove(cd, cs) => 00000 : cd : cs : 01010 : 111111
+		case CMOVZ(cd, cs, rs)          => '00000' : cd : cs : rs : '011011'
+		case CMOVN(cd, cs, rs)          => '00000' : cd : cs : rs : '011100'
+
+        -- Pointer-Comparison Instructions
+		case CEQ(rd, cb, cs)    => '00000' : rd : cb : cs : '010100'
+		case CNE(rd, cb, cs)    => '00000' : rd : cb : cs : '010101'
+		case CLT(rd, cb, cs)    => '00000' : rd : cb : cs : '010110'
+		case CLE(rd, cb, cs)    => '00000' : rd : cb : cs : '010111'
+		case CLTU(rd, cb, cs)   => '00000' : rd : cb : cs : '011000'
+		case CLEU(rd, cb, cs)   => '00000' : rd : cb : cs : '011001'
+		case CEXEQ(rd, cb, cs)  => '00000' : rd : cb : cs : '011010'
+		case CNEXEQ(rd, cb, cs) => '00000' : rd : cb : cs : '100001'
+
+        -- Exception-Handling Instructions
+		case CGet(CGetCause(rd)) => '00000' : rd : '00001' : '11111' : '111111'
+		case CSet(CSetCause(rs)) => '00000' : rs : '00010' : '11111' : '111111'
+
+        -- Control-Flow Instructions
+        case CBTU(cd, offset)        => '01001' : cd :                       offset
+        case CBTS(cd, offset)        => '01010' : cd :                       offset
+		case CJR(cb)                 => '00000' : cb : '00011' : '11111' : '111111'
+		case CJALR(cd, cb)           => '00000' : cd :      cb : '01100' : '111111'
+		case CCallFast(cs, cb)       => '00101' : cs :      cb : '00000' : '000001'
+        case CCall(cs, cb, selector) => '00101' : cs :      cb :           selector
+
+        -- Assertion Instructions
+		case CCheck(CCheckPerm(cs, rt)) => '00000' : cs : rt : '01000' : '111111'
+		case CCheck(CCheckType(cs, cb)) => '00000' : cs : cb : '01001' : '111111'
+
+        -- Fast Register-Clearing Instructions
+        case ClearLo(mask)  => '01111' : '00000' : mask
+        case ClearHi(mask)  => '01111' : '00001' : mask
+        case CClearLo(mask) => '01111' : '00010' : mask
+        case CClearHi(mask) => '01111' : '00011' : mask
+--TODO?        case '01111 00100               mask'   => FPClearLo(mask)
+--TODO?        case '01111 00101               mask'   => FPClearHi(mask)
+
+
         case CLLx(rd, cb, 's 00')           => '10000' : rd : cb : 0 : '1' : s : '00'
         case CLLx(rd, cb, 's 01')           => '10000' : rd : cb : 0 : '1' : s : '01'
         case CLLx(rd, cb, 's 10')           => '10000' : rd : cb : 0 : '1' : s : '10'
@@ -219,6 +252,10 @@ bits(26) CHERICOP2Encode (j::CHERICOP2) =
         case CSCx(rs, cb, rd, tt)           => '10000' : rs : cb : rd : 0 : '00' : tt
         case CSCC(cs, cb, rd)               => '10000' : cs : cb : rd : 0 : '0111'
         case UnknownCapInstruction          => '11111' : 0
+        --		case CTestSubset(rd, cb, ct) => 00000 : rd : cb : ct : 100000
+        --		case CBuildCap(cd, cb, ct) => 00000 : cd : cb : ct : 011101
+        --		case CCopyType(cd, cb, ct) => 00000 : cd : cb : ct : 011110
+        case _                              => UNKNOWN
     }
 
 word COP2Encode (i::instruction) =
