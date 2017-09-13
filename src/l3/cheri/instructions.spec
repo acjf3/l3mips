@@ -215,6 +215,29 @@ define COP2 > CHERICOP2 > CSet > CIncOffset (cd::reg, cb::reg, rt::reg) =
     }
 
 -----------------------------------
+-- CIncOffsetImmediate
+-----------------------------------
+define COP2 > CHERICOP2 > CSet > CIncOffsetImmediate (cd::reg, cb::reg, increment::bits(11)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if getTag(CAPR(cb)) and getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if not canRepOffset (CAPR(cb), getOffset(CAPR(cb)) + SignExtend(increment)) then
+    {
+        CAPR(cd) <- setOffset(nullCap, getBase(CAPR(cb)) + getOffset(CAPR(cb)) + SignExtend(increment));
+        watchOOB(CAPR(cd), PC)
+    }
+    else
+    {
+        CAPR(cd) <- setOffset(CAPR(cb), getOffset(CAPR(cb)) + SignExtend(increment));
+        watchOOB(CAPR(cd), PC)
+    }
+
+-----------------------------------
 -- CSetBounds
 -----------------------------------
 define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
@@ -268,6 +291,33 @@ define COP2 > CHERICOP2 > CSet > CSetBoundsExact (cd::reg, cb::reg, rt::reg) =
         SignalCapException(capExcInexact,cb)
     else
         CAPR(cd) <- setBounds(CAPR(cb), GPR(rt))
+}
+
+-----------------------------------
+-- CSetBoundsImmediate
+-----------------------------------
+define COP2 > CHERICOP2 > CSet > CSetBoundsImmediate (cd::reg, cb::reg, req_length::bits(11)) =
+{
+    base   = getBase(CAPR(cb));
+    offset = getOffset(CAPR(cb));
+    length = getLength(CAPR(cb));
+    cursor = getBase(CAPR(cb))+getOffset(CAPR(cb));
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if not getTag(CAPR(cb)) then
+        SignalCapException(capExcTag,cb)
+    else if getSealed(CAPR(cb)) then
+        SignalCapException(capExcSeal,cb)
+    else if cursor <+ base then
+        SignalCapException(capExcLength,cb)
+    else if ('0':cursor) + ZeroExtend(req_length) >+ ('0':base) + ('0':length) then
+        SignalCapException(capExcLength,cb)
+    else
+        CAPR(cd) <- setBounds(CAPR(cb), ZeroExtend(req_length))
 }
 
 -----------------------------------
