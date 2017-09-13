@@ -188,13 +188,13 @@ bool getSealed (cap::Capability) = match cap.sFields
 
 bits(64) getTop (cap::Capability) =
 {
-    pr, tr, br = getRepRegions(cap);
+    pr, tr, _ = getRepRegions(cap);
     [getBound(cap, pr, tr)]
 }
 
 bits(64) getBase (cap::Capability) =
 {
-    pr, tr, br = getRepRegions(cap);
+    pr, _, br = getRepRegions(cap);
     [getBound(cap, pr, br)]
 }
 

@@ -243,7 +243,6 @@ define COP2 > CHERICOP2 > CSet > CIncOffsetImmediate (cd::reg, cb::reg, incremen
 define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
 {
     base   = getBase(CAPR(cb));
-    offset = getOffset(CAPR(cb));
     length = getLength(CAPR(cb));
     cursor = getBase(CAPR(cb))+getOffset(CAPR(cb));
     if not CP0.Status.CU2 then
@@ -270,7 +269,6 @@ define COP2 > CHERICOP2 > CSet > CSetBounds (cd::reg, cb::reg, rt::reg) =
 define COP2 > CHERICOP2 > CSet > CSetBoundsExact (cd::reg, cb::reg, rt::reg) =
 {
     base   = getBase(CAPR(cb));
-    offset = getOffset(CAPR(cb));
     length = getLength(CAPR(cb));
     cursor = getBase(CAPR(cb))+getOffset(CAPR(cb));
     if not CP0.Status.CU2 then
@@ -299,7 +297,6 @@ define COP2 > CHERICOP2 > CSet > CSetBoundsExact (cd::reg, cb::reg, rt::reg) =
 define COP2 > CHERICOP2 > CSet > CSetBoundsImmediate (cd::reg, cb::reg, req_length::bits(11)) =
 {
     base   = getBase(CAPR(cb));
-    offset = getOffset(CAPR(cb));
     length = getLength(CAPR(cb));
     cursor = getBase(CAPR(cb))+getOffset(CAPR(cb));
     if not CP0.Status.CU2 then

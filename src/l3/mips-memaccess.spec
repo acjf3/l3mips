@@ -238,7 +238,7 @@ unit Fetch =
       nothing
    else if PC<1:0> == 0 then
    {
-      pc, cca = AddressTranslation (PC, LOAD);
+      pc, _ = AddressTranslation (PC, LOAD);
       when not exceptionSignalled do currentInst <- Some (ReadInst (pc))
    }
    else

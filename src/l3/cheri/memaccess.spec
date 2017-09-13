@@ -115,7 +115,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
     }
     else
     {
-        tmp, CCA, S, L = AddressTranslation (vAddr, LOAD);
+        tmp, CCA, _, _ = AddressTranslation (vAddr, LOAD);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         if exceptionSignalled then UNKNOWN else
@@ -188,7 +188,7 @@ inline nat capbottom = Log2(CAPBYTEWIDTH)-3
 
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
-    pAddr, CCA, S, L = AddressTranslation (vAddr, LOAD);
+    pAddr, CCA, _, L = AddressTranslation (vAddr, LOAD);
     if exceptionSignalled then UNKNOWN else
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
@@ -237,7 +237,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
     }
     else {
         var sc_success = false;
-        tmp, CCA, S, L = AddressTranslation (vAddr, STORE);
+        tmp, _, _, _ = AddressTranslation (vAddr, STORE);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         when not exceptionSignalled do
@@ -322,7 +322,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool,
 bool StoreCap (vAddr::vAddr, cap::Capability, cond::bool) =
 {
     var sc_success = false;
-    pAddr, CCA, S, L = AddressTranslation (vAddr, STORE);
+    pAddr, _, S, _ = AddressTranslation (vAddr, STORE);
     when not exceptionSignalled do
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
@@ -417,7 +417,7 @@ word option Fetch =
            then {SignalCapException_noReg(capExcPermExe); None}
         else
         {
-            pc, cca = AddressTranslation (vAddr, LOAD);
+            pc, _ = AddressTranslation (vAddr, LOAD);
             if exceptionSignalled then None else Some (ReadInst (pc))
         }
     }

@@ -185,7 +185,7 @@ unit stats_invalid_cap_writes_updt (inc::int) =
 
 unit updt_shadow_stats_read (addr::CAPADDR, data::DataType) =
 {
-    tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
+    --tagged = match data {case Cap(c) => getTag(c) case Raw(r) => false};
     match static_shadow_MEM(addr)
     {
         case memUntouched =>

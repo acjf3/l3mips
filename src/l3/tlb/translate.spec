@@ -78,7 +78,7 @@ pAddr option tlbTryTranslation (vAddr::vAddr) =
               {
                 case Some(EvenOddBit) =>
                 {
-                    PFN, C, D, V =
+                    PFN, _, _, V =
                       if vAddr<EvenOddBit> then
                          e.PFN1, e.C1, e.D1, e.V1
                       else
