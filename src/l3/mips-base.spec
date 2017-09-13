@@ -168,3 +168,11 @@ string printCoreStats =
 
 string csvHeaderCoreStats = "branch_taken,branch_not_taken"
 string csvCoreStats = [coreStats.branch_taken] : "," : [coreStats.branch_not_taken]
+
+-- Handle unique UNKNOWN(next_unknown) values
+declare unknown_counter :: nat
+nat next_unknown =
+{
+	unknown_counter <- unknown_counter + 1;
+	unknown_counter
+}

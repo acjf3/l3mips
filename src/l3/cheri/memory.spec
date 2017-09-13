@@ -429,7 +429,7 @@ unit InitMEM =
     dynamic_shadow_TAGS <- InitMap (tagUnused);
     dynamic_shadow_4K_TAGS <- InitMap (tagUnused);
     dynamic_shadow_16K_TAGS <- InitMap (tagUnused);
-    the_MEM <- InitMap (Raw(UNKNOWN))
+    the_MEM <- InitMap (Raw(UNKNOWN(next_unknown)))
 }
 
 dword ReadData (dwordAddr::bits(37)) =

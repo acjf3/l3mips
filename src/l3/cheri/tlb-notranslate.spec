@@ -21,17 +21,17 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessTy
     {
         CP0.BadVAddr <- vAddr;
         SignalException (if AccessType == LOAD then AdEL else AdES);
-        UNKNOWN
+        UNKNOWN(next_unknown)
     }
 }
 
 pAddr option tlbTryTranslation (vAddr::vAddr) = None
 
-TLBEntry CP0TLBEntry () = UNKNOWN
+TLBEntry CP0TLBEntry () = UNKNOWN(next_unknown)
 
 unit SignalTLBCapException (capException::CapExceptionType, asid::bits(8), vAddr::vAddr) =
 {
    SignalTLBException_internal(asid,vAddr);
    SignalCapException_noReg(capException);
-   UNKNOWN
+   UNKNOWN(next_unknown)
 }

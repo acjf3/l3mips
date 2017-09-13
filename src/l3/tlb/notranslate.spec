@@ -23,10 +23,10 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, IorD::IorD, AccessType::AccessType
     {
         CP0.BadVAddr <- vAddr;
         SignalException (if AccessType == LOAD then AdEL else AdES);
-        UNKNOWN
+        UNKNOWN(next_unknown)
     }
 }
 
 pAddr option tlbTryTranslation (vAddr::vAddr) = None
 
-TLBEntry CP0TLBEntry () = UNKNOWN
+TLBEntry CP0TLBEntry () = UNKNOWN(next_unknown)

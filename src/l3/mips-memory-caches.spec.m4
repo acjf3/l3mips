@@ -328,7 +328,7 @@ L1Entry mkL1CacheEntry(valid::bool, tag::L1Tag, data::L1Data) =
     line
 }
 
-L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN, UNKNOWN))
+L1Cache DirectMappedL1Init () = InitMap (mkL1CacheEntry(false, UNKNOWN(next_unknown), UNKNOWN(next_unknown)))
 
 -- l1 log utils --
 
@@ -405,7 +405,7 @@ L2Entry mkL2CacheEntry(valid::bool, tag::L2Tag, sharers::L1Id list, data::L2Data
     line
 }
 
-DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN, UNKNOWN, UNKNOWN))
+DirectMappedL2 DirectMappedL2Init () = InitMap (mkL2CacheEntry(false, UNKNOWN(next_unknown), UNKNOWN(next_unknown), UNKNOWN(next_unknown)))
 
 -- l2 log utils --
 
@@ -528,7 +528,7 @@ unit invalL1 (addr::L1LineNumber, sharers::L1Id list, invalCurrent::bool) =
         entry = L1Cache(L1IdxFromLineNumber(addr));
         -- XXX test on short tags...
         when entry.valid and entry.tag<14:0> == L1TagFromLineNumber(addr)<14:0> do
-            L1Cache(L1IdxFromLineNumber(addr)) <- mkL1CacheEntry(false, UNKNOWN, UNKNOWN)
+            L1Cache(L1IdxFromLineNumber(addr)) <- mkL1CacheEntry(false, UNKNOWN(next_unknown), UNKNOWN(next_unknown))
     };
     -- restore current procId / current_l1_type --
     procID          <- currentProc;
@@ -894,7 +894,7 @@ unit L1Write (addr::L1Addr, data::L1Data, mask::L1Data) =
 unit InitMEM =
 {
     initMemStats;
-    MEM <- InitMap (UNKNOWN);
+    MEM <- InitMap (UNKNOWN(next_unknown));
     l2LastVictimWay <- 0;
     for i in L2WAYS .. 1 do
         c_l2(i) <- DirectMappedL2Init ();

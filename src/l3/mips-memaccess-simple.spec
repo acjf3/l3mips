@@ -38,7 +38,7 @@ unit clearDynamicMemStats () = nothing
 
 declare mem :: bits(37) -> dword
 
-unit InitMEM = mem <- InitMap (UNKNOWN)
+unit InitMEM = mem <- InitMap (UNKNOWN(next_unknown))
 unit WriteDWORD (pAddr::bits(37), data::dword) = mem(pAddr) <- data
 unit Write256 (pAddr::bits(35), data::bits(256)) =
 {
@@ -62,7 +62,7 @@ dword LoadMemory
   {
     CP0.BadVAddr <- vAddr;
     SignalException (AdEL);
-    return UNKNOWN
+    return UNKNOWN(next_unknown)
   }
   else
   {

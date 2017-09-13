@@ -111,14 +111,14 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
         mark_log (2, "Bad Load, CP0.BadVAddr <-" : hex (vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdEL);
-        UNKNOWN
+        UNKNOWN(next_unknown)
     }
     else
     {
         tmp, CCA, _, _ = AddressTranslation (vAddr, LOAD);
         pAddr = AdjustEndian (MemType, tmp);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
-        if exceptionSignalled then UNKNOWN else
+        if exceptionSignalled then UNKNOWN(next_unknown) else
         {
             a = pAddr<39:3>;
             var ret;
@@ -168,18 +168,18 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
 {
     capr0 = CAPR(0);
     if not getTag(capr0)
-        then {SignalCapException(capExcTag,0); UNKNOWN}
+        then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown)}
     else if getSealed(capr0)
-        then {SignalCapException(capExcSeal,0); UNKNOWN}
+        then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown)}
     else if not getPerms(capr0).Permit_Load
-        then {SignalCapException(capExcPermLoad, 0); UNKNOWN}
+        then {SignalCapException(capExcPermLoad, 0); UNKNOWN(next_unknown)}
     else
     {
        base, len = getBaseAndLength(capr0);
        if vAddr <+ base
-          then {SignalCapException(capExcLength,0); UNKNOWN}
+          then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown)}
        else if vAddr + ZeroExtend(AccessLength) >+ base + len
-          then {SignalCapException(capExcLength,0); UNKNOWN}
+          then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown)}
        else LoadMemoryCap(MemType, needAlign, vAddr, link)
     }
 }
@@ -189,7 +189,7 @@ inline nat capbottom = Log2(CAPBYTEWIDTH)-3
 Capability LoadCap (vAddr::vAddr, link::bool) =
 {
     pAddr, CCA, _, L = AddressTranslation (vAddr, LOAD);
-    if exceptionSignalled then UNKNOWN else
+    if exceptionSignalled then UNKNOWN(next_unknown) else
     {
         a = pAddr<39:Log2(CAPBYTEWIDTH)>;
 
@@ -233,7 +233,7 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
         mark_log (2, "Bad Store, CP0.BadVAddr <-" : hex (vAddr));
         CP0.BadVAddr <- vAddr;
         SignalException (AdES);
-        return UNKNOWN
+        return UNKNOWN(next_unknown)
     }
     else {
         var sc_success = false;
@@ -303,18 +303,18 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool,
 {
     capr0 = CAPR(0);
     if not getTag(capr0)
-        then {SignalCapException(capExcTag,0); UNKNOWN}
+        then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown)}
     else if getSealed(capr0)
-        then {SignalCapException(capExcSeal,0); UNKNOWN}
+        then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown)}
     else if not getPerms(capr0).Permit_Store
-        then {SignalCapException(capExcPermStore, 0); UNKNOWN}
+        then {SignalCapException(capExcPermStore, 0); UNKNOWN(next_unknown)}
     else
     {
         base, len = getBaseAndLength(capr0);
         if vAddr <+ base
-            then {SignalCapException(capExcLength,0); UNKNOWN}
+            then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown)}
         else if vAddr + ZeroExtend(AccessLength) >+ base + len
-            then {SignalCapException(capExcLength,0); UNKNOWN}
+            then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown)}
         else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, vAddr, cond)
     }
 }

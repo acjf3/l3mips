@@ -214,7 +214,7 @@ bits(26) CHERICOP2Encode (j::CHERICOP2) =
         case CLLx(rd, cb, 's 01')           => '10000' : rd : cb : 0 : '1' : s : '01'
         case CLLx(rd, cb, 's 10')           => '10000' : rd : cb : 0 : '1' : s : '10'
         case CLLx(rd, cb, '011')            => '10000' : rd : cb : 0 : '1011'
-        case CLLx(rd, cb, '111')            => UNKNOWN
+        case CLLx(rd, cb, '111')            => UNKNOWN(next_unknown)
         case CLLC(cd, cb)                   => '10000' : cd : cb : 0 : '1111'
         case CSCx(rs, cb, rd, tt)           => '10000' : rs : cb : rd : 0 : '00' : tt
         case CSCC(cs, cb, rd)               => '10000' : cs : cb : rd : 0 : '0111'
@@ -225,7 +225,7 @@ word COP2Encode (i::instruction) =
     match i
     {
         case COP2(CHERICOP2(j)) => '010010' : CHERICOP2Encode(j)
-        case _ => UNKNOWN
+        case _ => UNKNOWN(next_unknown)
     }
 
 word LWC2Encode (i::instruction) =
@@ -235,27 +235,27 @@ word LWC2Encode (i::instruction) =
         case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b00))) => '110010' : rd : cb : rt : offset : '100'
         case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b01))) => '110010' : rd : cb : rt : offset : '101'
         case LWC2(CHERILWC2(CLoad(rd, cb, rt, offset, 0b1, 0b10))) => '110010' : rd : cb : rt : offset : '110'
-        case _ => UNKNOWN
+        case _ => UNKNOWN(next_unknown)
     }
 
 word LDC2Encode (i::instruction) =
     match i
     {
         case LDC2(CHERILDC2(CLC(c, cb, rt, offset))) => '110110' : c : cb : rt : offset
-        case _ => UNKNOWN
+        case _ => UNKNOWN(next_unknown)
     }
 
 word SWC2Encode (i::instruction) =
     match i
     {
         case SWC2(CHERISWC2(CStore(rs, cb, rt, offset, t))) => '111010' : rs : cb : rt : offset : '0' : t
-        case _ => UNKNOWN
+        case _ => UNKNOWN(next_unknown)
     }
 
 word SDC2Encode (i::instruction) =
     match i
     {
         case SDC2(CHERISDC2(CSC(c, cb, rt, offset))) => '111110' : c : cb : rt : offset
-        case _ => UNKNOWN
+        case _ => UNKNOWN(next_unknown)
     }
 

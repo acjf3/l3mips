@@ -96,6 +96,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    COP1Init();
    COP2Init();
    done <- false;
+   unknown_counter <- 0;
    for i in 0 .. 31 do gpr([i]) <- 0xAAAAAAAAAAAAAAAA;
    PIC_initialise (0x7f804000 + [procID] * 0x4000);
    initCoreStats;

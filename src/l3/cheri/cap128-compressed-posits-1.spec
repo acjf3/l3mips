@@ -315,7 +315,7 @@ Capability setBounds (cap::Capability, length::bits(64)) =
     var new_cap = cap;
     match cap.sFields
     {
-        case Sealed(_)    => new_cap <- UNKNOWN
+        case Sealed(_)    => new_cap <- UNKNOWN(next_unknown)
         case Unsealed(uf) =>
         {
             -- aranges for a minimun 2 pages (2*4K) out of bounds buffer to be present
