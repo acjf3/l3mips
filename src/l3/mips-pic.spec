@@ -86,7 +86,7 @@ dword PIC_load(id :: id, addr :: bits(37)) =
   else if offset == 1025 then
     PIC_ip_bits(id)<127:64>
   else
-    UNKNOWN(next_unknown)
+    UNKNOWN(next_unknown("pic-data"))
 }
 
 unit PIC_store(id :: id, addr :: bits(37), mask :: dword, data :: dword) =

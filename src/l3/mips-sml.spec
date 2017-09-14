@@ -95,7 +95,7 @@ declare
 component HI :: dword
 {
    value = match hi { case Some (v) => v
-                      case None => { UNPREDICTABLE_HI (); UNKNOWN(next_unknown) }
+                      case None => { UNPREDICTABLE_HI (); UNKNOWN(next_unknown("hi-reg")) }
                     }
    assign value = { hi <- Some (value);
                     mark_log (2, log_w_hi (value))
@@ -105,7 +105,7 @@ component HI :: dword
 component LO :: dword
 {
    value = match lo { case Some (v) => v
-                      case None => { UNPREDICTABLE_LO (); UNKNOWN(next_unknown) }
+                      case None => { UNPREDICTABLE_LO (); UNKNOWN(next_unknown("lo-reg")) }
                     }
    assign value = { lo <- Some (value);
                     mark_log (2, log_w_lo (value))
@@ -158,7 +158,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
          case 0, 23, 0 => [CP0.Debug]
          case 0, 26, 0 => [CP0.ErrCtl]
          case 0, 30, 0 =>  CP0.ErrorEPC
-         case _ => UNKNOWN(next_unknown)
+         case _ => UNKNOWN(next_unknown("cop-reg"))
       }
    assign value =
    {

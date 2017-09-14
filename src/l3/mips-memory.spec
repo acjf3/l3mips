@@ -58,7 +58,7 @@ string log_mem_read (addr::dwordAddr, data::dword) =
 unit InitMEM =
 {
     initMemStats;
-    MEM <- InitMap (UNKNOWN(next_unknown))
+    MEM <- InitMap (UNKNOWN(next_unknown("mem-data")))
 }
 
 dword ReadData (pAddr::dwordAddr) =

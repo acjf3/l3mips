@@ -6,7 +6,7 @@
 inline pAddr * CCA * bool * bool
   SignalTLBException2 (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
 {
-   _ = SignalTLBException (e, asid, vAddr); UNKNOWN(next_unknown)
+   _ = SignalTLBException (e, asid, vAddr); UNKNOWN(next_unknown("tlb-translation"))
 }
 
 pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessType) =
@@ -66,7 +66,7 @@ pAddr * CCA * bool * bool AddressTranslation (vAddr::vAddr, AccessType::AccessTy
     {
         CP0.BadVAddr <- getBase(PCC) + vAddr;
         SignalException (if AccessType == LOAD then AdEL else AdES);
-        UNKNOWN(next_unknown)
+        UNKNOWN(next_unknown("tlb-translation"))
     }
 }
 
@@ -133,5 +133,5 @@ unit SignalTLBCapException (capException::CapExceptionType, asid::bits(8), vAddr
 {
    SignalTLBException_internal(asid,vAddr);
    SignalCapException_noReg(capException);
-   UNKNOWN(next_unknown)
+   UNKNOWN(next_unknown("tlb-cap-exception"))
 }

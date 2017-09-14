@@ -88,12 +88,12 @@ dword LoadMemory
     mark_log (2, "Bad load, CP0.BadVAddr <-" : hex (vAddr));
     CP0.BadVAddr <- vAddr;
     SignalException (AdEL);
-    return UNKNOWN(next_unknown)
+    return UNKNOWN(next_unknown("mem-data"))
   }
   else
   {
     pAddr_, c = AddressTranslation (vAddr, LOAD);
-    if exceptionSignalled then return UNKNOWN(next_unknown) else
+    if exceptionSignalled then return UNKNOWN(next_unknown("mem-data")) else
     {
       var pAddr = AdjustEndian (MemType, pAddr_);
       -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;

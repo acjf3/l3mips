@@ -19,7 +19,7 @@ define TLBP =
       case Nil =>
       {
           CP0.Index.P <- true;
-          CP0.Index.Index <- UNKNOWN(next_unknown)
+          CP0.Index.Index <- UNKNOWN(next_unknown("tlb-index"))
       }
       case list {(i, _)} =>
       {

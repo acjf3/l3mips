@@ -101,7 +101,7 @@ pAddr * CCA SignalTLBException (e::ExceptionType, asid::bits(8), vAddr::vAddr) =
 {
    SignalTLBException_internal(asid,vAddr);
    SignalException (e);
-   UNKNOWN(next_unknown)
+   UNKNOWN(next_unknown("tlb-translation"))
 }
 
 (pAddr * CCA) option * bool CheckSegment (vAddr::vAddr) =

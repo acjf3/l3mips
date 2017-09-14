@@ -59,7 +59,7 @@ pAddr * CCA AddressTranslation (vAddr::vAddr, AccessType::AccessType) =
    {
       CP0.BadVAddr <- vAddr;
       SignalException (if AccessType == LOAD then AdEL else AdES);
-      UNKNOWN(next_unknown)
+      UNKNOWN(next_unknown("tlb-translation"))
    }
 }
 
