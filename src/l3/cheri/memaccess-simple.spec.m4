@@ -162,15 +162,17 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
-    if not getTag(CAPR(0))
+    capr0 = CAPR(0);
+    base, len = getBaseAndLength(CAPR(0));
+    if not getTag(capr0)
         then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown("mem-data"))}
-    else if getSealed(CAPR(0))
+    else if getSealed(capr0)
         then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown("mem-data"))}
-    else if not getPerms(CAPR(0)).Permit_Load
+    else if not getPerms(capr0).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN(next_unknown("mem-data"))}
-    else if (vAddr <+ getBase(CAPR(0)))
+    else if (vAddr <+ getBase(capr0))
         then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("mem-data"))}
-    else if (vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+    else if (vAddr + ZeroExtend(AccessLength) + 1 >+ base + len)
         then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("mem-data"))}
     else LoadMemoryCap(MemType, needAlign, vAddr, link)
 }
@@ -238,15 +240,17 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
 
 bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, MemElem::dword, vAddr::vAddr, cond::bool) =
 {
-    if not getTag(CAPR(0))
+    capr0 = CAPR(0);
+    base, len = getBaseAndLength(capr0);
+    if not getTag(capr0)
         then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown("sc-success"))}
-    else if getSealed(CAPR(0))
+    else if getSealed(capr0)
         then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown("sc-success"))}
-    else if not getPerms(CAPR(0)).Permit_Store
+    else if not getPerms(capr0).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN(next_unknown("sc-success"))}
-    else if (vAddr <+ getBase(CAPR(0)))
+    else if (vAddr <+ getBase(capr0))
         then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("sc-success"))}
-    else if (vAddr + ZeroExtend(AccessLength) >+ getBase(CAPR(0)) + getLength(CAPR(0)))
+    else if (vAddr + ZeroExtend(AccessLength) + 1 >+ base + len)
         then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("sc-success"))}
     else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, vAddr, cond)
 }
