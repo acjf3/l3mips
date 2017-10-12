@@ -178,7 +178,7 @@ dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAdd
        base, len = getBaseAndLength(capr0);
        if vAddr <+ base
           then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("mem-data"))}
-       else if vAddr + ZeroExtend(AccessLength) + 1 >+ base + len
+       else if ('0':vAddr) + ZeroExtend(AccessLength) + 1 >+ ('0':base) + ('0':len)
           then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("mem-data"))}
        else LoadMemoryCap(MemType, needAlign, vAddr, link)
     }
@@ -313,7 +313,7 @@ bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool,
         base, len = getBaseAndLength(capr0);
         if vAddr <+ base
             then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("sc-success"))}
-        else if vAddr + ZeroExtend(AccessLength) + 1 >+ base + len
+        else if ('0':vAddr) + ZeroExtend(AccessLength) + 1 >+ ('0':base) + ('0':len)
             then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("sc-success"))}
         else StoreMemoryCap (MemType, AccessLength, MemElem, needAlign, vAddr, cond)
     }
@@ -411,7 +411,7 @@ word option Fetch =
         -- TODO need to take care of the 65 bit check (base+length overflows) everywhere else
         -- TODO and the +4 for instruction bounds check and the +access size on data bounds check
         -- TODO and whether inequalities are large or strict in all bounds checks
-        else if ('0':vAddr)+4 >+ [base] + [len]
+        else if ('0':vAddr) + 4 >+ [base] + [len]
            then {SignalCapException_noReg(capExcLength); None}
         else if not getPerms(PCC).Permit_Execute
            then {SignalCapException_noReg(capExcPermExe); None}
