@@ -31,6 +31,15 @@ define(`UPERMS', `4')dnl
 define(`OTYPEWIDTH', `24')dnl
 'dnl
 ,dnl
+CAP,c128concentrate,dnl params for 128 bits wide cheri concentrate capabilities
+`dnl
+define(`CAPBYTEWIDTH', 16)dnl
+define(`CAPADDR', `bits(36)')dnl
+define(`CAPRAWBITS', `bits(128)')dnl
+define(`UPERMS', `4')dnl
+define(`OTYPEWIDTH', `18')dnl
+'dnl
+,dnl
 CAP,p64,dnl params for 64 bits wide precise capabilities
 `dnl
 define(`CAPBYTEWIDTH', 8)dnl

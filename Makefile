@@ -45,6 +45,8 @@ ifdef CAP
     else
       L3SRCBASE+=cheri/cap128-compressed-candidate-3-representable-check.spec
     endif
+  else ifeq ($(CAP), c128concentrate)
+    L3SRCBASE+=cheri/cap128-cheri-concentrate.spec
   else ifeq ($(CAP), p64)
     L3SRCBASE+=cheri/cap-precise-base-256.spec cheri/cap64-precise.spec
   else ifeq ($(CAP), p128)

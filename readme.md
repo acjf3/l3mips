@@ -74,6 +74,7 @@ You can then build your CHERI simulator, specifying a value in the `CAP` variabl
 + `c128c2` : 128-bits wide compressed capabilities, candidate 2
 + `c128c3` : 128-bits wide compressed capabilities, candidate 3
     - When using `CAP=c128c3`, the `FAST_REP_CHECK` variable can be set to `1` to use the fast representability check and left undefined to use the accurate representability check for capability manipulations taking pointers far out of bounds.
++ `c128concentrate` : 128-bits wide compressed capabilities, cheri concentrate
 + anything else : same as `p256`
 
 ```

@@ -16,7 +16,7 @@ unit Write256 (addr::bits(35), data::bits(256)) =
     MEM(addr:'00') <- Raw (data<63:0>)
 }
 ,dnl
-regexp(CAP,c128posits1\|c128c1\|c128c3\|p128),0,dnl
+regexp(CAP,c128posits1\|c128c1\|c128c3\|c128concentrate\|p128),0,dnl
 unit WriteDWORD (dwordAddr::bits(37), data::dword) =
 {
     var fill = 0;
