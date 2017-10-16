@@ -411,7 +411,7 @@ string log_cap_bounds (cap::Capability) =
 {
     b = cap.bounds;
     "{otype:":hex(b.otype):
-    " exp:":hex([b.exp]::bits(8)):
+    " exp:":[b.exp]:
     " len19:":hex(b.len19):
     " topBits:":hex(b.topBits):
     " baseBits:":hex(b.baseBits):"}"
