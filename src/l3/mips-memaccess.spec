@@ -13,12 +13,12 @@ word flip_endian_word (w::word) =
 
 bool Aligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
 
-pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr) =
+pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr, be::bits(1)) =
   match MemType
   {
-     case 0 => pAddr ?? [ReverseEndian^3]
-     case 1 => pAddr ?? [ReverseEndian^2 : '0']
-     case 3 => pAddr ?? [ReverseEndian : '00']
+     case 0 => pAddr ?? [be^3]
+     case 1 => pAddr ?? [be^2 : '0']
+     case 3 => pAddr ?? [be : '00']
      case 7 => pAddr
      case _ => #UNPREDICTABLE ("bad access length")
   }
@@ -95,7 +95,7 @@ dword LoadMemory
     pAddr_, c = AddressTranslation (vAddr, LOAD);
     if exceptionSignalled then return UNKNOWN(next_unknown("mem-data")) else
     {
-      var pAddr = AdjustEndian (MemType, pAddr_);
+      var pAddr = AdjustEndian (MemType, pAddr_, ReverseEndian);
       -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
       a = pAddr<39:3>;
       var ret;
@@ -152,7 +152,7 @@ bool StoreMemory
   else
   {
     var pAddr = Fst (AddressTranslation (vAddr, STORE));
-    pAddr <- AdjustEndian (MemType, pAddr);
+    pAddr <- AdjustEndian (MemType, pAddr, ReverseEndian);
     -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
     var sc_success = true;
     when not exceptionSignalled do
@@ -169,8 +169,8 @@ bool StoreMemory
         };
       a = pAddr<39:3>;
       b = [AccessLength] + 0n1;
-      l = 64 - (b + [vAddr<2:0>]) * 0n8;
-      mask`64 = 1 << (l + b * 0n8) - 1 << l;
+      byte = AdjustEndian (MemType, [vAddr], BigEndianCPU)<2:0>;
+      mask`64 = (1 << (0n8 * b) - 1) << (0n8 * [byte]);
       if a == JTAG_UART.base_address then
         JTAG_UART_store (mask, MemElem)
       else

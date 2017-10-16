@@ -8,12 +8,12 @@
 
 bool Aligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
 
-pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr) =
+pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr, be::bits(1)) =
   match MemType
   {
-     case 0 => pAddr ?? [ReverseEndian^3]
-     case 1 => pAddr ?? [ReverseEndian^2 : '0']
-     case 3 => pAddr ?? [ReverseEndian : '00']
+     case 0 => pAddr ?? [be^3]
+     case 1 => pAddr ?? [be^2 : '0']
+     case 3 => pAddr ?? [be : '00']
      case 7 => pAddr
      case _ => #UNPREDICTABLE ("bad access length")
   }
@@ -66,7 +66,7 @@ dword LoadMemory
   }
   else
   {
-    pAddr = AdjustEndian (MemType, [vAddr]);
+    pAddr = AdjustEndian (MemType, [vAddr], ReverseEndian);
     if link then
     {
       LLbit <- Some (true);
@@ -90,7 +90,7 @@ bool StoreMemory
   }
   else
   {
-    pAddr = AdjustEndian (MemType, [vAddr]);
+    pAddr = AdjustEndian (MemType, [vAddr], ReverseEndian);
     sc_success = if cond then match LLbit
       {
         case None => #UNPREDICTABLE ("conditional store: LLbit not set")
@@ -102,9 +102,8 @@ bool StoreMemory
             #UNPREDICTABLE
               ("conditional store: address doesn't match previous LL address")
       } else true;
-    b = [AccessLength] + 0n1;
-    l = 64 - (b + [vAddr<2:0>]) * 0n8;
-    mask`64 = [2 ** (l + b * 0n8) - 2 ** l];
+    byte = AdjustEndian (MemType, [vAddr], BigEndianCPU)<2:0>;
+    mask`64 = (1 << (0n8 * ([AccessLength] + 1)) - 1) << (0n8 * [byte]);
     when sc_success do
     {
        for core in 0 .. totalCore - 1 do

@@ -15,12 +15,12 @@ word flip_endian_word (w::word) =
 
 bool isAligned (vAddr::vAddr, MemType::bits(3)) = [vAddr] && MemType == 0
 
-pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr) =
+pAddr AdjustEndian (MemType::bits(3), pAddr::pAddr, be::bits(1)) =
   match MemType
   {
-     case 0 => pAddr ?? [ReverseEndian^3]
-     case 1 => pAddr ?? [ReverseEndian^2 : '0']
-     case 3 => pAddr ?? [ReverseEndian : '00']
+     case 0 => pAddr ?? [be^3]
+     case 1 => pAddr ?? [be^2 : '0']
+     case 3 => pAddr ?? [be : '00']
      case 7 => pAddr
      case _ => #UNPREDICTABLE ("bad access length")
   }
@@ -116,7 +116,7 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
     else
     {
         tmp, CCA, _, _ = AddressTranslation (vAddr, LOAD);
-        pAddr = AdjustEndian (MemType, tmp);
+        pAddr = AdjustEndian (MemType, tmp, ReverseEndian);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         if exceptionSignalled then UNKNOWN(next_unknown("mem-data")) else
         {
@@ -238,13 +238,13 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
     else {
         var sc_success = false;
         tmp, _, _, _ = AddressTranslation (vAddr, STORE);
-        pAddr = AdjustEndian (MemType, tmp);
+        pAddr = AdjustEndian (MemType, tmp, ReverseEndian);
         -- pAddr <- if BigEndianMem then pAddr else pAddr && ~0b111;
         when not exceptionSignalled do
         {
             a = pAddr<39:3>;
-            l = 64 - ([AccessLength] + 1 + [vAddr<2:0>]) * 0n8;
-            mask`64 = 1 << (l + ([AccessLength] + 1) * 0n8) - 1 << l;
+            byte = AdjustEndian (MemType, [vAddr], BigEndianCPU)<2:0>;
+            mask`64 = (1 << (0n8 * ([AccessLength] + 1)) - 1) << (0n8 * [byte]);
 
             var found = false;
             if a == JTAG_UART.base_address then
