@@ -216,11 +216,13 @@ Capability setSealed (cap::Capability, sealed::bool) =
         {
             e = cap.bounds.exp;
             lowbits`12 = cap.address<11+e:e>;
+            new_cap.format <- if e == 0 then Exp0 else EmbeddedExp;
             new_cap.bounds.topBits<11:0>  <- lowbits;
             new_cap.bounds.baseBits<11:0> <- lowbits
         }
         case _ => when sealed do
         {
+            new_cap.format <- Sealed;
             new_cap.bounds.topBits<11:0>  <- 0;
             new_cap.bounds.baseBits<11:0> <- 0;
             new_cap.bounds.otype <- 0
@@ -398,6 +400,32 @@ else
 -- display and logging utils
 --------------------------------------------------------------------------------
 
+string log_cap_format (cap::Capability) = match cap.format
+{
+    case Exp0        => "Exp0"
+    case EmbeddedExp => "EmbeddedExp"
+    case Sealed      => "Sealed"
+}
+
+string log_cap_bounds (cap::Capability) =
+{
+    b = cap.bounds;
+    "{otype:":hex(b.otype):
+    " exp:":hex([b.exp]::bits(8)):
+    " len19:":hex(b.len19):
+    " topBits:":hex(b.topBits):
+    " baseBits:":hex(b.baseBits):"}"
+}
+
+string log_cap_inner_rep (cap::Capability) =
+    "t:":(if getTag(cap) then "1" else "0"):
+    " uperms:":hex (cap.&uperms):
+    " perms:":hex (cap.&perms):
+    " reserved:":hex (cap.reserved):
+    " format:": log_cap_format(cap):
+    " bounds:": log_cap_bounds(cap):
+    " address:": hex (cap.address)
+
 string log_cap_write (cap::Capability) =
     "t:":(if getTag(cap) then "1" else "0"):
     " s:":(if getSealed(cap) then "1" else "0"):
@@ -405,7 +433,7 @@ string log_cap_write (cap::Capability) =
     " type:":hex (getType(cap)):
     " offset:":hex (getOffset(cap)):
     " base:":hex (getBase(cap)):
-    " length:":hex (getLength(cap))
+    " length:":hex (getLength(cap))--:"\n(":log_cap_inner_rep(cap):")"
 
 string log_cpp_write (cap::Capability) = "PCC <- ":log_cap_write(cap)
 string log_creg_write (r::reg, cap::Capability) = "CapReg ":[[r]::nat]:" <- ":log_cap_write(cap)
