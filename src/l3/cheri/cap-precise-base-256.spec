@@ -46,7 +46,7 @@ Capability nullCap =
     new_cap.sealed   <- false;
     new_cap.cursor   <- 0;
     new_cap.base     <- 0;
-    new_cap.length   <- 0;
+    new_cap.length   <- ~0;
     new_cap.otype    <- 0;
     new_cap.uperms   <- 0;
     new_cap.perms    <- 0;
