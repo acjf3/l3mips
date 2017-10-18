@@ -131,7 +131,7 @@ OType getType (cap::Capability) = match cap.format
 
 UPerms getUPerms (cap::Capability) = cap.uperms
 
-Perms getPerms (cap::Capability) = cap.perms
+Perms getPerms (cap::Capability) = Perms(SignExtend(cap.&perms<10:0>))
 
 bool getSealed (cap::Capability) = match cap.format
 {
