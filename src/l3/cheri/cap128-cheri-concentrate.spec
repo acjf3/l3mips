@@ -168,14 +168,23 @@ Capability setBounds (cap::Capability, length::bits(64)) =
     -- deriving the new top
     newTop = ('0':cap.address) + ('0':length);
     var newTopBits = newTop<e+20:e>;
-    when (newTop && ~(~0 << e)) <> 0 do newTopBits <- newTopBits + 1; -- round up if significant bits are lost
     -- fold the derived values back in new_cap
     new_cap.bounds.exp      <- e;
     new_cap.bounds.otype    <- 0;
     new_cap.bounds.len19    <- [length<19>];
     new_cap.bounds.topBits  <- newTopBits;
     new_cap.bounds.baseBits <- newBaseBits;
-    new_cap.format <- if e == 0 then Exp0 else EmbeddedExp;
+    if e == 0 then new_cap.format <- Exp0
+    else
+    {
+        -- round up if significant bits are lost
+        -- (note: e bits are shifted out, and 3 are stolen)
+        when (newTop && ~(~0 << (e+3))) <> 0 do
+            new_cap.bounds.topBits<20:3> <- new_cap.bounds.topBits<20:3> + 1;
+        new_cap.bounds.topBits<2:0>  <- 0;
+        new_cap.bounds.baseBits<2:0> <- 0;
+        new_cap.format               <- EmbeddedExp
+    };
     -- overwrite new_cap if necessary
     new_cap <- match cap.format
     {
