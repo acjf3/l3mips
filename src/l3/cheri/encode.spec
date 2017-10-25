@@ -100,6 +100,7 @@ string COP2InstructionToString (i::instruction) =
                         case 0b11 => op_gr_gr_cr("cscd", rd, rs, cb)
                     }
                 case CSCC(cs, cb, rd)             => op_gr_cr_cr("cscc", rd, cs, cb)
+                case CMove(cd, cs)                => op_cr_cr("cmove", cd, cs)
                 case CMOVN(cd, cb, rt)            => op_cr_cr_gr("cmovn", cd, cb, rt)
                 case CMOVZ(cd, cb, rt)            => op_cr_cr_gr("cmovz", cd, cb, rt)
                 --case CTestSubset(rd, cb, ct)      => op_gr_cr_cr("ctestsubset", rd, cb, ct)
@@ -204,7 +205,7 @@ bits(26) CHERICOP2Encode (j::CHERICOP2) =
 		case CGet(CToPtr(rd, cb, cs))   => '00000' : rd : cb : cs : '010010'
 		case CSet(CFromPtr(cd, cb, rs)) => '00000' : cd : cb : rs : '010011'
 		case CSub(rt, cb, cs)           => '00000' : rt : cb : cs : '001010'
---TODO?		case CMove(cd, cs) => 00000 : cd : cs : 01010 : 111111
+		case CMove(cd, cs)              => '00000' : cd : cs : '01010' : '111111'
 		case CMOVZ(cd, cs, rs)          => '00000' : cd : cs : rs : '011011'
 		case CMOVN(cd, cs, rs)          => '00000' : cd : cs : rs : '011100'
 

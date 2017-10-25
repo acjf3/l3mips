@@ -995,6 +995,19 @@ define COP2 > CHERICOP2 > CMOVZ (cd::reg, cb::reg, rt::reg) =
     else when GPR(rt) == 0 do
         CAPR(cd) <- CAPR(cb)
 
+-----------------------------------
+-- CMove
+-----------------------------------
+define COP2 > CHERICOP2 > CMove (cd::reg, cs::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if register_inaccessible(cs) then
+        SignalCapException(capExcAccessSysReg,cs)
+    else
+        CAPR(cd) <- CAPR(cs)
+
 {-
 -----------------------------------
 -- CTestSubset

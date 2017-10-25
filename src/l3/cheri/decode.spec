@@ -26,7 +26,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000    cd    cs    ct 001100'   => CUnseal(cd, cs, ct)
            case '00000    cd    cs    rt 001101'   => CSet(CAndPerm(cd, cs, rt))
            case '00000    cd    cs    rt 001111'   => CSet(CSetOffset(cd, cs, rt))
-           case '00000    cd    cs    rt 010000'   => CSet(CSetBounds(cd, cs, rt))
+           case '00000    cd    cs    rt 001000'   => CSet(CSetBounds(cd, cs, rt))
            case '00000    cd    cs    rt 001001'   => CSet(CSetBoundsExact(cd, cs, rt))
            case '10010    cd    cb       length'   => CSet(CSetBoundsImmediate(cd, cb, length))
            case '00000    cd    cb 01011 111111'   => CSet(CClearTag(cd, cb))
@@ -37,7 +37,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000    rd    cb    cs 010010'   => CGet(CToPtr(rd, cb, cs))
            case '00000    cd    cb    rs 010011'   => CSet(CFromPtr(cd, cb, rs))
            case '00000    rt    cb    cs 001010'   => CSub(rt, cb, cs)
---TODO?    case '00000    cd    cs 01010 111111'   => CMove(cd, cs)
+           case '00000    cd    cs 01010 111111'   => CMove(cd, cs)
            case '00000    cd    cs    rs 011011'   => CMOVZ(cd, cs, rs)
            case '00000    cd    cs    rs 011100'   => CMOVN(cd, cs, rs)
 
@@ -60,9 +60,8 @@ instruction COP2Decode (v::bits(26)) =
            case '01010    cd             offset'   => CBTS(cd, offset)
            case '00000    cb 00011 11111 111111'   => CJR(cb)
            case '00000    cd    cb 01100 111111'   => CJALR(cd, cb)
---         case '00101    cs    cb 00000 000000'   => CCallClassic(cs, cb)
            case '00101    cs    cb 00000 000001'   => CCallFast(cs, cb)
---         case '00101 00000 00000 11111 111111'   => CReturn(cs, cb)
+           case '00101 00000 00000 11111 111111'   => CReturn -- TODO that's slightly nasty... Fix the spec a bit?
            case '00101    cs    cb     selector'   => CCall(cs, cb, selector)
 
            -- Assertion Instructions
