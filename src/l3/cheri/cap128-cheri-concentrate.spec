@@ -92,10 +92,10 @@ Capability defaultCap =
     new_cap.perms    <- Perms(0x7FF`32);
     new_cap.reserved <- 0;
     new_cap.format   <- EmbeddedExp;
-    new_cap.bounds.exp      <- 44;
+    new_cap.bounds.exp      <- 45;
     new_cap.bounds.otype    <- 0;
     new_cap.bounds.len19    <- 0;
-    new_cap.bounds.topBits  <- 0x100000;
+    new_cap.bounds.topBits  <- 0x080000;
     new_cap.bounds.baseBits <- 0;
     new_cap.address <- 0;
     new_cap
@@ -109,10 +109,10 @@ Capability nullCap =
     new_cap.perms    <- Perms(0);
     new_cap.reserved <- 0;
     new_cap.format   <- EmbeddedExp;
-    new_cap.bounds.exp      <- 44;  -- need to map exponent 44 to 0 mem representation
+    new_cap.bounds.exp      <- 45;
     new_cap.bounds.otype    <- 0;
     new_cap.bounds.len19    <- 0;
-    new_cap.bounds.topBits  <- 0x100000;
+    new_cap.bounds.topBits  <- 0x080000;
     new_cap.bounds.baseBits <- 0;
     new_cap.address <- 0;
     new_cap
@@ -270,7 +270,7 @@ bool canRepCap( cap::Capability,
     inRange = if i && mask == mask or i && mask == 0 then true else false;
     inLimits = if i >= 0 then imid <+ (edge - addr - 1)
                else imid >=+ (edge - addr) and edge != addr;
-    return ((inRange and inLimits) or e >= 44) and sealOk
+    return ((inRange and inLimits) or e >= 45) and sealOk
 }
 bool canRepOffset(cap::Capability, newOffset::bits(64)) =
     canRepCap(cap,getSealed(cap),newOffset)
@@ -297,7 +297,7 @@ bool canRepBounds(cap::Capability, newLength::bits(64)) =
 --------------------------------------------------------------------------------
 
 --                     Embedded Exp
--- 127___123_122_112_111_106_105___104___103________________________85_84_________________________64_
+-- 127___124_123_113_112_106_105___104___103________________________85_84_________________________64_
 -- |        |       |       |   |                                     |                             |
 -- | uperms | perms |  res  | 0 |len<19>|                    top<18:0>|                   base<20:0>| Exp0
 -- | uperms | perms |  res  | 1 |   0   |             top<18:3>|e<5:3>|            base<20:3>|e<2:0>| EmbeddedExp
@@ -309,12 +309,12 @@ bool canRepBounds(cap::Capability, newLength::bits(64)) =
 -- |________________________________________________________________________________________________|
 
 -- reconstructing most significant top bits:
--- top<20:19> = base<20:19> + carry_out + len_correction
+-- top<20:19> = base<20:19> + carry_out + lenMSB
 --      where
---              carry_out      = 1 if top<18:0> < base <18:0>
---                               0 otherwise
---              len_correction = len<19> if Exp0
---                                  0    otherwise
+--              carry_out = 1 if top<18:0> < base <18:0>
+--                          0 otherwise
+--              lenMSB    = len<19> if Exp0
+--                             1    otherwise
 
 bits(4) encUPerms (up::UPerms) = &up<3:0>
 UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
@@ -322,13 +322,13 @@ UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
 bits(11) encPerms (p::Perms) = &p<10:0>
 Perms decPerms (p::bits(11)) = Perms(SignExtend(p))
 
--- map exp 44 or 0b101100 to 0 representation
+-- map exp 45 or 0b101101 to 0 representation
 bits(6) encExp (e::nat) =
 {
     ebits::bits(6) = [e];
-    [~[ebits<5>]] : [ebits<4>] : ~ebits<3:2> : ebits<1:0>
+    [~[ebits<5>]] : [ebits<4>] : ~ebits<3:2> : [ebits<1>] : ~[ebits<0>]
 }
-nat decExp (e::bits(6)) = [~[e<5>] : [e<4>] : ~e<3:2> : e<1:0>]
+nat decExp (e::bits(6)) = [~[e<5>] : [e<4>] : ~e<3:2> : [e<1>] : ~[e<0>]]
 
 bits(42) encBounds (format::Format, bounds::Bounds) =
 {
@@ -375,7 +375,7 @@ Format * Bounds decBounds (bounds :: bits(42)) =
         }
     };
     carry_out      = if b.topBits<18:0> < b.baseBits<18:0> then '01' else '00';
-    len_correction = match f { case Exp0 => '0':b.len19 case _ => '00'};
+    len_correction = match f { case Exp0 => '0':b.len19 case _ => '01'};
     b.topBits<20:19> <- b.baseBits<20:19> + carry_out + len_correction;
     (f,b)
 }
