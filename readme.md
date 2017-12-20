@@ -9,13 +9,13 @@ Getting started
 
 To build the simulator, you need L3 installed on your machine.
 
-L3 is implemented in [Poly/ML 5.5](http://www.polyml.org/ "Poly/ML home page"), so in order to compile L3, you will need Poly/ML corectly installed.
+L3 is implemented in [Poly/ML 5.7](http://www.polyml.org/ "Poly/ML home page"), so in order to compile L3, you will need Poly/ML corectly installed.
 Simply follow the steps described on the [Poly/ML download page](http://www.polyml.org/download.html "Poly/ML download page"). It is basically a case of:
 
 ```
-wget http://downloads.sourceforge.net/project/polyml/polyml/5.5.2/polyml.5.5.2.tar.gz
-tar -xf polyml.5.5.2.tar.gz
-cd polyml.5.5.2/
+wget https://downloads.sourceforge.net/project/polyml/polyml/5.7.1/polyml.5.7.1.tar.gz
+tar -xf polyml.5.7.1.tar.gz
+cd polyml.5.7.1/
 ./configure
 make
 sudo make install
@@ -125,8 +125,8 @@ To control the name of the generated simulator, set the `SIM` variable:
 make SIM=mySimulatorName
 ```
 
-Runing the simulator
---------------------
+Running the simulator
+---------------------
 
 When running the `l3mips` simulator, a set of command line arguments can be specified. A list of these flags is provided when running the simulator with `-h` or `--help`, or without any argument. The simulator should be run as follows:
 
