@@ -9,7 +9,7 @@ Getting started
 
 To build the simulator, you need L3 installed on your machine.
 
-L3 is implemented in [Poly/ML 5.7](http://www.polyml.org/ "Poly/ML home page"), so in order to compile L3, you will need Poly/ML corectly installed.
+L3 is implemented in [Poly/ML 5.7](http://www.polyml.org/ "Poly/ML home page"), so in order to compile L3, you will need Poly/ML correctly installed.
 Simply follow the steps described on the [Poly/ML download page](http://www.polyml.org/download.html "Poly/ML download page"). It is basically a case of:
 
 ```
@@ -153,7 +153,7 @@ with `<file>` being the binary file to execute, and `[arguments]` an optional li
 + `--non-block <on|off>`    : non-blocking UART input `on` or `off`
 + `--dump-stats <number>`   : display statistics every `<number>` simulation steps
 + `--rdhwr-extra <on|off>`  : enable simulator control features through rdhwr inst, `on` or `off`
-+ `--schedule <file>`       : `<file>` of core ids indicating schedule. When ommitted, round robin between cores
++ `--schedule <file>`       : `<file>` of core ids indicating schedule. When omitted, round robin between cores
 + `--ignore <string>`       : UNPREDICTABLE#(`<string>`) behaviour is ignored (currently `<string>` must be `HI` or `LO`)
 + `-h` or `--help`          : print help message
 
