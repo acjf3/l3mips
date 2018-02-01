@@ -31,7 +31,7 @@ instruction COP2Decode (v::bits(26)) =
            case '10010    cd    cb       length'   => CSet(CSetBoundsImmediate(cd, cb, length))
            case '00000    cd    cb 01011 111111'   => CSet(CClearTag(cd, cb))
            case '00000    cd    cb    rt 010001'   => CSet(CIncOffset(cd, cb, rt))
-           case '10001    cd    cb    increment'   => CSet(CIncOffsetImmediate(cd, cb, increment))
+           case '10011    cd    cb    increment'   => CSet(CIncOffsetImmediate(cd, cb, increment))
 
            -- Pointer-Arithmetic Instructions
            case '00000    rd    cb    cs 010010'   => CGet(CToPtr(rd, cb, cs))
