@@ -50,15 +50,19 @@ record Capability
 bits(6) encExp (e::nat) =
 {
     ebits::bits(6) = [e];
-    ~ebits<5:4> : ebits<3:0>
+    ebits ?? 0b101101
 }
-nat decExp (e::bits(6)) = [~e<5:4> : e<3:0>]
+
+nat decExp (e::bits(6)) = [e ?? 0b101101]
 
 bits(4) encUPerms (up::UPerms) = &up<3:0>
 UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
 
 bits(11) encPerms (p::Perms) = &p<10:0>
 Perms decPerms (p::bits(11)) = Perms(SignExtend(p))
+
+bits(20) encTop (top::bits(20)) = top ?? 0x80000
+bits(20) decTop (rawtop::bits(20)) = rawtop ?? 0x80000
 
 {-
 RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
@@ -155,10 +159,10 @@ Capability nullCap =
     new_cap.uperms   <- UPerms(0);
     new_cap.perms    <- Perms(0);
     new_cap.reserved <- 0;
-    new_cap.exp      <- 48; -- this exponent maps to a 0 representation
+    new_cap.exp      <- 45; -- this exponent maps to a 0 representation
     var uf :: UnsealedFields;
     uf.baseBits <- 0;
-    uf.topBits  <- 0;
+    uf.topBits  <- 0x80000;
     new_cap.sFields  <- Unsealed(uf);
     new_cap.cursor   <- 0;
     new_cap
@@ -319,7 +323,7 @@ bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 CAPRAWBITS capToBits (cap :: Capability) = match cap.sFields
 {
     case Sealed(sf)   => cap.cursor:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:encExp(cap.exp):'1':sf.otypeHi:sf.baseBits:sf.otypeLo:sf.topBits
-    case Unsealed(uf) => cap.cursor:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:encExp(cap.exp):'0':uf.baseBits:uf.topBits
+    case Unsealed(uf) => cap.cursor:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:encExp(cap.exp):'0':uf.baseBits:encTop(uf.topBits)
 }
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
@@ -344,7 +348,7 @@ Capability bitsToCap (raw :: CAPRAWBITS) =
     {
         var uf :: UnsealedFields;
         uf.baseBits <- raw<39:20>;
-        uf.topBits  <- raw<19:0>;
+        uf.topBits  <- decTop(raw<19:0>);
         f <- Unsealed(uf)
     };
     new_cap.sFields  <- f;
