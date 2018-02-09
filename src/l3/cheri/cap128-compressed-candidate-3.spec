@@ -384,7 +384,7 @@ string cap_inner_rep (cap::Capability) =
 string log_cap_write (cap::Capability) =
     "t:":(if getTag(cap) then "1" else "0"):
     " s:":(if getSealed(cap) then "1" else "0"):
-    " perms:":hex (cap.&uperms<3:0> : SignExtend(cap.&perms<10:0>)`15): -- TODO report 2 architectural fields
+    " perms:":hex (cap.&uperms<3:0> : ZeroExtend(cap.&perms<10:0>)`15): -- TODO report 2 architectural fields
     " type:":hex (getType(cap)):
     " offset:":hex (getOffset(cap)):
     " base:":hex (getBase(cap)):
