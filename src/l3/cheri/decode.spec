@@ -58,8 +58,8 @@ instruction COP2Decode (v::bits(26)) =
            -- Control-Flow Instructions
            case '01001    cd             offset'   => CBTU(cd, offset)
            case '01010    cd             offset'   => CBTS(cd, offset)
-           case '01011    cd             offset'   => CBEZ(cd, offset)
-           case '01100    cd             offset'   => CBNZ(cd, offset)
+           case '10001    cd             offset'   => CBEZ(cd, offset)
+           case '10010    cd             offset'   => CBNZ(cd, offset)
            case '00000    cb 00011 11111 111111'   => CJR(cb)
            case '00000    cd    cb 01100 111111'   => CJALR(cd, cb)
            case '00101    cs    cb 00000 000001'   => CCallFast(cs, cb)
