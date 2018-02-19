@@ -617,6 +617,40 @@ define COP2 > CHERICOP2 > CBTS (cb::reg, offset::bits(16)) =
     }
 
 -----------------------------------
+-- CBEZ
+-----------------------------------
+define COP2 > CHERICOP2 > CBEZ (cb::reg, offset::bits(16)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else
+    {
+        CheckBranch;
+        if register_inaccessible(cb) then
+            SignalCapException(capExcAccessSysReg,cb)
+        else if CAPR(cb) == nullCap then
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+        else
+            nothing
+    }
+
+-----------------------------------
+-- CBNZ
+-----------------------------------
+define COP2 > CHERICOP2 > CBNZ (cb::reg, offset::bits(16)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else
+    {
+        CheckBranch;
+        if register_inaccessible(cb) then
+            SignalCapException(capExcAccessSysReg,cb)
+        else if CAPR(cb) <> nullCap then
+            BranchTo <- Some (PC + 4 + SignExtend(offset) << 2)
+        else
+            nothing
+    }
+
+-----------------------------------
 -- CSC
 -----------------------------------
 define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
