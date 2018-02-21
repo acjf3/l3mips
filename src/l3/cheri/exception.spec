@@ -160,6 +160,9 @@ unit SignalCapException (capException::CapExceptionType, regNum::bits(5)) =
 unit SignalCapException_noReg (capException::CapExceptionType) =
     SignalCapException_internal (capException, 0xff)
 
+unit CheckBranch =
+   when IsSome (BranchDelay) or IsSome(BranchDelayPCC) do #UNPREDICTABLE("Not permitted in delay slot")
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------

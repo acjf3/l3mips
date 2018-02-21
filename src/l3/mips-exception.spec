@@ -77,6 +77,9 @@ unit SignalCP1UnusableException = {CP0.Cause.CE <- '01'; SignalException(CpU)}
 
 unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
 
+unit CheckBranch =
+   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------

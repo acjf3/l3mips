@@ -131,9 +131,6 @@ bool NotWordValue (value::dword) =
    return top != 0 and top != 0x1_FFFF_FFFF
 }
 
-unit CheckBranch =
-   when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
-
 -- dump regs --
 
 unit dumpRegs () =
