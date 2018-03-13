@@ -664,6 +664,8 @@ define SDC2 > CHERISDC2 > CSC (cs::reg, cb::reg, rt::reg, offset::bits(11)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Store then
+        SignalCapException(capExcPermStore,cb)
     else if not getPerms(CAPR(cb)).Permit_Store_Capability then
         SignalCapException(capExcPermStoreCap,cb)
     else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
@@ -704,6 +706,8 @@ define LDC2 > CHERILDC2 > CLC (cd::reg, cb::reg, rt::reg, offset::bits(11)) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Load then
+        SignalCapException(capExcPermLoad,cb)
     else
     {
         cursor = getBase(CAPR(cb)) + getOffset(CAPR(cb));
@@ -871,6 +875,8 @@ define COP2 > CHERICOP2 > CLLC (cd::reg, cb::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Load then
+        SignalCapException(capExcPermLoad,cb)
     else if ('0':addr) + [CAPBYTEWIDTH] >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
         SignalCapException(capExcLength,cb)
     else if addr <+ getBase(CAPR(cb)) then
@@ -951,6 +957,8 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
+    else if not getPerms(CAPR(cb)).Permit_Store then
+        SignalCapException(capExcPermStore,cb)
     else if not getPerms(CAPR(cb)).Permit_Store_Capability then
         SignalCapException(capExcPermStoreCap,cb)
     else if not getPerms(CAPR(cb)).Permit_Store_Local_Capability
