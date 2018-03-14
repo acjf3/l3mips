@@ -1336,7 +1336,7 @@ define COP2 > CHERICOP2 > CCallFast (cs::reg, cb::reg) =
     {
         CheckBranch;
         new_PCC = setSealed(CAPR(cs), false);
-        PCC <- setType(new_PCC, 0);
+        BranchToPCC <- setType(new_PCC, 0);
         BranchTo <- Some (getOffset(CAPR(cs)));
         CCallBranch <- true;
         new_IDC = setSealed(CAPR(cb), false);
