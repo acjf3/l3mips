@@ -1259,8 +1259,8 @@ define COP2 > CHERICOP2 > CUnseal (cd::reg, cs::reg, ct::reg) =
         SignalCapException(capExcSeal,ct)
     else if (getBase(CAPR(ct)) + getOffset(CAPR(ct))) <> ZeroExtend(getType(CAPR(cs))) then
         SignalCapException(capExcType,ct)
-    else if not getPerms(CAPR(ct)).Permit_Seal then
-        SignalCapException(capExcPermSeal,ct)
+    else if not getPerms(CAPR(ct)).Permit_Unseal then
+        SignalCapException(capExcPermUnseal,ct)
     else if getOffset(CAPR(ct)) >=+ getLength(CAPR(ct)) then
         SignalCapException(capExcLength,ct)
     else

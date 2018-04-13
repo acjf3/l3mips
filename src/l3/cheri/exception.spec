@@ -57,7 +57,9 @@ construct CapExceptionType
     capExcPermStoreLocalCap, -- Permit_Store_Local_Capability Violation
     capExcPermSeal,          -- Permit_Seal Violation
     capExcAccessSysReg,      -- Access_System_Registers Violation
-    capExcPermCCall          -- Premit_CCall Violation
+    capExcPermCCall,         -- Premit_CCall Violation
+    capExcPermCCallIDC,      -- Premit_CCall IDC Violation
+    capExcPermUnseal         -- Premit_Unseal Violation
 }
 
 bits(8) capExcCode (e::CapExceptionType) = match e
@@ -83,6 +85,8 @@ bits(8) capExcCode (e::CapExceptionType) = match e
     case capExcPermSeal          => 0x17
     case capExcAccessSysReg      => 0x18
     case capExcPermCCall         => 0x19
+    case capExcPermCCallIDC      => 0x1a
+    case capExcPermUnseal        => 0x1b
 }
 
 unit SignalException (ExceptionType::ExceptionType) =
