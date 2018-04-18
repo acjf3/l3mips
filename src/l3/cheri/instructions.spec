@@ -1050,7 +1050,6 @@ define COP2 > CHERICOP2 > CMove (cd::reg, cs::reg) =
     else
         CAPR(cd) <- CAPR(cs)
 
-{-
 -----------------------------------
 -- CTestSubset
 -----------------------------------
@@ -1074,6 +1073,7 @@ define COP2 > CHERICOP2 > CTestSubset (rd::reg, cb::reg, ct::reg) =
         else 0x1
     }
 
+{-
 -----------------------------------
 -- CBuildCap
 -----------------------------------
