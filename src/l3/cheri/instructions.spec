@@ -1073,7 +1073,6 @@ define COP2 > CHERICOP2 > CTestSubset (rd::reg, cb::reg, ct::reg) =
         else 0x1
     }
 
-{-
 -----------------------------------
 -- CBuildCap
 -----------------------------------
@@ -1113,6 +1112,7 @@ define COP2 > CHERICOP2 > CBuildCap (cd::reg, cb::reg, ct::reg) =
         CAPR(cd) <- new_cap
     }
 
+{-
 -----------------------------------
 -- CCopyType
 -----------------------------------
