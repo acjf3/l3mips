@@ -1112,11 +1112,14 @@ define COP2 > CHERICOP2 > CBuildCap (cd::reg, cb::reg, ct::reg) =
         CAPR(cd) <- new_cap
     }
 
-{-
 -----------------------------------
 -- CCopyType
 -----------------------------------
 define COP2 > CHERICOP2 > CCopyType (cd::reg, cb::reg, ct::reg) =
+{
+    base =  getBase(CAPR(cb));
+    length = getLength(CAPR(cb));
+    otype = getType(CAPR(ct));
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cd) then
@@ -1129,13 +1132,16 @@ define COP2 > CHERICOP2 > CCopyType (cd::reg, cb::reg, ct::reg) =
         SignalCapException(capExcTag,cb)
     else if getSealed(CAPR(cb)) then
         SignalCapException(capExcSeal,cb)
-    else if not canRepOffset (CAPR(cb), ZeroExtend(getType(CAPR(ct))) - getBase(CAPR(cb))) then
-        SignalCapException(capExcInexact,cb)
-    else if getSealed(CAPR(ct)) then
-        CAPR(cd) <- setOffset(CAPR(cb), ZeroExtend(getType(CAPR(ct))) - getBase(CAPR(cb)))
+    else if not getSealed(CAPR(ct)) then
+        CAPR(cd) <- setOffset(nullCap, ~0)
+    else if ZeroExtend(otype) <+ base then
+        SignalCapException(capExcLength,cb)
+    -- base + length will not wrap around, so we can do this in 64 bits
+    else if ZeroExtend(otype) >+ base + length then
+        SignalCapException(capExcLength,cb)
     else
-        CAPR(cd) <- setOffset(CAPR(cb), ~0)
--}
+        CAPR(cd) <- setOffset(CAPR(cb), ZeroExtend(otype) - getBase(CAPR(cb)))
+}
 
 -----------------------------------
 -- CJR
