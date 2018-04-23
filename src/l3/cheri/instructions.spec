@@ -801,9 +801,9 @@ define LWC2 > CHERILWC2 > CLoad (rd::reg, cb::reg, rt::reg, offset::bits(8), s::
     }
 
 -----------------------------------
--- CStore
+-- store util function
 -----------------------------------
-define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2)) =
+unit store (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2), cond::bool) =
     if not CP0.Status.CU2 then
         SignalCP2UnusableException
     else if register_inaccessible(cb) then
@@ -819,35 +819,15 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
         cap_cb = CAPR(cb);
         cursor = getBase(cap_cb) + getOffset(cap_cb); -- mod 2^64 ?
         extOff = (([offset<7>]::bits(1))^3:offset) << [t];
-        addr   = cursor + GPR(rt) + SignExtend(extOff);
-        var size;
-        var access;
-        var bytesel = '000';
-        match t
+        addr   = if cond then cursor else cursor + GPR(rt) + SignExtend(extOff);
+        size = ZeroExtend(1::bits(64) << [t]);
+        access = if t == '00' then '000' else '1'^[t];
+        bytesel = match t
         {
-            case 0 =>
-            {
-                size    <- 1;
-                access  <- BYTE;
-                bytesel <- addr<2:0> ?? BigEndianCPU^3
-            }
-            case 1 =>
-            {
-                size    <- 2;
-                access  <- HALFWORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU^2:'0')
-            }
-            case 2 =>
-            {
-                size    <- 4;
-                access  <- WORD;
-                bytesel <- addr<2:0> ?? (BigEndianCPU^1:'00')
-            }
-            case 3 =>
-            {
-                size    <- 8;
-                access  <- DOUBLEWORD
-            }
+            case 0 => addr<2:0> ?? BigEndianCPU^3
+            case 1 => addr<2:0> ?? (BigEndianCPU^2:'0')
+            case 2 => addr<2:0> ?? (BigEndianCPU^1:'00')
+            case 3 => '000'
         };
         if ('0':addr) + ('0':size) >+ ('0':getBase(cap_cb)) + ('0':getLength(cap_cb)) then
             SignalCapException(capExcLength,cb)
@@ -855,9 +835,18 @@ define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t:
             SignalCapException(capExcLength,cb)
         else
         {
-            _ = StoreMemoryCap(access, access, GPR(rs) << (0n8 * [bytesel]), true, [addr], false)
+            --data = if cond then GPR(rs) else GPR(rs) << (0n8 * [bytesel]);
+            data = GPR(rs) << (0n8 * [bytesel]);
+            ret = StoreMemoryCap(access, access, data, true, [addr], cond);
+            when (cond and not exceptionSignalled) do GPR(rt) <- if ret then 1 else 0
         }
     }
+
+-----------------------------------
+-- CStore
+-----------------------------------
+define SWC2 > CHERISWC2 > CStore (rs::reg, cb::reg, rt::reg, offset::bits(8), t::bits(2)) =
+  store(rs, cb, rt, offset, t, false)
 
 -----------------------------------
 -- CLLC
@@ -984,32 +973,7 @@ define COP2 > CHERICOP2 > CSCC (cs::reg, cb::reg, rd::reg) =
 -- CSCx
 -----------------------------------
 define COP2 > CHERICOP2 > CSCx (rs::reg, cb::reg, rd::reg, t::bits(2)) =
-{
-    addr = getBase(CAPR(cb)) + getOffset(CAPR(cb));
-    size = ZeroExtend(1::bits(64) << [t]);
-    access_length = if t == '00' then '000' else '1'^[t];
-    if not CP0.Status.CU2 then
-        SignalCP2UnusableException
-    else if register_inaccessible(cb) then
-        SignalCapException(capExcAccessSysReg,cb)
-    else if not getTag(CAPR(cb)) then
-        SignalCapException(capExcTag,cb)
-    else if getSealed(CAPR(cb)) then
-        SignalCapException(capExcSeal,cb)
-    else if not getPerms(CAPR(cb)).Permit_Store then
-        SignalCapException(capExcPermStore,cb)
-    else if ('0':addr) + ('0':size) >+ ('0':getBase(CAPR(cb))) + ('0':getLength(CAPR(cb))) then
-        SignalCapException(capExcLength,cb)
-    else if addr <+ getBase(CAPR(cb)) then
-        SignalCapException(capExcLength,cb)
-    else
-    {
-        ret = if StoreMemoryCap(access_length, access_length,
-                                     GPR(rs), true, addr, true)
-                                     then 1 else 0;
-        when not exceptionSignalled do GPR(rd) <- ret
-    }
-}
+    store(rs, cb, rd, 0, t, true)
 
 -----------------------------------
 -- CMOVN
