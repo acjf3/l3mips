@@ -1029,7 +1029,6 @@ define COP2 > CHERICOP2 > CTestSubset (rd::reg, cb::reg, ct::reg) =
         cbase = CAPR(cb);
         ctgt  = CAPR(ct);
         GPR(rd) <- if getTag(cbase) <> getTag(ctgt) then 0x0
-        else if getSealed(cbase) <> getSealed(ctgt) then 0x0
         else if getBase(ctgt) <+ getBase(cbase) then 0x0
         else if getBase(ctgt) + getLength(ctgt) >+ getBase(cbase) + getLength(cbase) then 0x0
         else if &getPerms(ctgt)<14:0> && &getPerms(cbase)<14:0> <> &getPerms(ctgt)<14:0> then 0x0
