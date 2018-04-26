@@ -78,7 +78,7 @@ unit watchForStore (addr::pAddr, data::dword, mask::dword) =
 -- virtual address computation
 vAddr getVirtualAddress (addr::bits(64)) = addr
 
--- Pimitive memory load (with memory-mapped devices)
+-- Primitive memory load (with memory-mapped devices)
 
 dword LoadMemory
   ( MemType::bits(3), AccessLength::bits(3), needAlign::bool,
