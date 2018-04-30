@@ -6,10 +6,14 @@
 bool isCapAligned  (addr::bits(64))  = addr<3:0> == 0
 
 CAPRAWBITS capToBits (cap :: Capability) =
-  &cap<191:64> ?? &nullCap<127:0>
+  &cap<127:64> ?? &nullCap<127:64> : &cap<191:128> ?? &nullCap<191:128>
 
-Capability bitsToCap (raw :: CAPRAWBITS) =
-    Capability('0' : ~0::bits(64) : raw : 0x0::bits(64))
+Capability bitsToCap (raw :: CAPRAWBITS) = {
+  var newCap = nullCap;
+  newCap.cursor <- raw<127:64>;
+  newCap.base   <- raw<63:0>;
+  return newCap
+}
 
 dword readDwordFromRaw (dwordAddr::bits(37), raw::CAPRAWBITS) =
 if dwordAddr<0> then raw<127:64> else raw<63:0>
