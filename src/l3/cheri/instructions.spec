@@ -130,6 +130,16 @@ define COP2 > CHERICOP2 > CGet > CGetType (rd::reg, cb::reg) =
         GPR(rd) <- ~0
 
 -----------------------------------
+-- CGetAddr rd, cb
+-----------------------------------
+define COP2 > CHERICOP2 > CGet > CGetAddr (rd::reg, cb::reg) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else GPR(rd) <- getBase(CAPR(cb)) + getOffset(CAPR(cb))
+
+-----------------------------------
 -- CGetPCC cd
 -----------------------------------
 define COP2 > CHERICOP2 > CGet > CGetPCC (cd::reg) =

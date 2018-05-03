@@ -38,6 +38,7 @@ string COP2InstructionToString (i::instruction) =
                 case CGet(CGetSealed(rd, cb))           => op_gr_cr("cgetsealed",rd,cb)
                 case CGet(CGetPerm(rd, cb))             => op_gr_cr("cgetperm",rd,cb)
                 case CGet(CGetType(rd, cb))             => op_gr_cr("cgettype",rd,cb)
+                case CGet(CGetAddr(rd, cb))             => op_gr_cr("cgetaddr",rd,cb)
                 case CGet(CGetPCC(cd))                  => op_cr("cgetpcc",cd)
                 case CGet(CGetPCCSetOffset(cd, rs))     => op_cr_gr("cgetpccsetoffset",cd,rs)
                 case CGet(CGetCause(rd))                => op_gr("cgetcause",rd)

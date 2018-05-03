@@ -18,6 +18,7 @@ instruction COP2Decode (v::bits(26)) =
            case '00000    rd    cb 00100 111111'   => CGet(CGetTag(rd, cb))
            case '00000    rd    cb 00101 111111'   => CGet(CGetSealed(rd, cb))
            case '00000    rd    cb 00110 111111'   => CGet(CGetOffset(rd, cb))
+           case '00000    rd    cb 01111 111111'   => CGet(CGetAddr(rd, cb))
            case '00000    cd 00000 11111 111111'   => CGet(CGetPCC(cd))
            case '00000    cd    rs 00111 111111'   => CGet(CGetPCCSetOffset(cd,rs))
 
