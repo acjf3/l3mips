@@ -53,10 +53,16 @@ git clone git@github.com:acjf3/l3mips.git
 cd l3mips
 ```
 
-and build the MIPS simulator :
+and build the MIPS simulator, either using `mlton` if it is installed on your machine:
 
 ```
 make
+```
+
+or using PolyML:
+
+```
+make poly
 ```
 
 To build the [CHERI](http://www.chericpu.org "Capability Hardware Enhanced RISC Instructions (CHERI) ") MIPS simulator,
