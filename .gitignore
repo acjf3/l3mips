@@ -6,3 +6,10 @@ src/hol/*.thy
 src/sml/mips.sig
 src/sml/mips.sml
 src/sml/run.sml
+src/l3/mips-cache-sizes.spec
+src/l3/mips-memory-caches.spec
+src/l3/cheri/cache-sizes.spec
+src/l3/cheri/cap-params.spec
+src/l3/cheri/memory-caches.spec
+src/l3/cheri/memory-sml-helpers.spec
+src/l3/cheri/memaccess-simple.spec
