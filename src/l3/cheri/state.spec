@@ -21,6 +21,7 @@ declare
    all_capcause         :: id -> CapCause    -- capability exception cause register
    all_pcc              :: id -> Capability  -- program counter capability
    all_capr             :: id -> CapRegFile  -- capability register file
+   all_scapr            :: id -> CapRegFile  -- special capability register file
 
    -- State of current core
    BranchDelayPCC    :: (bits(64) * Capability) option
@@ -30,6 +31,7 @@ declare
    capcause          :: CapCause          -- capability exception cause register
    c_pcc             :: Capability        -- program counter capability
    c_capr            :: CapRegFile        -- capability register file
+   c_scapr           :: CapRegFile        -- special capability register file
 }
 
 unit switchCoreCAP (i::id) =
@@ -41,13 +43,15 @@ unit switchCoreCAP (i::id) =
    all_capcause (procID) <- capcause;
    all_pcc (procID) <- c_pcc;
    all_capr (procID) <- c_capr;
+   all_scapr (procID) <- c_scapr;
    BranchDelayPCC <- all_BranchDelayPCC (i);
    BranchToPCC <- all_BranchToPCC (i);
    CCallBranchDelay <- all_CCallBranchDelay (i);
    CCallBranch <- all_CCallBranch (i);
    capcause <- all_capcause (i);
    c_pcc <- all_pcc (i);
-   c_capr <- all_capr (i)
+   c_capr <- all_capr (i);
+   c_scapr <- all_scapr (i)
 }
 
 unit dumpCRegs () =
@@ -61,16 +65,6 @@ unit dumpCRegs () =
         "\t" : log_cap_write(c_capr([i])))
 }
 
-component PCC :: Capability
-{
-    value = c_pcc
-    assign value =
-    {
-        c_pcc <- value;
-        mark_log (2, log_cpp_write (value))
-    }
-}
-
 component CAPR (n::reg) :: Capability
 {
     value = c_capr(n)
@@ -81,28 +75,66 @@ component CAPR (n::reg) :: Capability
     }
 }
 
+component SCAPR (n::reg) :: Capability
+{
+    value = c_scapr(n)
+    assign value =
+    {
+        c_scapr(n) <- value;
+        mark_log (2, "Special ":log_creg_write (n, value))
+    }
+}
+
+component PCC :: Capability
+{
+    value = c_pcc
+    assign value =
+    {
+        c_pcc <- value;
+        mark_log (2, log_cpp_write (value))
+    }
+}
+
+component TLSC :: Capability
+{
+    value = SCAPR(1)
+    assign value = SCAPR(1) <- value
+}
+
+component PTLSC :: Capability
+{
+    value = SCAPR(8)
+    assign value = SCAPR(8) <- value
+}
+
+component KR1C :: Capability
+{
+    value = SCAPR(22)
+    assign value = SCAPR(22) <- value
+}
+
+component KR2C :: Capability
+{
+    value = SCAPR(23)
+    assign value = SCAPR(23) <- value
+}
+
+component DDC :: Capability
+{
+    value = CAPR(0)
+    assign value = CAPR(0) <- value
+}
+
 component RCC :: Capability
 {
-    value = CAPR(24)
-    assign value = CAPR(24) <- value
+    value = CAPR(17)
+    assign value = CAPR(17) <- value
 }
 
 component IDC :: Capability
 {
     value = CAPR(26)
     assign value = CAPR(26) <- value
-}
-
-component KR1C :: Capability
-{
-    value = CAPR(27)
-    assign value = CAPR(27) <- value
-}
-
-component KR2C :: Capability
-{
-    value = CAPR(28)
-    assign value = CAPR(28) <- value
 }
 
 component KCC :: Capability

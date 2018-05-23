@@ -1322,6 +1322,60 @@ define COP2 > CHERICOP2 > CCallFast (cs::reg, cb::reg) =
     }
 
 -----------------------------------
+-- CRead/WriteHwr
+-----------------------------------
+bool special_register_accessible (sel::bits(5)) = match sel
+{
+    case 0  => true
+    case 1  => true
+    case 8  => getPerms(PCC).Access_System_Registers
+    case 22 => (CP0.Status.CU0 or KernelMode)
+    case 23 => (CP0.Status.CU0 or KernelMode)
+    case 29 => (CP0.Status.CU0 or KernelMode) and getPerms(PCC).Access_System_Registers
+    case 30 => (CP0.Status.CU0 or KernelMode) and getPerms(PCC).Access_System_Registers
+    case 31 => (CP0.Status.CU0 or KernelMode) and getPerms(PCC).Access_System_Registers
+    case _  => false
+}
+define COP2 > CHERICOP2 > CReadHwr (cd::reg, selector::bits(5)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cd) then
+        SignalCapException(capExcAccessSysReg,cd)
+    else if not special_register_accessible(selector) then
+        SignalCapException(capExcAccessSysReg,selector)
+    else CAPR(cd) <- match selector
+    {
+        case 0  => DDC
+        case 1  => TLSC
+        case 8  => PTLSC
+        case 22 => KR1C
+        case 23 => KR2C
+        case 29 => KCC
+        case 30 => KDC
+        case 31 => EPCC
+        case x  => SCAPR(x)
+    }
+define COP2 > CHERICOP2 > CWriteHwr (cb::reg, selector::bits(5)) =
+    if not CP0.Status.CU2 then
+        SignalCP2UnusableException
+    else if register_inaccessible(cb) then
+        SignalCapException(capExcAccessSysReg,cb)
+    else if not special_register_accessible(selector) then
+        SignalCapException(capExcAccessSysReg,selector)
+    else match selector
+    {
+        case 0  => DDC      <- CAPR(cb)
+        case 1  => TLSC     <- CAPR(cb)
+        case 8  => PTLSC    <- CAPR(cb)
+        case 22 => KR1C     <- CAPR(cb)
+        case 23 => KR2C     <- CAPR(cb)
+        case 29 => KCC      <- CAPR(cb)
+        case 30 => KDC      <- CAPR(cb)
+        case 31 => EPCC     <- CAPR(cb)
+        case x  => SCAPR(x) <- CAPR(cb)
+    }
+
+-----------------------------------
 -- CReturn
 -----------------------------------
 define COP2 > CHERICOP2 > CReturn =

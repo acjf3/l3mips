@@ -71,6 +71,10 @@ instruction COP2Decode (v::bits(26)) =
            case '00000    cs    rt 01000 111111'   => CCheck(CCheckPerm(cs, rt))
            case '00000    cs    cb 01001 111111'   => CCheck(CCheckType(cs, cb))
 
+           -- Special capabilities reads and writes
+           case '00000    cd     s 01101 111111'   => CReadHwr(cd, s)
+           case '00000    cb     s 01110 111111'   => CWriteHwr(cb, s)
+
            -- Fast Register-Clearing Instructions
            case '01111 00000               mask'   => ClearLo(mask)
            case '01111 00001               mask'   => ClearHi(mask)
