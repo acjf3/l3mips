@@ -1076,7 +1076,7 @@ define COP2 > CHERICOP2 > CBuildCap (cd::reg, cb::reg, ct::reg) =
     {
         var new_cap = CAPR(cb);
         raw = CAPR(ct);
-        new_cap  <- setOffset(new_cap, getBase(raw));
+        new_cap  <- setOffset(new_cap, getBase(raw) - getBase(CAPR(cb)));
         new_cap  <- setBounds(new_cap, getLength(raw));
         new_cap  <- setPerms(new_cap, getPerms(raw));
         new_cap  <- setUPerms(new_cap, getUPerms(raw));
