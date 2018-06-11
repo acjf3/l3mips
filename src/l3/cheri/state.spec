@@ -63,6 +63,10 @@ unit dumpCRegs () =
     mark_log (0, "DEBUG CAP REG " :
         (if i<10 then " " else "") : [[i]::nat] :
         "\t" : log_cap_write(c_capr([i])))
+  ; for i in 0 .. 31 do
+    mark_log (0, "DEBUG CAP HWREG " :
+        (if i<10 then " " else "") : [[i]::nat] :
+        "\t" : log_cap_write(c_scapr([i])))
 }
 
 component CAPR (n::reg) :: Capability
