@@ -751,6 +751,7 @@ define Load > LWR (base::reg, rt::reg, offset::bits(16)) =
    vAddr = getVirtualAddress(SignExtend(offset) + GPR(base));
    byte = vAddr<1:0> ?? BigEndianCPU^2;
    word = vAddr<2:2> ?? BigEndianCPU;
+   vAddr = if BigEndianMem then vAddr && ~0b11 else vAddr;
    memdoubleword =
       LoadMemory (WORD, WORD - ('0' : byte), false, vAddr, false);
    when not exceptionSignalled do
@@ -804,6 +805,7 @@ define Load > LDR (base::reg, rt::reg, offset::bits(16)) =
 {
    vAddr = getVirtualAddress(SignExtend(offset) + GPR(base));
    byte = vAddr<2:0> ?? BigEndianCPU^3;
+   vAddr = if BigEndianMem then vAddr && ~0b111 else vAddr;
    memdoubleword =
     LoadMemory (DOUBLEWORD, DOUBLEWORD - byte, false, vAddr, false);
    when not exceptionSignalled do
