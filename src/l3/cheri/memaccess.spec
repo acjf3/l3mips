@@ -98,7 +98,7 @@ unit watchForCapStore (addr::bits(40), cap::Capability) = match watchPaddr
 
 -- virtual address computation
 vAddr getVirtualAddress (addr::bits(64)) =
-  addr + getBase(CAPR(0)) + getOffset(CAPR(0))
+  addr + getBase(DDC) + getOffset(DDC)
 
 -----------------
 -- Data accesses
@@ -166,16 +166,16 @@ dword LoadMemoryCap (MemType::bits(3), needAlign::bool, vAddr::vAddr, link::bool
 
 dword LoadMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool, vAddr::vAddr, link::bool) =
 {
-    capr0 = CAPR(0);
-    if not getTag(capr0)
+    cap = DDC;
+    if not getTag(cap)
         then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown("mem-data"))}
-    else if getSealed(capr0)
+    else if getSealed(cap)
         then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown("mem-data"))}
-    else if not getPerms(capr0).Permit_Load
+    else if not getPerms(cap).Permit_Load
         then {SignalCapException(capExcPermLoad, 0); UNKNOWN(next_unknown("mem-data"))}
     else
     {
-       base, len = getBaseAndLength(capr0);
+       base, len = getBaseAndLength(cap);
        if vAddr <+ base
           then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("mem-data"))}
        else if ('0':vAddr) + ZeroExtend(AccessLength) + 1 >+ ('0':base) + ('0':len)
@@ -301,16 +301,16 @@ bool StoreMemoryCap (MemType::bits(3), AccessLength::bits(3), MemElem::dword, ne
 bool StoreMemory (MemType::bits(3), AccessLength::bits(3), needAlign::bool,
                   MemElem::dword, vAddr::vAddr, cond::bool) =
 {
-    capr0 = CAPR(0);
-    if not getTag(capr0)
+    cap = DDC;
+    if not getTag(cap)
         then {SignalCapException(capExcTag,0); UNKNOWN(next_unknown("sc-success"))}
-    else if getSealed(capr0)
+    else if getSealed(cap)
         then {SignalCapException(capExcSeal,0); UNKNOWN(next_unknown("sc-success"))}
-    else if not getPerms(capr0).Permit_Store
+    else if not getPerms(cap).Permit_Store
         then {SignalCapException(capExcPermStore, 0); UNKNOWN(next_unknown("sc-success"))}
     else
     {
-        base, len = getBaseAndLength(capr0);
+        base, len = getBaseAndLength(cap);
         if vAddr <+ base
             then {SignalCapException(capExcLength,0); UNKNOWN(next_unknown("sc-success"))}
         else if ('0':vAddr) + ZeroExtend(AccessLength) + 1 >+ ('0':base) + ('0':len)
