@@ -11,7 +11,10 @@ unit COP2Init () =
     defaultCapCause.ExcCode <- 0;
     defaultCapCause.RegNum <- 0;
     capcause <- defaultCapCause;
+    for i in 0 .. 31 do CAPR([i]) <- nullCap;
+    for i in 0 .. 31 do SCAPR([i]) <- nullCap;
     PCC <- defaultCap;
-    for i in 0 .. 31 do CAPR([i]) <- defaultCap;
-    for i in 0 .. 31 do SCAPR([i]) <- defaultCap
+    KCC <- defaultCap;
+    EPCC <- defaultCap;
+    DDC <- defaultCap
 }

@@ -63,7 +63,7 @@ unit dumpCRegs () =
 
 component CAPR (n::reg) :: Capability
 {
-    value = c_capr(n)
+    value = if n == 0 then nullCap else c_capr(n)
     assign value =
     {
         c_capr(n) <- value;
@@ -91,6 +91,24 @@ component PCC :: Capability
     }
 }
 
+component RCC :: Capability
+{
+    value = CAPR(17)
+    assign value = CAPR(17) <- value
+}
+
+component IDC :: Capability
+{
+    value = CAPR(26)
+    assign value = CAPR(26) <- value
+}
+
+component DDC :: Capability
+{
+    value = SCAPR(0)
+    assign value = SCAPR(0) <- value
+}
+
 component TLSC :: Capability
 {
     value = SCAPR(1)
@@ -115,42 +133,20 @@ component KR2C :: Capability
     assign value = SCAPR(23) <- value
 }
 
-component DDC :: Capability
-{
-    value = CAPR(0)
-    assign value = CAPR(0) <- value
-}
-
-component RCC :: Capability
-{
-    value = CAPR(17)
-    assign value = CAPR(17) <- value
-}
-
-component IDC :: Capability
-{
-    value = CAPR(26)
-    assign value = CAPR(26) <- value
-}
-
 component KCC :: Capability
 {
-    value = CAPR(29)
-    assign value = CAPR(29) <- value
+    value = SCAPR(29)
+    assign value = SCAPR(29) <- value
 }
 
 component KDC :: Capability
 {
-    value = CAPR(30)
-    assign value = CAPR(30) <- value
+    value = SCAPR(30)
+    assign value = SCAPR(30) <- value
 }
 
 component EPCC :: Capability
 {
-    value = CAPR(31)
-    assign value = CAPR(31) <- value
+    value = SCAPR(31)
+    assign value = SCAPR(31) <- value
 }
-
-bool allow_system_reg_access(p::Perms, r::reg) =
-  if r >=+ 27 and not p.Access_System_Registers then false
-  else true
