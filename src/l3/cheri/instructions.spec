@@ -1313,12 +1313,9 @@ define COP2 > CHERICOP2 > CCallFast (cs::reg, cb::reg) =
         SignalCapException(capExcLength,cs)
     else
     {
-        CheckBranch;
-        new_PCC = setType(setSealed(CAPR(cs), false),0);
-        BranchToPCC <- Some (getOffset(CAPR(cs)), new_PCC);
-        CCallBranch <- true;
-        new_IDC = setSealed(CAPR(cb), false);
-        IDC <- setType(new_IDC, 0)
+        PC <- getOffset(CAPR(cs));
+        PCC <- setType(setSealed(CAPR(cs), false),0);
+        IDC <- setType(setSealed(CAPR(cb), false), 0)
     }
 
 -----------------------------------
