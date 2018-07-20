@@ -190,7 +190,7 @@ component CPR (n::nat, reg::bits(5), sel::bits(3)) :: dword
                             CP0.Cause.IP<7> <- false;
                             CP0.Cause.TI <- false
                           }
-         case 0, 12, 0 => CP0.&Status <- value<31:0>
+         case 0, 12, 0 => { CP0.&Status <- value<31:0>; CP0.Status.RE <- false } -- force RE to False
          case 0, 13, 0 => CP0.Cause.IP<1:0> <- value<9:8>
          case 0, 14, 0 => CP0.EPC <- value
          case 0, 16, 0 => CP0.Config.K0 <- value<2:0>

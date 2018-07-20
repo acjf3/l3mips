@@ -72,6 +72,7 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Status.KX <- true;
    CP0.Status.SX <- true;
    CP0.Status.UX <- true;
+   CP0.Status.RE <- false;
    CP0.Count <- 0;
    CP0.Compare <- 0;
    CP0.PRId <- 0x400;           -- processor ID
