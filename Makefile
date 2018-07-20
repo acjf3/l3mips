@@ -114,7 +114,13 @@ else
   endif
 endif
 
-L3SRCBASE+=mips-sml.spec
+L3SRCBASE+=mips-CP0.spec
+L3SRCBASE+=mips-utils.spec
+ifdef CAP
+L3SRCBASE+=cheri/cop-access.spec
+else
+L3SRCBASE+=mips-cop-access.spec
+endif
 
 ##################################
 # Coprocessor 1 (Floating Point) #

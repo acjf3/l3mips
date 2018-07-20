@@ -1002,7 +1002,7 @@ define SYSCALL = SignalException (Sys)
 define CP > MTC0 (rt::reg, rd::reg, sel::bits(3)) =
    -- Will need adapting for EntryLo1 and EntryLo0
    if CP0.Status.CU0 or KernelMode then
-      CPR (0, rd, sel) <- GPR(rt)
+      mtc (0, rd, sel, rt)
    else
       SignalException (CpU)
 
@@ -1012,7 +1012,7 @@ define CP > MTC0 (rt::reg, rd::reg, sel::bits(3)) =
 -----------------------------------
 define CP > DMTC0 (rt::reg, rd::reg, sel::bits(3)) =
    if CP0.Status.CU0 or KernelMode then
-      CPR (0, rd, sel) <- GPR(rt)
+      dmtc (0, rd, sel, rt)
    else
       SignalException (CpU)
 
@@ -1023,7 +1023,7 @@ define CP > DMTC0 (rt::reg, rd::reg, sel::bits(3)) =
 define CP > MFC0 (rt::reg, rd::reg, sel::bits(3)) =
    -- Will need adapting for EntryLo1 and EntryLo0; see manual entry for MFC0
    if CP0.Status.CU0 or KernelMode then
-      GPR(rt) <- SignExtend (CPR (0, rd, sel)<31:0>)
+      mfc (0, rd, sel, rt)
    else
       SignalException (CpU)
 
@@ -1033,7 +1033,7 @@ define CP > MFC0 (rt::reg, rd::reg, sel::bits(3)) =
 -----------------------------------
 define CP > DMFC0 (rt::reg, rd::reg, sel::bits(3)) =
    if CP0.Status.CU0 or KernelMode then
-      GPR(rt) <- CPR (0, rd, sel)
+      dmfc (0, rd, sel, rt)
    else
       SignalException (CpU)
 

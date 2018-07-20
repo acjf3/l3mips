@@ -173,22 +173,17 @@ unit CheckBranch =
 define ERET =
 {
    CheckBranch;
-   if CP0.Status.CU0 or KernelMode then
+   if getPerms(PCC).Access_System_Registers then
    {
-      if CP0.Status.ERL then
+      if CP0.Status.CU0 or KernelMode then
       {
-          PC <- CP0.ErrorEPC - 4;
-          CP0.Status.ERL <- false
+         PC <- if CP0.Status.ERL then CP0.ErrorEPC - 4 else CP0.EPC - 4;
+         CP0.Status.EXL <- false;
+         LLbit <- Some (false);
+         -- move EPCC to PCC
+         PCC <- EPCC
       }
-      else
-      {
-          PC <- CP0.EPC - 4;
-          CP0.Status.EXL <- false
-      };
-      LLbit <- Some (false);
-      -- move EPCC to PCC
-      PCC <- EPCC
+      else SignalException (CpU)
    }
-   else
-      SignalException (CpU)
+   else SignalCapException_noReg(capExcAccessSysReg)
 }

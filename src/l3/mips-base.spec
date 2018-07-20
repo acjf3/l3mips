@@ -4,6 +4,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
+declare done :: bool   -- Flag to request termination of the simulation
+
 --================================================
 -- The register state space
 --================================================

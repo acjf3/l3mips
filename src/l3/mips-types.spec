@@ -15,6 +15,10 @@ type dword  = bits(64)
 type vAddr  = bits(64)
 type pAddr  = bits(40)
 
+type mAddr = bits(37)
+
+nat PSIZE = 40         -- 40-bit physical memory
+
 exception UNPREDICTABLE :: string
 
 --------------------------------------------------
