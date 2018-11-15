@@ -224,10 +224,12 @@ Capability setSealed (cap::Capability, sealed::bool) =
         case Sealed => when not sealed do
         {
             e = cap.bounds.exp;
-            lowbits`12 = cap.address<11+e:e>;
+            --lowbits`12 = cap.address<11+e:e>;
             new_cap.format <- if e == 0 then Exp0 else EmbeddedExp;
-            new_cap.bounds.topBits<11:0>  <- lowbits;
-            new_cap.bounds.baseBits<11:0> <- lowbits
+            --new_cap.bounds.topBits<11:0>  <- lowbits;
+            --new_cap.bounds.baseBits<11:0> <- lowbits
+            new_cap.bounds.topBits<11:0>  <- 0;
+            new_cap.bounds.baseBits<11:0> <- 0
         }
         case _ => when sealed do
         {
