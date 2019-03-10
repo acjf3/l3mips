@@ -117,6 +117,8 @@ register ConfigRegister2 :: word
 register ConfigRegister3 :: word
 {
    31 : M           -- Continuation (1 if config register 4 exists)
+   27 : BP          -- BadInstrP register implemented?
+   26 : BI          -- BadInstr register implemented?
    13 : ULRI        -- UserLocal register implemented?
    10 : DSPP        -- MIPS DSPASE implemented?
     7 : LPA         -- Large physical addr support and page grain reg present?

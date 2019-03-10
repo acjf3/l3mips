@@ -46,7 +46,9 @@ unit initMips (pc::nat, uart::nat, rdhwr_extra::bool) =
    CP0.Config2.SA <- [L2WAYS-1];               -- Secondary cache associativity
 
    -- Configuration register 3 (mimic BERI)
-   CP0.Config3.M  <- true;      -- true if config register 4 exists
+   CP0.Config3.M    <- true;    -- true if config register 4 exists
+   CP0.Config3.BP   <- true;    -- BadInstrP implemented?
+   CP0.Config3.BI   <- true;    -- BadInstr implemented?
    CP0.Config3.ULRI <- true;    -- UserLocal register implemented?
    CP0.Config3.DSPP <- false;   -- MIPS DSPASE implemented?
    CP0.Config3.LPA  <- false;   -- Large physical addr support and
