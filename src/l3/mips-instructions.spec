@@ -1076,7 +1076,7 @@ define Branch > BEQ (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) == GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BNE rs, rt, offset
@@ -1085,7 +1085,7 @@ define Branch > BNE (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) <> GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BLEZ rs, offset
@@ -1094,7 +1094,7 @@ define Branch > BLEZ (rs::reg, offset::bits(16)) =
    if GPR(rs) <= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BGTZ rs, offset
@@ -1103,7 +1103,7 @@ define Branch > BGTZ (rs::reg, offset::bits(16)) =
    if GPR(rs) > 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BLTZ rs, offset
@@ -1112,7 +1112,7 @@ define Branch > BLTZ (rs::reg, offset::bits(16)) =
    if GPR(rs) < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BGEZ rs, offset
@@ -1121,7 +1121,7 @@ define Branch > BGEZ (rs::reg, offset::bits(16)) =
    if GPR(rs) >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 
 -----------------------------------
 -- BLTZAL rs, offset
@@ -1133,7 +1133,7 @@ define Branch > BLTZAL (rs::reg, offset::bits(16)) =
    if temp < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 }
 
 -----------------------------------
@@ -1146,7 +1146,7 @@ define Branch > BGEZAL (rs::reg, offset::bits(16)) =
    if temp >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-      CheckBranch
+      BranchNotTaken
 }
 
 -----------------------------------
@@ -1156,10 +1156,7 @@ define Branch > BEQL (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) == GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BNEL rs, rt, offset
@@ -1168,10 +1165,7 @@ define Branch > BNEL (rs::reg, rt::reg, offset::bits(16)) =
    if GPR(rs) <> GPR(rt) then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BLEZL rs, offset
@@ -1180,10 +1174,7 @@ define Branch > BLEZL (rs::reg, offset::bits(16)) =
    if GPR(rs) <= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BGTZL rs, offset
@@ -1192,10 +1183,7 @@ define Branch > BGTZL (rs::reg, offset::bits(16)) =
    if GPR(rs) > 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BLTZL rs, offset
@@ -1204,10 +1192,7 @@ define Branch > BLTZL (rs::reg, offset::bits(16)) =
    if GPR(rs) < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BGEZL rs, offset
@@ -1216,10 +1201,7 @@ define Branch > BGEZL (rs::reg, offset::bits(16)) =
    if GPR(rs) >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 
 -----------------------------------
 -- BLTZALL rs, offset
@@ -1231,10 +1213,7 @@ define Branch > BLTZALL (rs::reg, offset::bits(16)) =
    if temp < 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 }
 
 -----------------------------------
@@ -1247,10 +1226,7 @@ define Branch > BGEZALL (rs::reg, offset::bits(16)) =
    if temp >= 0 then
       BranchTo <- Some (PC + 4 + SignExtend (offset) << 2)
    else
-   {
-      CheckBranch;
-      PC <- PC + 4
-   }
+      BranchLikelyNotTaken
 }
 
 ---------------

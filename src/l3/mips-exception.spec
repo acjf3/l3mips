@@ -82,6 +82,20 @@ unit SignalCP2UnusableException = {CP0.Cause.CE <- '10'; SignalException(CpU)}
 unit CheckBranch =
    when IsSome (BranchDelay) do #UNPREDICTABLE("Not permitted in delay slot")
 
+unit BranchNotTaken =
+{
+   CheckBranch;
+   -- The instruction after a branch is considered to be in a branch delay slot,
+   -- even if the branch is not taken.
+   BranchTo <- Some (PC + 8)
+}
+
+unit BranchLikelyNotTaken =
+{
+   CheckBranch;
+   PC <- PC + 4
+}
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------
