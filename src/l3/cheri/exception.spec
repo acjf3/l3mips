@@ -169,6 +169,20 @@ unit SignalCapException_noReg (capException::CapExceptionType) =
 unit CheckBranch =
    when IsSome (BranchDelay) or IsSome(BranchDelayPCC) do #UNPREDICTABLE("Not permitted in delay slot")
 
+unit BranchNotTaken =
+{
+   CheckBranch;
+   -- The instruction after a branch is considered to be in a branch delay slot,
+   -- even if the branch is not taken.
+   BranchTo <- Some (PC + 8)
+}
+
+unit BranchLikelyNotTaken =
+{
+   CheckBranch;
+   PC <- PC + 4
+}
+
 -----------------------------------
 -- ERET instruction
 -----------------------------------
