@@ -25,7 +25,8 @@ component CP0R (reg::bits(5), sel::bits(3)) :: dword
          case  6, 0 => [CP0.&Wired]
          case  7, 0 => [CP0.&HWREna]
          case  8, 0 =>  CP0.BadVAddr
-         case  8, 1 => [CP0.EInstr]
+         case  8, 1 => [CP0.BadInstr]
+         case  8, 2 => [CP0.BadInstrP]
          case  9, 0 => [CP0.Count]
          case 10, 0 =>  CP0.&EntryHi
          case 11, 0 => [CP0.Compare]

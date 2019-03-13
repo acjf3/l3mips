@@ -171,44 +171,45 @@ register HWREna :: word
 
 record CP0
 {
-   Index    :: Index           -- 0   Index to TLB array
-   Random   :: Random          -- 1   Pseudorandom pointer to TLB array
-   EntryLo0 :: EntryLo         -- 2   Low half of TLB entry for even VPN
-   EntryLo1 :: EntryLo         -- 3   Low half of TLB entry for odd VPN
-   Context  :: Context         -- 4   Kernel virtual page table entry (PTE)
-   UsrLocal :: dword           -- 4   UserLocal register
-   PageMask :: PageMask        -- 5   TLB page mask
-   Wired    :: Wired           -- 6   Number of wired TLB entries
-   HWREna   :: HWREna          -- 7   See RDHWR instruction
-   BadVAddr :: dword           -- 8   Bad virtual address
-   EInstr   :: word            -- 8   Selector 1, Instruction cause of the exception
-   Count    :: word            -- 9   Timer count
-   EntryHi  :: EntryHi         -- 10  High half of TLB entry
-   Compare  :: word            -- 11  Timer compare
-   Status   :: StatusRegister  -- 12  Status register
-   Cause    :: CauseRegister   -- 13  Cause of last exception
-   EPC      :: dword           -- 14  Exception program counter
-   PRId     :: word            -- 15  Processor revision identifier
-   Config   :: ConfigRegister  -- 16  Configuration register
-   Config1  :: ConfigRegister1 -- 16  Configuration register 1
-   Config2  :: ConfigRegister2 -- 16  Configuration register 2
-   Config3  :: ConfigRegister3 -- 16  Configuration register 3
-   Config6  :: ConfigRegister6 -- 16  Configuration register 6
-   LLAddr   :: dword           -- 17  Load linked address
--- WatchLo  :: word            -- 18  Memory reference trap address low bits
--- WatchHi  :: word            -- 19  Memory reference trap address high bits
-   XContext :: XContext        -- 20  PTE entry in 64-bit mode
--- Reserved                    -- 21
--- Implementation dependent    -- 22
-   Debug    :: word            -- 23  EJTAG Debug register
--- DEPC     :: word            -- 24  Program counter EJTAG debug exception
--- PerfCnt  :: word            -- 25  Performance counter interface
-   ErrCtl   :: word            -- 26  Error Control
--- CacheErr :: word            -- 27  Cache error and status register
--- TagLo    :: word            -- 28  Cache tag register
--- TagHi    :: word            -- 29  Cache tag register
-   ErrorEPC :: dword           -- 30  Error exception program counter
--- KScratch :: word            -- 31  Scratch Registers for Kernel Mode
+   Index     :: Index           -- 0   Index to TLB array
+   Random    :: Random          -- 1   Pseudorandom pointer to TLB array
+   EntryLo0  :: EntryLo         -- 2   Low half of TLB entry for even VPN
+   EntryLo1  :: EntryLo         -- 3   Low half of TLB entry for odd VPN
+   Context   :: Context         -- 4   Kernel virtual page table entry (PTE)
+   UsrLocal  :: dword           -- 4   UserLocal register
+   PageMask  :: PageMask        -- 5   TLB page mask
+   Wired     :: Wired           -- 6   Number of wired TLB entries
+   HWREna    :: HWREna          -- 7   See RDHWR instruction
+   BadVAddr  :: dword           -- 8   Bad virtual address
+   BadInstr  :: word            -- 8   Selector 1, Instruction cause of the exception
+   BadInstrP :: word            -- 8   Selector 2, Branch before exception cause in delay slot
+   Count     :: word            -- 9   Timer count
+   EntryHi   :: EntryHi         -- 10  High half of TLB entry
+   Compare   :: word            -- 11  Timer compare
+   Status    :: StatusRegister  -- 12  Status register
+   Cause     :: CauseRegister   -- 13  Cause of last exception
+   EPC       :: dword           -- 14  Exception program counter
+   PRId      :: word            -- 15  Processor revision identifier
+   Config    :: ConfigRegister  -- 16  Configuration register
+   Config1   :: ConfigRegister1 -- 16  Configuration register 1
+   Config2   :: ConfigRegister2 -- 16  Configuration register 2
+   Config3   :: ConfigRegister3 -- 16  Configuration register 3
+   Config6   :: ConfigRegister6 -- 16  Configuration register 6
+   LLAddr    :: dword           -- 17  Load linked address
+-- WatchLo   :: word            -- 18  Memory reference trap address low bits
+-- WatchHi   :: word            -- 19  Memory reference trap address high bits
+   XContext  :: XContext        -- 20  PTE entry in 64-bit mode
+-- Reserved                     -- 21
+-- Implementation dependent     -- 22
+   Debug     :: word            -- 23  EJTAG Debug register
+-- DEPC      :: word            -- 24  Program counter EJTAG debug exception
+-- PerfCnt   :: word            -- 25  Performance counter interface
+   ErrCtl    :: word            -- 26  Error Control
+-- CacheErr  :: word            -- 27  Cache error and status register
+-- TagLo     :: word            -- 28  Cache tag register
+-- TagHi     :: word            -- 29  Cache tag register
+   ErrorEPC  :: dword           -- 30  Error exception program counter
+-- KScratch  :: word            -- 31  Scratch Registers for Kernel Mode
 }
 
 -- Memory types
