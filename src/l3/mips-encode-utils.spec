@@ -40,7 +40,7 @@ inline string c (n::reg) = ", " : reg_name(n)
 string ihex (n::bits(N)) = (if n <+ 10 then "" else "0x") : ToLower([n])
 inline string ai (n::bits(N)) = ihex([n]`32 << 2)
 inline string lai (n::bits(N)) = ihex([n + 1]`32 << 2)
-inline string oi (n::bits(N)) = if n == 0 then "" else ihex(n)
+inline string oi (n::bits(N)) = if n == 0 then "" else ", " : ihex(n)
 inline string mnemonic (s::string) = PadRight (#" ", 12, s : " ")
 
 string op1i (s::string, n::bits(N)) = mnemonic(s) : ihex(n)
