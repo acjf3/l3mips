@@ -38,13 +38,15 @@ bits(5) ExceptionCode (ExceptionType::ExceptionType) =
 
 unit SignalException (ExceptionType::ExceptionType) =
 {
+   CP0.BadInstrP <- UNKNOWN(next_unknown("BadInstrP"));
    when not CP0.Status.EXL do
    {
       if IsSome (BranchDelay) then
       {
          mark_log (2, "EPC <- ":hex (PC - 4):" (in branch delay slot => PC - 4 )");
          CP0.EPC <- PC - 4;
-         CP0.Cause.BD <- true
+         CP0.Cause.BD <- true;
+         when IsSome(lastInst) do CP0.BadInstrP <- ValOf(lastInst)
       }
       else
       {
@@ -59,7 +61,7 @@ unit SignalException (ExceptionType::ExceptionType) =
                      0x080`30
                   else
                      0x180;
-   when IsSome(currentInst) do CP0.EInstr <- ValOf(currentInst);
+   when IsSome(currentInst) do CP0.BadInstr <- ValOf(currentInst);
    CP0.Cause.ExcCode <- ExceptionCode (ExceptionType);
    CP0.Status.EXL <- true;
    vectorBase = if CP0.Status.BEV then

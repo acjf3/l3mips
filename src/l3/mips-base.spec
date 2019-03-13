@@ -39,6 +39,7 @@ declare {
   c_state     :: procState
   instCnt     :: nat             -- Instruction counter
   currentInst :: bits(32) option -- Current instruction
+  lastInst    :: bits(32) option -- Last instruction
   totalCore   :: nat             -- Total amount of core(s)
   procID      :: id              -- ID of the core executing current instruction
 }

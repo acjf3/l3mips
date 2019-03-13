@@ -44,5 +44,6 @@ unit Next =
         case _ => #UNPREDICTABLE("Branch follows branch")
     };
     exceptionSignalled <- false;
-    CP0.Count <- CP0.Count + 1
+    CP0.Count <- CP0.Count + 1;
+    lastInst <- currentInst
 }
