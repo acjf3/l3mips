@@ -97,7 +97,10 @@ component CP0R (reg::bits(5), sel::bits(3)) :: dword
          case 23, 0 => {CP0.Debug <- value<31:0>; done <- true}
          case 26, 0 => {CP0.ErrCtl <- value<31:0>; dumpRegs()}
          case 30, 0 => CP0.ErrorEPC <- value
-         case _ => unmark_log (2)
+         case _ => {
+                     unmark_log (2);
+                     #UNPREDICTABLE("Write to unsupported CP0 register")
+                   }
       }
    }
 }
