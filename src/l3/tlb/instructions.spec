@@ -107,7 +107,11 @@ define TLBWR =
       j = CP0.EntryHi.VPN2<7:0>;
       match TLB_direct (j)
       {
-          case Some (old) => TLB_assoc ([CP0.Random.Random]) <- Some (old)
+          case Some (old) =>
+             {
+                TLB_next_random ();
+                TLB_assoc ([CP0.Random.Random]) <- Some (old)
+             }
           case _ => nothing
       };
       TLB_direct (j) <- Some (CP0TLBEntry ())
@@ -115,5 +119,6 @@ define TLBWR =
   else
   {
       j = CP0.Random.Random;
-      TLB_assoc ([j]) <- Some (CP0TLBEntry ())
+      TLB_assoc ([j]) <- Some (CP0TLBEntry ());
+      TLB_next_random ()
   }

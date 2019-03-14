@@ -150,3 +150,10 @@ nat option checkMask (mask::bits(12)) = match mask
 
 unit check_cca (cca::bits(3)) =
   when cca in set {0, 1, 7} do #UNPREDICTABLE("CCA " : [cca] : " Reserved")
+
+unit TLB_next_random () =
+   CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired then
+                           [TLBAssocEntries - 1]
+                        else
+                           CP0.Random.Random - 1
+

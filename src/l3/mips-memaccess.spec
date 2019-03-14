@@ -215,11 +215,6 @@ unit Fetch =
 {
    currentInst <- None;
 
-   CP0.Random.Random <- if CP0.Random.Random == CP0.Wired.Wired then
-                           [TLBAssocEntries - 1]
-                        else
-                           CP0.Random.Random - 1;
-
    when CP0.Compare == CP0.Count do
    {
       CP0.Cause.IP<7> <- true
