@@ -3,10 +3,9 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-bool hasCP2 = true
-
 unit COP2Init () =
 {
+    hasCP2 <- true;
     var defaultCapCause :: CapCause;
     defaultCapCause.ExcCode <- 0;
     defaultCapCause.RegNum <- 0;

@@ -6,6 +6,13 @@
 
 declare done :: bool   -- Flag to request termination of the simulation
 
+--------------------------------------------------
+-- Coprocessor present
+--------------------------------------------------
+
+declare hasCP2 :: bool
+declare hasCP1 :: bool
+
 --================================================
 -- The register state space
 --================================================

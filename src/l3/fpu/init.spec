@@ -3,10 +3,9 @@
 -- (c) 2015 Michael Roe
 ---------------------------------------------------------------------------
 
-bool hasCP1 = true
-
 unit COP1Init() =
 {
+    hasCP1 <- true;
     fcsr.FS <- false;
     fcsr.FCC <- 0;
     fcsr.ABS2008 <- false;

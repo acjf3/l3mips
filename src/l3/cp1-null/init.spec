@@ -3,6 +3,4 @@
 -- (c) 2015 Michael Roe
 ---------------------------------------------------------------------------
 
-bool hasCP1 = false
-
-unit COP1Init () = ()
+unit COP1Init () = hasCP1 <- false

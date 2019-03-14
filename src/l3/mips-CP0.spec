@@ -82,7 +82,12 @@ component CP0R (reg::bits(5), sel::bits(3)) :: dword
                          CP0.Cause.IP<7> <- false;
                          CP0.Cause.TI <- false
                        }
-         case 12, 0 => { CP0.&Status <- value<31:0>; CP0.Status.RE <- false } -- force RE to False
+         case 12, 0 => {
+                         CP0.&Status <- value<31:0>;
+                         CP0.Status.CU2 <- CP0.Status.CU2 and hasCP2;
+                         CP0.Status.CU1 <- CP0.Status.CU1 and hasCP1;
+                         CP0.Status.RE <- false -- force RE to False
+                       }
          case 13, 0 => CP0.Cause.IP<1:0> <- value<9:8>
          case 14, 0 => CP0.EPC <- value
          case 16, 0 => CP0.Config.K0 <- value<2:0>

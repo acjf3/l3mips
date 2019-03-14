@@ -3,6 +3,4 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-bool hasCP2 = false
-
-unit COP2Init () = ()
+unit COP2Init () = hasCP2 <- false
