@@ -3,4 +3,8 @@
 -- (c) Alexandre Joannou, University of Cambridge
 ---------------------------------------------------------------------------
 
-unit COP2Init () = hasCP2 <- false
+unit COP2Init () =
+{
+   hasCP2 <- false;
+   CP0.Config1.C2 <- false
+}

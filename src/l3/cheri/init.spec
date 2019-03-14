@@ -6,6 +6,7 @@
 unit COP2Init () =
 {
     hasCP2 <- true;
+    CP0.Config1.C2 <- true;
     var defaultCapCause :: CapCause;
     defaultCapCause.ExcCode <- 0;
     defaultCapCause.RegNum <- 0;
