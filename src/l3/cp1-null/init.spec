@@ -6,6 +6,7 @@
 unit COP1Init () =
 {
    hasCP1 <- false;
-   CP0.Config1.FP <- false
+   CP0.Config1.FP <- false;
+   CP0.Status.FR <- false
 }
 

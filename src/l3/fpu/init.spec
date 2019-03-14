@@ -7,6 +7,7 @@ unit COP1Init() =
 {
     hasCP1 <- true;
     CP0.Config1.FP <- true;
+    CP0.Status.FR <- true;
     fcsr.FS <- false;
     fcsr.FCC <- 0;
     fcsr.ABS2008 <- false;
