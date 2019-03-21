@@ -46,6 +46,35 @@ unit switchCoreTLB (i::id) =
    c_TLB_assoc <- all_TLB_assoc (i)
 }
 
+inline bool RangedMatchingEntry (e0::TLBEntry, e1::TLBEntry) =
+  if (e0.R == e1.R) and ((e0.G or e1.G) or e0.ASID == e1.ASID) then
+  {
+    nmask`27 = ~[e0.Mask] && ~[e1.Mask];
+    return (e0.VPN2 && nmask == e1.VPN2 && nmask)
+  }
+  else
+    false
+
+bits(TLBEntries) RangedLookupTLB (e::TLBEntry) =
+{
+    var matched :: bits(TLBEntries) = 0;
+    for i in 0 .. TLBAssocEntries - 1 do
+       match TLB_assoc ([i])
+       {
+          case Some (e1) =>
+             when RangedMatchingEntry (e, e1) do matched<i> <- true
+          case _ => matched<i> <- false
+       };
+    for i in 0 .. TLBDirectEntries - 1 do
+       match TLB_direct ([i])
+       {
+          case Some (e1) =>
+             when RangedMatchingEntry (e, e1) do matched<i+TLBAssocEntries> <- true
+          case _ => matched<i+TLBAssocEntries> <- false
+       };
+   return matched
+}
+
 inline bool MatchingEntry (r::bits(2), vpn2::bits(27), e::TLBEntry) =
   if e.R == r and (e.G or e.ASID == CP0.EntryHi.ASID) then
   {

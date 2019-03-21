@@ -75,20 +75,33 @@ define TLBWI =
       UNPREDICTABLE_TLB ();
       SignalException (MCheck)
   }
-  else if [CP0.Index.Index] < TLBAssocEntries then
-  {
-      i`4 = [CP0.Index.Index];
-      TLB_assoc (i) <- Some (CP0TLBEntry ())
-  }
-  else if [CP0.Index.Index] < TLBEntries then
-  {
-      j = CP0.EntryHi.VPN2<7:0>;
-      TLB_direct (j) <- Some (CP0TLBEntry ())
-  }
   else
   {
-      UNPREDICTABLE_TLB ();
-      SignalException (MCheck)
+    var matches = RangedLookupTLB(CP0TLBEntry ());
+    idx :: nat = if ([CP0.Index.Index] < TLBAssocEntries)
+                   then [CP0.Index.Index]
+                   else [CP0.EntryHi.VPN2<7:0>];
+    matches<idx> <- false;
+    if (matches != 0) then
+    {
+        UNPREDICTABLE_TLB ();
+        SignalException (MCheck)
+    }
+    else if [CP0.Index.Index] < TLBAssocEntries then
+    {
+        i`4 = [CP0.Index.Index];
+        TLB_assoc (i) <- Some (CP0TLBEntry ())
+    }
+    else if [CP0.Index.Index] < TLBEntries then
+    {
+        j = CP0.EntryHi.VPN2<7:0>;
+        TLB_direct (j) <- Some (CP0TLBEntry ())
+    }
+    else
+    {
+        UNPREDICTABLE_TLB ();
+        SignalException (MCheck)
+    }
   }
 
 -----------------------------------
@@ -98,6 +111,11 @@ define TLBWR =
   if !CP0.Status.CU0 and !KernelMode then
       SignalException(CpU)
   else if not IsSome(checkMask(CP0.PageMask.Mask)) then
+  {
+      UNPREDICTABLE_TLB ();
+      SignalException (MCheck)
+  }
+  else if (RangedLookupTLB(CP0TLBEntry ()) != 0) then
   {
       UNPREDICTABLE_TLB ();
       SignalException (MCheck)
