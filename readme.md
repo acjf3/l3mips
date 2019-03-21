@@ -1,7 +1,7 @@
 L3 MIPS
 =======
 
-A **MIPS ISA simulator** implemented in [L3](http://www.cl.cam.ac.uk/~acjf3/l3/ "L3: An ISA Specification Language").
+A **MIPS ISA simulator** implemented in [L3](https://acjf3.github.io/l3/index.html).
 The simulator also supports [CHERI](http://www.chericpu.org "Capability Hardware Enhanced RISC Instructions (CHERI) ") capability extensions.
 
 Getting started
