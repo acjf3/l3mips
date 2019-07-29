@@ -11,7 +11,8 @@ register UPerms :: bits (32)
 
 register Perms :: bits (32)
 {
-    31-11 : Reserved
+    31-12 : Reserved
+    11 : Permit_Set_CID
     10 : Access_System_Registers
      9 : Permit_Unseal
      8 : Permit_CCall

@@ -6,147 +6,107 @@
 -- types definitions
 --------------------------------------------------------------------------------
 
-type OType = bits(OTYPEWIDTH)
-record Bounds
-{
-    otype    :: OType
-    exp      :: nat
-    len19    :: bits(1)
-    topBits  :: bits(21)
-    baseBits :: bits(21)
-}
-
-construct Format {
-    Exp0,
-    EmbeddedExp,
-    Sealed
-}
+type OType = bits(18)
 
 record Capability
 {
-    tag      :: bool     -- 1-bit validity tag
-    uperms   :: UPerms   -- 4-bit user permissions
-    perms    :: Perms    -- 11-bit permissions
-    reserved :: bits(7)  -- 7-bit reserved
-    format   :: Format   -- 42-bit Format+Bounds field
-    bounds   :: Bounds   --
-    address  :: bits(64) -- 64-bit address
-}
-
--- helper functions
---------------------------------------------------------------------------------
-construct RepRegion {Low :: bits(21), Hi :: bits(21)}
-
-RepRegion * RepRegion * RepRegion getRepRegions (cap::Capability) =
-{
-    e   = cap.bounds.exp;
-    tb  = cap.bounds.topBits;
-    bb  = cap.bounds.baseBits;
-    ptr = cap.address<e+20:e>;
-    repBound`21 = (bb<20:18> - '001') : 0`18;
-    pr  = if ptr <+ repBound then Hi (ptr) else Low (ptr);
-    tr  = if tb  <+ repBound then Hi (tb)  else Low (tb);
-    br  = if bb  <+ repBound then Hi (bb)  else Low (bb);
-    (pr, tr, br)
-}
-
-inline bits(65) getBoundAux
-   (ptr::RepRegion, bound::RepRegion, addrAlign::bits(65), e::nat, s::nat) =
-    match (ptr, bound)
-    {
-        -- same region as ptr => no correction
-        case Low(_), Low(b) => addrAlign + [b] << e
-        case Hi(_) , Hi(b)  => addrAlign + [b] << e
-        -- region above ptr => add a region size
-        case Low(_), Hi(b)  => addrAlign + [b] << e + 1 << s
-        -- region below ptr => take away a region size
-        case Hi(_), Low(b)  => addrAlign + [b] << e - 1 << s
-    }
-
-bits(65) * bits(65) getBounds
-  (cap::Capability, ptr::RepRegion, bound1::RepRegion, bound2::RepRegion) =
-{
-    e = cap.bounds.exp;          -- exponent
-    s = e+21;                    -- region size
-    addr`65 = [cap.address];     -- address
-    addrAlign = addr >>+ s << s; -- aligned address
-    return (getBoundAux (ptr, bound1, addrAlign, e, s),
-            getBoundAux (ptr, bound2, addrAlign, e, s))
-}
-
-bits(64) * bits(64) * bits(64) getBaseTopLength (cap::Capability) =
-{
-    t, b = getBounds (cap, getRepRegions(cap));
-    len = t - b;
-    return ([b], [t], if len<64> then ~0 else [len])
+    tag       :: bool     -- 1-bit validity tag
+    uperms    :: UPerms   -- 4-bit user permissions
+    perms     :: Perms    -- 12-bit permissions
+    reserved  :: bits(2)  -- 2-bit reserved
+    internalE :: bool     -- are we using a non zero internal exponent
+    E         :: bits(6)  -- the internal exponent
+    B         :: bits(14) -- Base bits
+    T         :: bits(14) -- Top bits
+    otype     :: bits(18) -- object type
+    address   :: bits(64) -- 64-bit address
 }
 
 -- standard capabilities definitions
 --------------------------------------------------------------------------------
 
+bits(6)  resetE = 52
+bits(14) resetT = 0x1000 -- set the second to last bit (bit index 12)
+
 Capability defaultCap =
 {
     var new_cap :: Capability;
-    new_cap.tag      <- true;
-    new_cap.uperms   <- UPerms(~0);
-    new_cap.perms    <- Perms(0x7FF`32);
-    new_cap.reserved <- 0;
-    new_cap.format   <- EmbeddedExp;
-    new_cap.bounds.exp      <- 45;
-    new_cap.bounds.otype    <- 0;
-    new_cap.bounds.len19    <- 0;
-    new_cap.bounds.topBits  <- 0x080000;
-    new_cap.bounds.baseBits <- 0;
-    new_cap.address <- 0;
+    new_cap.tag       <- true;
+    new_cap.uperms    <- UPerms(~0);
+    new_cap.perms     <- Perms(~0);
+    new_cap.reserved  <- 0;
+    new_cap.internalE <- true;
+    new_cap.E         <- resetE;
+    new_cap.B         <- 0;
+    new_cap.T         <- resetT;
+    new_cap.otype     <- ~0;
+    new_cap.address   <- 0;
     new_cap
 }
 
 Capability nullCap =
 {
     var new_cap :: Capability;
-    new_cap.tag      <- false;
-    new_cap.uperms   <- UPerms(0);
-    new_cap.perms    <- Perms(0);
-    new_cap.reserved <- 0;
-    new_cap.format   <- EmbeddedExp;
-    new_cap.bounds.exp      <- 45;
-    new_cap.bounds.otype    <- 0;
-    new_cap.bounds.len19    <- 0;
-    new_cap.bounds.topBits  <- 0x080000;
-    new_cap.bounds.baseBits <- 0;
-    new_cap.address <- 0;
+    new_cap.tag       <- false;
+    new_cap.uperms    <- UPerms(0);
+    new_cap.perms     <- Perms(0);
+    new_cap.reserved  <- 0;
+    new_cap.internalE <- true;
+    new_cap.E         <- resetE;
+    new_cap.B         <- 0;
+    new_cap.T         <- resetT;
+    new_cap.otype     <- ~0;
+    new_cap.address   <- 0;
     new_cap
 }
 
+-- inner helpers
+--------------------------------------------------------------------------------
+
+bits(64) * bits(65) getCapBounds(cap::Capability) =
+{
+  -- Do address, base and top lie in the R aligned region above the one containing R?
+  R :: bits(3) = cap.B<13:11> - 0b001;
+  aHi :: int = if (cap.address >> ZeroExtend((cap.E + 11)))<2:0> <+ R then 1 else 0;
+  bHi :: int = if cap.B<13:11> <+ R then 1 else 0;
+  tHi :: int = if cap.T<13:11> <+ R then 1 else 0;
+  -- Compute region corrections for top and base relative to a
+  correction_base :: int = bHi - aHi;
+  correction_top  :: int = tHi - aHi;
+  a_top = cap.address >>+ ZeroExtend((cap.E + 14));
+  --
+  var base :: bits(65) = ([[[a_top]::nat] + correction_base] : cap.B) << ZeroExtend(cap.E);
+  var top  :: bits(65) = ([[[a_top]::nat] + correction_top]  : cap.T) << ZeroExtend(cap.E);
+  when (base<64> == true) do
+    top<64> <- (aHi == 1) and (tHi == 1);
+  (base<63:0>, top)
+}
 -- Interface
 --------------------------------------------------------------------------------
 
 bool getTag (cap::Capability) = cap.tag
 
-OType getType (cap::Capability) = match cap.format
-{
-    case Sealed => cap.bounds.otype
-    case _      => 0
-}
+OType getType (cap::Capability) = cap.otype
 
 UPerms getUPerms (cap::Capability) = cap.uperms
 
-Perms getPerms (cap::Capability) = Perms(SignExtend(cap.&perms<10:0>))
+Perms getPerms (cap::Capability) = Perms(SignExtend(cap.&perms<11:0>))
 
-bool getSealed (cap::Capability) = match cap.format
+bool getSealed (cap::Capability) = cap.otype != ~0
+
+bits(64) getBase (cap::Capability)   = {b,_ = getCapBounds(cap); b}
+
+bits(64) getTop (cap::Capability)    = {_,t = getCapBounds(cap); t<63:0>}
+
+bits(64) getLength (cap::Capability) =
 {
-    case Sealed => true
-    case _      => false
+  b,t = getCapBounds(cap);
+  len = (t - ZeroExtend(b));
+  if len >=+ [2**64] then ~0 else len<63:0>
 }
 
-bits(64) getBase (cap::Capability)   = {b,_,_ = getBaseTopLength(cap); b}
-
-bits(64) getTop (cap::Capability)    = {_,t,_ = getBaseTopLength(cap); t}
-
-bits(64) getLength (cap::Capability) = {_,_,l = getBaseTopLength(cap); l}
-
 bits(64) * bits(64) getBaseAndLength (cap::Capability) =
-{b,_,l = getBaseTopLength(cap); (b,l)}
+(getBase(cap), getLength(cap))
 
 bits(64) getOffset (cap::Capability) = cap.address - getBase(cap)
 
@@ -157,41 +117,55 @@ Capability setOffset (cap::Capability, offset::bits(64)) =
     new_cap
 }
 
-nat idxMSNZ (data::bits(64)) = if data == 0 then 0 else [Log2 (data)]
+nat idxMSNZ (data::bits(65)) = if data == 0 then 0 else [Log2 (data)]
+nat count_leading_zeros(data::bits(65)) = 64 - idxMSNZ(data)
 Capability setBounds (cap::Capability, length::bits(64)) =
 {
+    base   :: bits(65) = ZeroExtend(cap.address);
+    top    :: bits(65) = base + ZeroExtend(length);
+    newLen :: bits(65) = top - base;
+    e  :: nat  = 52 - count_leading_zeros(ZeroExtend(newLen<64:13>));
+    ie :: bool = (e != 0) or newLen<12>;
+
+    var Bbits :: bits(14) = [base];
+    var Tbits :: bits(14) = [top];
+    var lostSignificantBase :: bool = false;
+    var lostSignificantTop  :: bool = false;
+    var incE :: bool = false;
+
+    when ie do {
+      var B_ie :: bits(11) = [base >> [e + 3]];
+      var T_ie :: bits(11) = [top  >> [e + 3]];
+
+      maskLo :: bits(65) = ~(~0 << [e + 3]);
+      lostSignificantBase <- (base && maskLo) <> 0;
+      lostSignificantTop  <- (top  && maskLo) <> 0;
+
+      when lostSignificantTop do T_ie <- T_ie + 1;
+
+      len_ie = T_ie - B_ie;
+      when len_ie<10> do {
+        incE <- true;
+
+        lostSignificantBase <- lostSignificantBase or B_ie<0>;
+        lostSignificantTop  <- lostSignificantTop  or T_ie<0>;
+
+        B_ie <- [base >> [e + 4]];
+        incT :: bits(11) = if lostSignificantTop then 0x1 else 0x0;
+        T_ie <- [top >> [e + 4]] + incT
+      };
+
+      Bbits <- B_ie : 0b000;
+      Tbits <- T_ie : 0b000
+    };
     var new_cap = cap;
-    -- deriving new exponent
-    var e = idxMSNZ([length >>+ 20]);
-    -- deriving the new base
-    newBaseBits = cap.address<e+20:e>;
-    -- deriving the new top
-    newTop = ('0':cap.address) + ('0':length);
-    var newTopBits = newTop<e+20:e>;
-    -- fold the derived values back in new_cap
-    new_cap.bounds.exp      <- e;
-    new_cap.bounds.otype    <- 0;
-    new_cap.bounds.len19    <- [length<19>];
-    new_cap.bounds.topBits  <- newTopBits;
-    new_cap.bounds.baseBits <- newBaseBits;
-    if e == 0 then new_cap.format <- Exp0
-    else
-    {
-        -- round up if significant bits are lost
-        -- (note: e bits are shifted out, and 3 are stolen)
-        when (newTop && ~(~0 << (e+3))) <> 0 do
-            new_cap.bounds.topBits<20:3> <- new_cap.bounds.topBits<20:3> + 1;
-        new_cap.bounds.topBits<2:0>  <- 0;
-        new_cap.bounds.baseBits<2:0> <- 0;
-        new_cap.format               <- EmbeddedExp
-    };
-    -- overwrite new_cap if necessary
-    new_cap <- match cap.format
-    {
-        case Exp0        => if e == 0 then new_cap else UNKNOWN(next_unknown("capability"))
-        case EmbeddedExp => new_cap
-        case Sealed      => UNKNOWN(next_unknown("capability"))
-    };
+    new_cap.address <- [base];
+    new_cap.E <- if incE then [e + 1] else [e];
+    new_cap.B <- Bbits;
+    new_cap.T <- Tbits;
+    new_cap.internalE <- ie;
+    --exact = not(lostSignificantBase or lostSignificantTop);
+    --(exact, newCap)
     new_cap
 }
 
@@ -219,38 +193,15 @@ Capability setPerms (cap::Capability, perms::Perms) =
 Capability setSealed (cap::Capability, sealed::bool) =
 {
     var new_cap = cap;
-    match cap.format
-    {
-        case Sealed => when not sealed do
-        {
-            e = cap.bounds.exp;
-            --lowbits`12 = cap.address<11+e:e>;
-            new_cap.format <- if e == 0 then Exp0 else EmbeddedExp;
-            --new_cap.bounds.topBits<11:0>  <- lowbits;
-            --new_cap.bounds.baseBits<11:0> <- lowbits
-            new_cap.bounds.topBits<11:0>  <- 0;
-            new_cap.bounds.baseBits<11:0> <- 0
-        }
-        case _ => when sealed do
-        {
-            new_cap.format <- Sealed;
-            new_cap.bounds.topBits<11:0>  <- 0;
-            new_cap.bounds.baseBits<11:0> <- 0;
-            new_cap.bounds.otype <- 0
-        }
-    };
+    -- TODO
     new_cap
 }
 
-Capability setType (cap::Capability, otype::OType) = match cap.format
+Capability setType (cap::Capability, otype::OType) =
 {
-    case Sealed =>
-    {
-        var new_cap = cap;
-        new_cap.bounds.otype <- otype;
-        new_cap
-    }
-    case _ => cap
+  var new_cap = cap;
+  new_cap.otype <- otype;
+  new_cap
 }
 
 bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
@@ -262,17 +213,8 @@ bool canRepCap( cap::Capability,
                 newSealed::bool,
                 newOffset::bits(64)) =
 {
-    sealOk = if newSealed then cap.bounds.topBits<11:0> == 0 and cap.bounds.baseBits<11:0> == 0 else true;
-    e::nat         = cap.bounds.exp;              -- exponent
-    i::bits(64)    = newOffset - getOffset(cap);  -- increment
-    imid::bits(21) = i<e+20:e>;                   -- increment's mid bits (21 bits)
-    addr::bits(21) = cap.address<e+20:e>;         -- addr field mid bits (21 bits)
-    edge::bits(21) = (cap.bounds.baseBits<20:18> - '001') : 0`18; -- 1/8th of the representable space below the base
-    mask::bits(64) = ~[2**(e+21) - 1];
-    inRange = if i && mask == mask or i && mask == 0 then true else false;
-    inLimits = if i >= 0 then imid <+ (edge - addr - 1)
-               else imid >=+ (edge - addr) and edge != addr;
-    return ((inRange and inLimits) or e >= 45) and sealOk
+    -- TODO
+    return false
 }
 bool canRepOffset(cap::Capability, newOffset::bits(64)) =
     canRepCap(cap,getSealed(cap),newOffset)
@@ -298,26 +240,6 @@ bool canRepBounds(cap::Capability, newLength::bits(64)) =
 -- In memory representation
 --------------------------------------------------------------------------------
 
---                     Embedded Exp
--- 127___124_123_113_112_106_105___104___103________________________85_84_________________________64_
--- |        |       |       |   |                                     |                             |
--- | uperms | perms |  res  | 0 |len<19>|                    top<18:0>|                   base<20:0>| Exp0
--- | uperms | perms |  res  | 1 |   0   |             top<18:3>|e<5:3>|            base<20:3>|e<2:0>| EmbeddedExp
--- | uperms | perms |  res  | 1 |   1   |top<18:12>|otype<17:9>|e<5:3>|base<20:12>|otype<8:0>|e<2:0>| Sealed
--- |________|_______|_______|___|_____________________________________|_____________________________|
--- 63_______________________________________________________________________________________________0
--- |                                                                                                |
--- |                                              address                                           |
--- |________________________________________________________________________________________________|
-
--- reconstructing most significant top bits:
--- top<20:19> = base<20:19> + carry_out + lenMSB
---      where
---              carry_out = 1 if top<18:0> < base <18:0>
---                          0 otherwise
---              lenMSB    = len<19> if Exp0
---                             1    otherwise
-
 bits(4) encUPerms (up::UPerms) = &up<3:0>
 UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
 
@@ -325,77 +247,16 @@ bits(11) encPerms (p::Perms) = &p<10:0>
 Perms decPerms (p::bits(11)) = Perms(SignExtend(p))
 
 -- map exp 45 or 0b101101 to 0 representation
-bits(6) encExp (e::nat) =
-{
-    ebits::bits(6) = [e];
-    [~[ebits<5>]] : [ebits<4>] : ~ebits<3:2> : [ebits<1>] : ~[ebits<0>]
-}
-nat decExp (e::bits(6)) = [~[e<5>] : [e<4>] : ~e<3:2> : [e<1>] : ~[e<0>]]
-
-bits(42) encBounds (format::Format, bounds::Bounds) =
-{
-    e = encExp(bounds.exp);
-    otype = bounds.otype;
-    match format
-    {
-        case Exp0          => '0'  : bounds.len19 : bounds.topBits<18:0> : bounds.baseBits<20:0>
-        case EmbeddedExp   => '10' : bounds.topBits<18:3> : e<5:3> : bounds.baseBits<20:3> : e<2:0>
-        case Sealed        => '11' : bounds.topBits<18:12> : otype<17:9> : e<5:3> : bounds.baseBits<20:12> : otype<8:0> : e<2:0>
-    }
-}
-Format * Bounds decBounds (bounds :: bits(42)) =
-{
-    var f::Format;
-    var b::Bounds;
-    b.otype    <- 0;
-    b.exp      <- 0;
-    b.len19    <- 0;
-    b.topBits  <- 0;
-    b.baseBits <- 0;
-
-    f <- if not bounds<41> then Exp0
-            else if not bounds<40> then EmbeddedExp
-            else Sealed;
-
-    match f
-    {
-        case Exp0 => {
-            b.len19         <- [bounds<40>];
-            b.topBits<18:0> <- bounds<39:21>;
-            b.baseBits      <- bounds<20:0>
-        }
-        case EmbeddedExp => {
-            b.exp           <- decExp(bounds<23:21> : bounds<2:0>);
-            b.topBits<18:0> <- bounds<39:24> : 0`3;
-            b.baseBits      <- bounds<20:3> : 0`3
-        }
-        case Sealed => {
-            b.otype         <- bounds<32:24> : bounds<11:3>;
-            b.exp           <- decExp(bounds<23:21> : bounds<2:0>);
-            b.topBits<18:0> <- bounds<39:33> : 0`12;
-            b.baseBits      <- bounds<20:12> : 0`12
-        }
-    };
-    carry_out      = if b.topBits<18:0> < b.baseBits<18:0> then '01' else '00';
-    len_correction = match f { case Exp0 => '0':b.len19 case _ => '01'};
-    b.topBits<20:19> <- b.baseBits<20:19> + carry_out + len_correction;
-    (f,b)
-}
+bits(6) encExp (e::nat) = 0 -- TODO
+nat decExp (e::bits(6)) = 0 -- TODO
 
 CAPRAWBITS capToBits (cap :: Capability) =
-    cap.address:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:encBounds(cap.format,cap.bounds)
+    cap.address:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:0 -- TODO
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
 {
-    var new_cap :: Capability;
-    new_cap.tag      <- false;
-    new_cap.uperms   <- decUPerms(raw<63:60>);
-    new_cap.perms    <- decPerms(raw<59:49>);
-    new_cap.reserved <- raw<48:42>;
-    f,b = decBounds(raw<41:0>);
-    new_cap.format   <- f;
-    new_cap.bounds   <- b;
-    new_cap.address  <- raw<127:64>;
+    -- TODO
+    var new_cap :: Capability = defaultCap;
     new_cap
 }
 
@@ -411,21 +272,9 @@ else
 -- display and logging utils
 --------------------------------------------------------------------------------
 
-string log_cap_format (cap::Capability) = match cap.format
-{
-    case Exp0        => "Exp0"
-    case EmbeddedExp => "EmbeddedExp"
-    case Sealed      => "Sealed"
-}
-
 string log_cap_bounds (cap::Capability) =
 {
-    b = cap.bounds;
-    "{otype:":hex(b.otype):
-    " exp:":[b.exp]:
-    " len19:":hex(b.len19):
-    " topBits:":hex(b.topBits):
-    " baseBits:":hex(b.baseBits):"}"
+    "meh" -- TODO
 }
 
 string log_cap_inner_rep (cap::Capability) =
@@ -433,7 +282,6 @@ string log_cap_inner_rep (cap::Capability) =
     " uperms:":hex (cap.&uperms):
     " perms:":hex (cap.&perms):
     " reserved:":hex (cap.reserved):
-    " format:": log_cap_format(cap):
     " bounds:": log_cap_bounds(cap):
     " address:": hex (cap.address)
 
