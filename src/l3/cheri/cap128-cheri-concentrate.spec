@@ -14,11 +14,11 @@ record Capability
     uperms    :: UPerms   -- 4-bit user permissions
     perms     :: Perms    -- 12-bit permissions
     reserved  :: bits(2)  -- 2-bit reserved
+    otype     :: bits(18) -- object type
     internalE :: bool     -- are we using a non zero internal exponent
     E         :: bits(6)  -- the internal exponent
     B         :: bits(14) -- Base bits
     T         :: bits(14) -- Top bits
-    otype     :: bits(18) -- object type
     address   :: bits(64) -- 64-bit address
 }
 
@@ -193,7 +193,7 @@ Capability setPerms (cap::Capability, perms::Perms) =
 Capability setSealed (cap::Capability, sealed::bool) =
 {
     var new_cap = cap;
-    -- TODO
+    when not sealed do new_cap.otype <- ~0;
     new_cap
 }
 
@@ -211,11 +211,7 @@ bool isCapAligned (addr::bits(64)) = addr<3:0> == 0
 
 bool canRepCap( cap::Capability,
                 newSealed::bool,
-                newOffset::bits(64)) =
-{
-    -- TODO
-    return false
-}
+                newOffset::bits(64)) = true
 bool canRepOffset(cap::Capability, newOffset::bits(64)) =
     canRepCap(cap,getSealed(cap),newOffset)
 bool canRepSeal(cap::Capability, newSeal::bool) =
@@ -240,23 +236,31 @@ bool canRepBounds(cap::Capability, newLength::bits(64)) =
 -- In memory representation
 --------------------------------------------------------------------------------
 
-bits(4) encUPerms (up::UPerms) = &up<3:0>
-UPerms decUPerms (up::bits(4)) = UPerms(ZeroExtend(up))
+CAPRAWBITS rawCapBits (cap :: Capability) =
+{
+  uprms :: bits(4)  = cap.&uperms<3:0>;
+  prms  :: bits(12) = cap.&perms<11:0>;
+  ie    :: bits(1)  = if cap.internalE then '1' else '0';
+  base  = if cap.internalE then cap.B<13:3> : cap.E<2:0> else cap.B;
+  top   = if cap.internalE then cap.T<12:3> : cap.E<5:3> else cap.T<12:0>;
+  cap.address:uprms:prms:cap.reserved:cap.otype:ie:base:top
+}
 
-bits(11) encPerms (p::Perms) = &p<10:0>
-Perms decPerms (p::bits(11)) = Perms(SignExtend(p))
-
--- map exp 45 or 0b101101 to 0 representation
-bits(6) encExp (e::nat) = 0 -- TODO
-nat decExp (e::bits(6)) = 0 -- TODO
-
-CAPRAWBITS capToBits (cap :: Capability) =
-    cap.address:encUPerms(cap.uperms):encPerms(cap.perms):cap.reserved:0 -- TODO
+CAPRAWBITS capToBits (cap :: Capability) = rawCapBits(nullCap) ?? rawCapBits(cap)
 
 Capability bitsToCap (raw :: CAPRAWBITS) =
 {
-    -- TODO
-    var new_cap :: Capability = defaultCap;
+  newRaw = rawCapBits(nullCap) ?? raw;
+  var new_cap = nullCap;
+    new_cap.uperms    <- UPerms(ZeroExtend(newRaw<63:60>));
+    new_cap.perms     <- Perms(SignExtend(newRaw<59:48>));
+    new_cap.reserved  <- newRaw<47:46>;
+    new_cap.otype     <- newRaw<45:28>;
+    new_cap.internalE <- newRaw<27>;
+    new_cap.E         <- if new_cap.internalE then newRaw<15:13> : newRaw<2:0> else 0;
+    new_cap.B         <- if new_cap.internalE then newRaw<26:16> : '000' else newRaw<26:13>;
+    new_cap.T         <- if new_cap.internalE then '1' : newRaw<12:3> : '000' else '1':newRaw<12:0>;
+    new_cap.address   <- newRaw<127:64>;
     new_cap
 }
 
