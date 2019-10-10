@@ -77,7 +77,11 @@ else
     L3SRCBASE+=tlb/translate.spec
   endif
 endif
-L3SRCBASE+=tlb/instructions.spec
+ifdef CAP
+  L3SRCBASE+=cheri/tlb-instructions.spec
+else
+  L3SRCBASE+=tlb/instructions.spec
+endif
 
 #########
 # Misc. #
@@ -145,6 +149,11 @@ endif
 #####################
 # MIPS Instructions #
 #####################
+ifdef CAP
+L3SRCBASE+=cheri/CP0-instructions.spec
+else
+L3SRCBASE+=mips-CP0-instructions.spec
+endif
 L3SRCBASE+=mips-instructions.spec
 
 ######################
