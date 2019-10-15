@@ -90,7 +90,7 @@ OType getType (cap::Capability) = cap.otype
 
 UPerms getUPerms (cap::Capability) = cap.uperms
 
-Perms getPerms (cap::Capability) = Perms(SignExtend(cap.&perms<11:0>))
+Perms getPerms (cap::Capability) = Perms(ZeroExtend(cap.&perms<11:0>))
 
 bool getSealed (cap::Capability) = cap.otype != ~0
 
