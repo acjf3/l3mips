@@ -25,7 +25,7 @@ You can download the sources for L3 and the L3 manual on the [L3 page](http://ww
 The sources are shipped as a *.tar.bz2* archive. Extract them and `cd` into the root directory of the archive:
 
 ```
-wget https://www.cl.cam.ac.uk/~mr101/l3/l3.tar.bz2
+wget https://github.com/CTSRD-CHERI/l3/raw/main/l3.tar.bz2
 tar -xf l3.tar.bz2
 cd L3-AAAA-MM-DD/
 ```
