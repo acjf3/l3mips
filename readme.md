@@ -20,17 +20,11 @@ cd polyml-5.7.1/
 make
 sudo make install
 ```
-
-You can download the sources for L3 and the L3 manual on the [L3 page](http://www.cl.cam.ac.uk/~acjf3/l3/ "L3: An ISA Specification Language").
-The sources are shipped as a *.tar.bz2* archive. Extract them and `cd` into the root directory of the archive:
-
+You can clone the sources for L3 as follows:
 ```
-wget https://github.com/CTSRD-CHERI/l3/raw/main/l3.tar.bz2
-tar -xf l3.tar.bz2
-cd L3-AAAA-MM-DD/
+git clone https://github.com/CTSRD-CHERI/l3.git
+cd l3
 ```
-
-(with `L3-AAAA-MM-DD/` matching the date of your L3 release).
 
 You should now be able to build L3 with:
 
